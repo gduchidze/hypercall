@@ -19,10 +19,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Guest_GetInfo_FullMethodName   = "/hypercall.guest.v1.Guest/GetInfo"
-	Guest_Exec_FullMethodName      = "/hypercall.guest.v1.Guest/Exec"
-	Guest_ReadFile_FullMethodName  = "/hypercall.guest.v1.Guest/ReadFile"
-	Guest_WriteFile_FullMethodName = "/hypercall.guest.v1.Guest/WriteFile"
+	Guest_StartControlled_FullMethodName    = "/hypercall.guest.v1.Guest/StartControlled"
+	Guest_InspectControlled_FullMethodName  = "/hypercall.guest.v1.Guest/InspectControlled"
+	Guest_ContinueControlled_FullMethodName = "/hypercall.guest.v1.Guest/ContinueControlled"
+	Guest_PrepareCapture_FullMethodName     = "/hypercall.guest.v1.Guest/PrepareCapture"
+	Guest_ReleaseCapture_FullMethodName     = "/hypercall.guest.v1.Guest/ReleaseCapture"
+	Guest_RebindClone_FullMethodName        = "/hypercall.guest.v1.Guest/RebindClone"
+	Guest_GetInfo_FullMethodName            = "/hypercall.guest.v1.Guest/GetInfo"
+	Guest_Exec_FullMethodName               = "/hypercall.guest.v1.Guest/Exec"
+	Guest_ReadFile_FullMethodName           = "/hypercall.guest.v1.Guest/ReadFile"
+	Guest_WriteFile_FullMethodName          = "/hypercall.guest.v1.Guest/WriteFile"
 )
 
 // GuestClient is the client API for Guest service.
@@ -34,6 +40,14 @@ const (
 // value. The credential is provisioned out of band and binds the allocation;
 // request fields never establish authority. Credentials must change on a fork.
 type GuestClient interface {
+	// Guest-owned bounded qualification process; survives host transport reset.
+	StartControlled(ctx context.Context, in *StartControlledRequest, opts ...grpc.CallOption) (*ControlledState, error)
+	InspectControlled(ctx context.Context, in *InspectControlledRequest, opts ...grpc.CallOption) (*ControlledState, error)
+	ContinueControlled(ctx context.Context, in *ContinueControlledRequest, opts ...grpc.CallOption) (*ControlledState, error)
+	PrepareCapture(ctx context.Context, in *PrepareCaptureRequest, opts ...grpc.CallOption) (*ControlledState, error)
+	ReleaseCapture(ctx context.Context, in *ReleaseCaptureRequest, opts ...grpc.CallOption) (*ControlledState, error)
+	// Authenticated against freshly provisioned unmounted session block disk.
+	RebindClone(ctx context.Context, in *RebindCloneRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
 	GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
 	Exec(ctx context.Context, in *ExecRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[ExecEvent], error)
 	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error)
@@ -46,6 +60,66 @@ type guestClient struct {
 
 func NewGuestClient(cc grpc.ClientConnInterface) GuestClient {
 	return &guestClient{cc}
+}
+
+func (c *guestClient) StartControlled(ctx context.Context, in *StartControlledRequest, opts ...grpc.CallOption) (*ControlledState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ControlledState)
+	err := c.cc.Invoke(ctx, Guest_StartControlled_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) InspectControlled(ctx context.Context, in *InspectControlledRequest, opts ...grpc.CallOption) (*ControlledState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ControlledState)
+	err := c.cc.Invoke(ctx, Guest_InspectControlled_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) ContinueControlled(ctx context.Context, in *ContinueControlledRequest, opts ...grpc.CallOption) (*ControlledState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ControlledState)
+	err := c.cc.Invoke(ctx, Guest_ContinueControlled_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) PrepareCapture(ctx context.Context, in *PrepareCaptureRequest, opts ...grpc.CallOption) (*ControlledState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ControlledState)
+	err := c.cc.Invoke(ctx, Guest_PrepareCapture_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) ReleaseCapture(ctx context.Context, in *ReleaseCaptureRequest, opts ...grpc.CallOption) (*ControlledState, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ControlledState)
+	err := c.cc.Invoke(ctx, Guest_ReleaseCapture_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) RebindClone(ctx context.Context, in *RebindCloneRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInfoResponse)
+	err := c.cc.Invoke(ctx, Guest_RebindClone_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *guestClient) GetInfo(ctx context.Context, in *GetInfoRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
@@ -106,6 +180,14 @@ func (c *guestClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts 
 // value. The credential is provisioned out of band and binds the allocation;
 // request fields never establish authority. Credentials must change on a fork.
 type GuestServer interface {
+	// Guest-owned bounded qualification process; survives host transport reset.
+	StartControlled(context.Context, *StartControlledRequest) (*ControlledState, error)
+	InspectControlled(context.Context, *InspectControlledRequest) (*ControlledState, error)
+	ContinueControlled(context.Context, *ContinueControlledRequest) (*ControlledState, error)
+	PrepareCapture(context.Context, *PrepareCaptureRequest) (*ControlledState, error)
+	ReleaseCapture(context.Context, *ReleaseCaptureRequest) (*ControlledState, error)
+	// Authenticated against freshly provisioned unmounted session block disk.
+	RebindClone(context.Context, *RebindCloneRequest) (*GetInfoResponse, error)
 	GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error)
 	Exec(*ExecRequest, grpc.ServerStreamingServer[ExecEvent]) error
 	ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error)
@@ -120,6 +202,24 @@ type GuestServer interface {
 // pointer dereference when methods are called.
 type UnimplementedGuestServer struct{}
 
+func (UnimplementedGuestServer) StartControlled(context.Context, *StartControlledRequest) (*ControlledState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartControlled not implemented")
+}
+func (UnimplementedGuestServer) InspectControlled(context.Context, *InspectControlledRequest) (*ControlledState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method InspectControlled not implemented")
+}
+func (UnimplementedGuestServer) ContinueControlled(context.Context, *ContinueControlledRequest) (*ControlledState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ContinueControlled not implemented")
+}
+func (UnimplementedGuestServer) PrepareCapture(context.Context, *PrepareCaptureRequest) (*ControlledState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PrepareCapture not implemented")
+}
+func (UnimplementedGuestServer) ReleaseCapture(context.Context, *ReleaseCaptureRequest) (*ControlledState, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReleaseCapture not implemented")
+}
+func (UnimplementedGuestServer) RebindClone(context.Context, *RebindCloneRequest) (*GetInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method RebindClone not implemented")
+}
 func (UnimplementedGuestServer) GetInfo(context.Context, *GetInfoRequest) (*GetInfoResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetInfo not implemented")
 }
@@ -151,6 +251,114 @@ func RegisterGuestServer(s grpc.ServiceRegistrar, srv GuestServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Guest_ServiceDesc, srv)
+}
+
+func _Guest_StartControlled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartControlledRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).StartControlled(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_StartControlled_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).StartControlled(ctx, req.(*StartControlledRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_InspectControlled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(InspectControlledRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).InspectControlled(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_InspectControlled_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).InspectControlled(ctx, req.(*InspectControlledRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_ContinueControlled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ContinueControlledRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).ContinueControlled(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_ContinueControlled_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).ContinueControlled(ctx, req.(*ContinueControlledRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_PrepareCapture_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PrepareCaptureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).PrepareCapture(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_PrepareCapture_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).PrepareCapture(ctx, req.(*PrepareCaptureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_ReleaseCapture_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReleaseCaptureRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).ReleaseCapture(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_ReleaseCapture_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).ReleaseCapture(ctx, req.(*ReleaseCaptureRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_RebindClone_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(RebindCloneRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).RebindClone(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_RebindClone_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).RebindClone(ctx, req.(*RebindCloneRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Guest_GetInfo_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -225,6 +433,30 @@ var Guest_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "hypercall.guest.v1.Guest",
 	HandlerType: (*GuestServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "StartControlled",
+			Handler:    _Guest_StartControlled_Handler,
+		},
+		{
+			MethodName: "InspectControlled",
+			Handler:    _Guest_InspectControlled_Handler,
+		},
+		{
+			MethodName: "ContinueControlled",
+			Handler:    _Guest_ContinueControlled_Handler,
+		},
+		{
+			MethodName: "PrepareCapture",
+			Handler:    _Guest_PrepareCapture_Handler,
+		},
+		{
+			MethodName: "ReleaseCapture",
+			Handler:    _Guest_ReleaseCapture_Handler,
+		},
+		{
+			MethodName: "RebindClone",
+			Handler:    _Guest_RebindClone_Handler,
+		},
 		{
 			MethodName: "GetInfo",
 			Handler:    _Guest_GetInfo_Handler,

@@ -57,8 +57,18 @@ class GuestContract(unittest.TestCase):
             cls.process.wait(timeout=5)
 
     def test_allocation_identity_comes_from_authenticated_session(self):
+        host_before_ns = time.time_ns()
         info = self.client.GetInfo(pb.GetInfoRequest(), metadata=self.metadata, timeout=3)
-        self.assertEqual(info, pb.GetInfoResponse(
+        host_after_ns = time.time_ns()
+        # This guest is a separate native process on the same host. Its UTC
+        # sample must describe this RPC, rather than a missing or stale value.
+        skew_ns = 2_000_000_000
+        self.assertGreaterEqual(info.server_time_unix_nano, host_before_ns - skew_ns)
+        self.assertLessEqual(info.server_time_unix_nano, host_after_ns + skew_ns)
+        static_info = pb.GetInfoResponse()
+        static_info.CopyFrom(info)
+        static_info.ClearField("server_time_unix_nano")
+        self.assertEqual(static_info, pb.GetInfoResponse(
             protocol_version="hypercall.guest.v1",
             identity=pb.AllocationIdentity(tenant_id="tenant-contract", project_id="project-contract",
                                           sandbox_id="sandbox-contract", execution_id="execution-contract", epoch=7),

@@ -53,6 +53,7 @@ Native macOS cannot provide Linux KVM; use the [Lima development setup](docs/dev
 - [Guest service and security model](internal/guest/README.md)
 - [Protocol and code generation](proto/README.md)
 - [Host setup and qualification](docs/development/host.md)
+- [Snapshot/fork qualification](docs/development/snapshots.md)
 
 ## Status
 
@@ -61,8 +62,11 @@ vsock, Go/Python commands and files, resource exhaustion, cancellation, network
 denial, independent VMs, and cleanup after guest or host failure.
 
 Workspaces are ephemeral and network access is disabled. Linux AMD64 is
-cross-built but still needs runtime qualification. Snapshot, restore, and fork
-are not implemented. Native Mac command tests use trusted processes; the
+cross-built but still needs runtime qualification. Snapshot capture and guest UTC renewal have partial real KVM evidence.
+Two-child fork continuity currently fails after guest health timeouts; cross-host
+restore and live GCS remain untested. Snapshot/fork support and its concurrency
+envelope are unqualified; [qualification status](docs/development/snapshots.md#qualification-status)
+records the results and remaining gates. Native Mac command tests use trusted processes; the
 separate Linux KVM suite establishes VM behavior.
 
 ## License

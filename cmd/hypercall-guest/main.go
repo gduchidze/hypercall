@@ -22,6 +22,7 @@ type sessionConfig struct {
 	Identity   *guestv1.AllocationIdentity `json:"identity"`
 	Credential string                      `json:"credential"`
 	ExpiresAt  time.Time                   `json:"expires_at"`
+	Entropy    string                      `json:"entropy"`
 }
 
 func main() {

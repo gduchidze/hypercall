@@ -5,6 +5,8 @@ package sandbox
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -50,7 +52,13 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 		Identity   *guestv1.AllocationIdentity `json:"identity"`
 		Credential string                      `json:"credential"`
 		ExpiresAt  time.Time                   `json:"expires_at"`
-	}{o.Allocation.identity(), h.credential, o.ExpiresAt}
+		Entropy    string                      `json:"entropy"`
+	}{o.Allocation.identity(), h.credential, o.ExpiresAt, ""}
+	entropy := make([]byte, 32)
+	if _, err := rand.Read(entropy); err != nil {
+		return err
+	}
+	session.Entropy = hex.EncodeToString(entropy)
 	if err := writeJSON(filepath.Join(bootstrap, "session.json"), session, 0600); err != nil {
 		return err
 	}
@@ -81,6 +89,45 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 	}
 	if err := os.Chown(sessionDisk, b.cfg.JailerUID, b.cfg.JailerGID); err != nil {
 		return err
+	}
+
+	if h.restore != nil {
+		for _, item := range []struct{ src, name string }{{h.restore.disk, "workspace.ext4"}, {h.restore.memory, "memory"}, {h.restore.state, "vmstate"}} {
+			if err := copyFile(ctx, item.src, filepath.Join(o.RootDir, item.name), b.cfg.JailerUID, b.cfg.JailerGID); err != nil {
+				return err
+			}
+		}
+		if err := os.Chmod(filepath.Join(o.RootDir, "workspace.ext4"), 0600); err != nil {
+			return err
+		}
+	} else {
+		workspace := filepath.Join(allocationDir, "workspace")
+		if err := os.Mkdir(workspace, 0700); err != nil {
+			return err
+		}
+		if err := os.Chown(workspace, 1000, 1000); err != nil {
+			return err
+		}
+		disk := filepath.Join(o.RootDir, "workspace.ext4")
+		// ext4 metadata needs room beyond the user-visible capacity; project quotas
+		// are out of scope, so the filesystem itself is the bounded workspace.
+		blocks := h.record.Limits.WorkspaceBytes / 1024
+		if blocks < 1024 {
+			blocks = 1024
+		}
+		cmd := exec.CommandContext(ctx, mkfs, "-q", "-F", "-t", "ext4", "-O", "^metadata_csum_seed", "-d", workspace, disk, strconv.FormatInt(blocks, 10))
+		cmd.Env = []string{"PATH=/usr/sbin:/usr/bin:/sbin:/bin", "LANG=C"}
+		cmd.Stdout = io.Discard
+		cmd.Stderr = io.Discard
+		if err := cmd.Run(); err != nil {
+			return errors.New("create private workspace disk failed")
+		}
+		if err := os.Chmod(disk, 0600); err != nil {
+			return err
+		}
+		if err := os.Chown(disk, b.cfg.JailerUID, b.cfg.JailerGID); err != nil {
+			return err
+		}
 	}
 	cg, err := b.createCgroup(h)
 	if err != nil {
@@ -134,18 +181,28 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 	}}
 	defer transport.CloseIdleConnections()
 	client := &http.Client{Transport: transport, Timeout: 5 * time.Second}
-	for _, call := range []struct {
-		path string
-		body any
-	}{
-		{"/machine-config", map[string]any{"vcpu_count": h.record.Limits.VCPUs, "mem_size_mib": h.record.Limits.MemoryMiB, "smt": false}},
-		{"/boot-source", map[string]any{"kernel_image_path": "/kernel", "boot_args": "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro rootfstype=ext4 init=/sbin/hypercall-init"}},
-		{"/drives/rootfs", map[string]any{"drive_id": "rootfs", "path_on_host": "/rootfs.ext4", "is_root_device": true, "is_read_only": true}},
-		{"/drives/session", map[string]any{"drive_id": "session", "path_on_host": "/session.ext4", "is_root_device": false, "is_read_only": true}},
-		{"/vsock", map[string]any{"guest_cid": 3, "uds_path": "/vsock.sock"}},
-		{"/actions", map[string]any{"action_type": "InstanceStart"}},
-	} {
-		if err = firecrackerPut(ctx, client, call.path, call.body); err != nil {
+	if h.restore == nil {
+		for _, call := range []struct {
+			path string
+			body any
+		}{
+			{"/machine-config", map[string]any{"vcpu_count": h.record.Limits.VCPUs, "mem_size_mib": h.record.Limits.MemoryMiB, "smt": false}},
+			{"/boot-source", map[string]any{"kernel_image_path": "/kernel", "boot_args": "console=ttyS0 reboot=k panic=1 pci=off root=/dev/vda ro rootfstype=ext4 init=/sbin/hypercall-init"}},
+			{"/drives/rootfs", map[string]any{"drive_id": "rootfs", "path_on_host": "/rootfs.ext4", "is_root_device": true, "is_read_only": true}},
+			{"/drives/session", map[string]any{"drive_id": "session", "path_on_host": "/session.ext4", "is_root_device": false, "is_read_only": true}},
+			{"/drives/workspace", map[string]any{"drive_id": "workspace", "path_on_host": "/workspace.ext4", "is_root_device": false, "is_read_only": false}},
+			{"/vsock", map[string]any{"guest_cid": 3, "uds_path": "/vsock.sock"}},
+			{"/actions", map[string]any{"action_type": "InstanceStart"}},
+		} {
+			if err = firecrackerPut(ctx, client, call.path, call.body); err != nil {
+				return err
+			}
+		}
+	} else {
+		if err = firecrackerPut(ctx, client, "/snapshot/load", map[string]any{"snapshot_path": "/vmstate", "mem_backend": map[string]any{"backend_path": "/memory", "backend_type": "File"}, "resume_vm": false}); err != nil {
+			return err
+		}
+		if err = firecrackerRequest(ctx, client, http.MethodPatch, "/vm", map[string]any{"state": "Resumed"}); err != nil {
 			return err
 		}
 	}
@@ -157,7 +214,7 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 	h.conn = conn
 	h.client = guestv1.NewGuestClient(conn)
 	if err = waitFor(ctx, func() error {
-		infoCtx, cancel := context.WithTimeout(authContext(ctx, h.credential), time.Second)
+		infoCtx, cancel := context.WithTimeout(authContext(ctx, h.credential), 5*time.Second)
 		defer cancel()
 		live, liveErr := b.populated(h.record.Token)
 		if liveErr != nil {
@@ -166,9 +223,25 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 		if !live {
 			return terminalBootError{errors.New("guest runtime exited during boot")}
 		}
-		info, e := h.client.GetInfo(infoCtx, &guestv1.GetInfoRequest{})
+
+		var info *guestv1.GetInfoResponse
+		var e error
+		if h.restore != nil {
+			info, e = h.client.RebindClone(infoCtx, &guestv1.RebindCloneRequest{HostUnixNano: time.Now().UnixNano()})
+			if e != nil { // A lost rebind response may already have opened the new session.
+				probe, probeErr := h.client.GetInfo(infoCtx, &guestv1.GetInfoRequest{})
+				if probeErr == nil {
+					info, e = probe, nil
+				}
+			}
+		} else {
+			info, e = h.client.GetInfo(infoCtx, &guestv1.GetInfoRequest{})
+		}
 		if e != nil {
 			return e
+		}
+		if h.restore != nil && (info.ServerTimeUnixNano <= 0 || time.Since(time.Unix(0, info.ServerTimeUnixNano)) > 2*time.Second || time.Until(time.Unix(0, info.ServerTimeUnixNano)) > 2*time.Second) {
+			return errors.New("guest UTC renewal acknowledgement outside supported bound")
 		}
 		if info.ProtocolVersion != "hypercall.guest.v1" || !proto.Equal(info.Identity, o.Allocation.identity()) || info.MaxFileBytes != 1<<20 || info.MaxExecOutputBytes != 1<<20 {
 			return errors.New("guest protocol or allocation identity mismatch")
@@ -180,11 +253,14 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 	return nil
 }
 func firecrackerPut(ctx context.Context, c *http.Client, path string, body any) error {
+	return firecrackerRequest(ctx, c, http.MethodPut, path, body)
+}
+func firecrackerRequest(ctx context.Context, c *http.Client, method, path string, body any) error {
 	data, err := json.Marshal(body)
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequestWithContext(ctx, http.MethodPut, "http://firecracker"+path, bytes.NewReader(data))
+	req, err := http.NewRequestWithContext(ctx, method, "http://firecracker"+path, bytes.NewReader(data))
 	if err != nil {
 		return err
 	}
