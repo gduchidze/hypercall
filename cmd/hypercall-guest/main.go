@@ -41,6 +41,7 @@ func run(logger *slog.Logger) error {
 	uid := flag.Int("uid", -1, "production workload uid (must be non-root)")
 	gid := flag.Int("gid", -1, "production workload gid (must be non-root)")
 	allowedEnv := flag.String("allow-env", "LANG,LC_ALL,TZ,PYTHONUNBUFFERED", "comma-separated explicitly allowed environment keys")
+	workloadCgroup := flag.String("workload-cgroup", "", "production cgroup v2 subtree with finite workload limits")
 	flag.Parse()
 	if flag.NArg() != 0 {
 		return errors.New("unexpected positional arguments")
@@ -57,7 +58,7 @@ func run(logger *slog.Logger) error {
 	if *allowedEnv != "" {
 		allowed = strings.Split(*allowedEnv, ",")
 	}
-	svc, err := guest.New(guest.Config{Workspace: *workspace, Identity: session.Identity, Credential: session.Credential, ExpiresAt: session.ExpiresAt, TrustedLocal: *testSocket != "", ExecHelper: executable, UID: *uid, GID: *gid, AllowedEnv: allowed, Logger: logger})
+	svc, err := guest.New(guest.Config{Workspace: *workspace, Identity: session.Identity, Credential: session.Credential, ExpiresAt: session.ExpiresAt, TrustedLocal: *testSocket != "", ExecHelper: executable, UID: *uid, GID: *gid, AllowedEnv: allowed, WorkloadCgroup: *workloadCgroup, Logger: logger})
 	if err != nil {
 		return err
 	}

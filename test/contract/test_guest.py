@@ -7,6 +7,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import subprocess
 import tempfile
+import time
 import unittest
 
 import grpc
@@ -132,10 +133,20 @@ class GuestContract(unittest.TestCase):
                                        metadata=self.metadata, timeout=3))
         self.assertEqual((len(events), events[-1].WhichOneof("event"), events[-1].result.timed_out),
                          (1, "result", True))
-        with self.assertRaises(grpc.RpcError) as failure:
-            list(self.client.Exec(pb.ExecRequest(argv=["/bin/sleep", "5"], timeout_ms=3000),
-                                  metadata=self.metadata, timeout=0.1))
-        self.assertEqual(failure.exception.code(), grpc.StatusCode.DEADLINE_EXCEEDED)
+        # grpc-go v1.84.0 closes expired HTTP/2 streams with RST_STREAM CANCEL.
+        # Python may observe that reset before its own deadline timer fires.
+        # This reproduces with a minimal gRPC server without guest execution.
+        for _ in range(20):
+            started = time.monotonic()
+            with self.assertRaises(grpc.RpcError) as failure:
+                list(self.client.Exec(pb.ExecRequest(argv=["/bin/sleep", "5"], timeout_ms=3000),
+                                      metadata=self.metadata, timeout=0.1))
+            error = failure.exception
+            if error.code() == grpc.StatusCode.CANCELLED:
+                self.assertEqual(error.details(), "Received RST_STREAM with error code 8")
+                self.assertGreaterEqual(time.monotonic() - started, 0.08)
+            else:
+                self.assertEqual(error.code(), grpc.StatusCode.DEADLINE_EXCEEDED)
 
 
 if __name__ == "__main__":
