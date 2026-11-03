@@ -140,6 +140,8 @@ type GetInfoResponse struct {
 	Identity           *AllocationIdentity `protobuf:"bytes,2,opt,name=identity,proto3" json:"identity,omitempty"`
 	MaxFileBytes       uint32              `protobuf:"varint,3,opt,name=max_file_bytes,json=maxFileBytes,proto3" json:"max_file_bytes,omitempty"`
 	MaxExecOutputBytes uint32              `protobuf:"varint,4,opt,name=max_exec_output_bytes,json=maxExecOutputBytes,proto3" json:"max_exec_output_bytes,omitempty"`
+	// Guest UTC after authenticated renewal; never a monotonic clock.
+	ServerTimeUnixNano int64 `protobuf:"varint,5,opt,name=server_time_unix_nano,json=serverTimeUnixNano,proto3" json:"server_time_unix_nano,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -198,6 +200,13 @@ func (x *GetInfoResponse) GetMaxFileBytes() uint32 {
 func (x *GetInfoResponse) GetMaxExecOutputBytes() uint32 {
 	if x != nil {
 		return x.MaxExecOutputBytes
+	}
+	return 0
+}
+
+func (x *GetInfoResponse) GetServerTimeUnixNano() int64 {
+	if x != nil {
+		return x.ServerTimeUnixNano
 	}
 	return 0
 }
@@ -622,6 +631,338 @@ func (x *WriteFileResponse) GetBytesWritten() uint64 {
 	return 0
 }
 
+type StartControlledRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Counter       int64                  `protobuf:"varint,1,opt,name=counter,proto3" json:"counter,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StartControlledRequest) Reset() {
+	*x = StartControlledRequest{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StartControlledRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StartControlledRequest) ProtoMessage() {}
+
+func (x *StartControlledRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StartControlledRequest.ProtoReflect.Descriptor instead.
+func (*StartControlledRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *StartControlledRequest) GetCounter() int64 {
+	if x != nil {
+		return x.Counter
+	}
+	return 0
+}
+
+type InspectControlledRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *InspectControlledRequest) Reset() {
+	*x = InspectControlledRequest{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *InspectControlledRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*InspectControlledRequest) ProtoMessage() {}
+
+func (x *InspectControlledRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use InspectControlledRequest.ProtoReflect.Descriptor instead.
+func (*InspectControlledRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{11}
+}
+
+type ContinueControlledRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Delta         int64                  `protobuf:"varint,1,opt,name=delta,proto3" json:"delta,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ContinueControlledRequest) Reset() {
+	*x = ContinueControlledRequest{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ContinueControlledRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ContinueControlledRequest) ProtoMessage() {}
+
+func (x *ContinueControlledRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ContinueControlledRequest.ProtoReflect.Descriptor instead.
+func (*ContinueControlledRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ContinueControlledRequest) GetDelta() int64 {
+	if x != nil {
+		return x.Delta
+	}
+	return 0
+}
+
+type PrepareCaptureRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *PrepareCaptureRequest) Reset() {
+	*x = PrepareCaptureRequest{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *PrepareCaptureRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*PrepareCaptureRequest) ProtoMessage() {}
+
+func (x *PrepareCaptureRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use PrepareCaptureRequest.ProtoReflect.Descriptor instead.
+func (*PrepareCaptureRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{13}
+}
+
+type ReleaseCaptureRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HostUnixNano  int64                  `protobuf:"varint,1,opt,name=host_unix_nano,json=hostUnixNano,proto3" json:"host_unix_nano,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReleaseCaptureRequest) Reset() {
+	*x = ReleaseCaptureRequest{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReleaseCaptureRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReleaseCaptureRequest) ProtoMessage() {}
+
+func (x *ReleaseCaptureRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReleaseCaptureRequest.ProtoReflect.Descriptor instead.
+func (*ReleaseCaptureRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *ReleaseCaptureRequest) GetHostUnixNano() int64 {
+	if x != nil {
+		return x.HostUnixNano
+	}
+	return 0
+}
+
+type RebindCloneRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HostUnixNano  int64                  `protobuf:"varint,1,opt,name=host_unix_nano,json=hostUnixNano,proto3" json:"host_unix_nano,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RebindCloneRequest) Reset() {
+	*x = RebindCloneRequest{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RebindCloneRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RebindCloneRequest) ProtoMessage() {}
+
+func (x *RebindCloneRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RebindCloneRequest.ProtoReflect.Descriptor instead.
+func (*RebindCloneRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *RebindCloneRequest) GetHostUnixNano() int64 {
+	if x != nil {
+		return x.HostUnixNano
+	}
+	return 0
+}
+
+type ControlledState struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Counter       int64                  `protobuf:"varint,1,opt,name=counter,proto3" json:"counter,omitempty"`
+	FileData      []byte                 `protobuf:"bytes,2,opt,name=file_data,json=fileData,proto3" json:"file_data,omitempty"`
+	Pid           int64                  `protobuf:"varint,3,opt,name=pid,proto3" json:"pid,omitempty"`
+	AtBarrier     bool                   `protobuf:"varint,4,opt,name=at_barrier,json=atBarrier,proto3" json:"at_barrier,omitempty"`
+	Identity      *AllocationIdentity    `protobuf:"bytes,5,opt,name=identity,proto3" json:"identity,omitempty"`
+	RandomProbe   []byte                 `protobuf:"bytes,6,opt,name=random_probe,json=randomProbe,proto3" json:"random_probe,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ControlledState) Reset() {
+	*x = ControlledState{}
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ControlledState) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ControlledState) ProtoMessage() {}
+
+func (x *ControlledState) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_guest_v1_guest_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ControlledState.ProtoReflect.Descriptor instead.
+func (*ControlledState) Descriptor() ([]byte, []int) {
+	return file_hypercall_guest_v1_guest_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *ControlledState) GetCounter() int64 {
+	if x != nil {
+		return x.Counter
+	}
+	return 0
+}
+
+func (x *ControlledState) GetFileData() []byte {
+	if x != nil {
+		return x.FileData
+	}
+	return nil
+}
+
+func (x *ControlledState) GetPid() int64 {
+	if x != nil {
+		return x.Pid
+	}
+	return 0
+}
+
+func (x *ControlledState) GetAtBarrier() bool {
+	if x != nil {
+		return x.AtBarrier
+	}
+	return false
+}
+
+func (x *ControlledState) GetIdentity() *AllocationIdentity {
+	if x != nil {
+		return x.Identity
+	}
+	return nil
+}
+
+func (x *ControlledState) GetRandomProbe() []byte {
+	if x != nil {
+		return x.RandomProbe
+	}
+	return nil
+}
+
 var File_hypercall_guest_v1_guest_proto protoreflect.FileDescriptor
 
 const file_hypercall_guest_v1_guest_proto_rawDesc = "" +
@@ -635,12 +976,13 @@ const file_hypercall_guest_v1_guest_proto_rawDesc = "" +
 	"sandbox_id\x18\x03 \x01(\tR\tsandboxId\x12!\n" +
 	"\fexecution_id\x18\x04 \x01(\tR\vexecutionId\x12\x14\n" +
 	"\x05epoch\x18\x05 \x01(\x04R\x05epoch\"\x10\n" +
-	"\x0eGetInfoRequest\"\xd9\x01\n" +
+	"\x0eGetInfoRequest\"\x8c\x02\n" +
 	"\x0fGetInfoResponse\x12)\n" +
 	"\x10protocol_version\x18\x01 \x01(\tR\x0fprotocolVersion\x12B\n" +
 	"\bidentity\x18\x02 \x01(\v2&.hypercall.guest.v1.AllocationIdentityR\bidentity\x12$\n" +
 	"\x0emax_file_bytes\x18\x03 \x01(\rR\fmaxFileBytes\x121\n" +
-	"\x15max_exec_output_bytes\x18\x04 \x01(\rR\x12maxExecOutputBytes\"\xc6\x01\n" +
+	"\x15max_exec_output_bytes\x18\x04 \x01(\rR\x12maxExecOutputBytes\x121\n" +
+	"\x15server_time_unix_nano\x18\x05 \x01(\x03R\x12serverTimeUnixNano\"\xc6\x01\n" +
 	"\vExecRequest\x12\x12\n" +
 	"\x04argv\x18\x01 \x03(\tR\x04argv\x12\x10\n" +
 	"\x03cwd\x18\x02 \x01(\tR\x03cwd\x12:\n" +
@@ -668,8 +1010,32 @@ const file_hypercall_guest_v1_guest_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04data\x18\x02 \x01(\fR\x04data\"8\n" +
 	"\x11WriteFileResponse\x12#\n" +
-	"\rbytes_written\x18\x01 \x01(\x04R\fbytesWritten2\xd6\x02\n" +
-	"\x05Guest\x12R\n" +
+	"\rbytes_written\x18\x01 \x01(\x04R\fbytesWritten\"2\n" +
+	"\x16StartControlledRequest\x12\x18\n" +
+	"\acounter\x18\x01 \x01(\x03R\acounter\"\x1a\n" +
+	"\x18InspectControlledRequest\"1\n" +
+	"\x19ContinueControlledRequest\x12\x14\n" +
+	"\x05delta\x18\x01 \x01(\x03R\x05delta\"\x17\n" +
+	"\x15PrepareCaptureRequest\"=\n" +
+	"\x15ReleaseCaptureRequest\x12$\n" +
+	"\x0ehost_unix_nano\x18\x01 \x01(\x03R\fhostUnixNano\":\n" +
+	"\x12RebindCloneRequest\x12$\n" +
+	"\x0ehost_unix_nano\x18\x01 \x01(\x03R\fhostUnixNano\"\xe0\x01\n" +
+	"\x0fControlledState\x12\x18\n" +
+	"\acounter\x18\x01 \x01(\x03R\acounter\x12\x1b\n" +
+	"\tfile_data\x18\x02 \x01(\fR\bfileData\x12\x10\n" +
+	"\x03pid\x18\x03 \x01(\x03R\x03pid\x12\x1d\n" +
+	"\n" +
+	"at_barrier\x18\x04 \x01(\bR\tatBarrier\x12B\n" +
+	"\bidentity\x18\x05 \x01(\v2&.hypercall.guest.v1.AllocationIdentityR\bidentity\x12!\n" +
+	"\frandom_probe\x18\x06 \x01(\fR\vrandomProbe2\xac\a\n" +
+	"\x05Guest\x12b\n" +
+	"\x0fStartControlled\x12*.hypercall.guest.v1.StartControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12f\n" +
+	"\x11InspectControlled\x12,.hypercall.guest.v1.InspectControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12h\n" +
+	"\x12ContinueControlled\x12-.hypercall.guest.v1.ContinueControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12`\n" +
+	"\x0ePrepareCapture\x12).hypercall.guest.v1.PrepareCaptureRequest\x1a#.hypercall.guest.v1.ControlledState\x12`\n" +
+	"\x0eReleaseCapture\x12).hypercall.guest.v1.ReleaseCaptureRequest\x1a#.hypercall.guest.v1.ControlledState\x12Z\n" +
+	"\vRebindClone\x12&.hypercall.guest.v1.RebindCloneRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12R\n" +
 	"\aGetInfo\x12\".hypercall.guest.v1.GetInfoRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12H\n" +
 	"\x04Exec\x12\x1f.hypercall.guest.v1.ExecRequest\x1a\x1d.hypercall.guest.v1.ExecEvent0\x01\x12U\n" +
 	"\bReadFile\x12#.hypercall.guest.v1.ReadFileRequest\x1a$.hypercall.guest.v1.ReadFileResponse\x12X\n" +
@@ -687,37 +1053,57 @@ func file_hypercall_guest_v1_guest_proto_rawDescGZIP() []byte {
 	return file_hypercall_guest_v1_guest_proto_rawDescData
 }
 
-var file_hypercall_guest_v1_guest_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_hypercall_guest_v1_guest_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_hypercall_guest_v1_guest_proto_goTypes = []any{
-	(*AllocationIdentity)(nil), // 0: hypercall.guest.v1.AllocationIdentity
-	(*GetInfoRequest)(nil),     // 1: hypercall.guest.v1.GetInfoRequest
-	(*GetInfoResponse)(nil),    // 2: hypercall.guest.v1.GetInfoResponse
-	(*ExecRequest)(nil),        // 3: hypercall.guest.v1.ExecRequest
-	(*ExecEvent)(nil),          // 4: hypercall.guest.v1.ExecEvent
-	(*ExecResult)(nil),         // 5: hypercall.guest.v1.ExecResult
-	(*ReadFileRequest)(nil),    // 6: hypercall.guest.v1.ReadFileRequest
-	(*ReadFileResponse)(nil),   // 7: hypercall.guest.v1.ReadFileResponse
-	(*WriteFileRequest)(nil),   // 8: hypercall.guest.v1.WriteFileRequest
-	(*WriteFileResponse)(nil),  // 9: hypercall.guest.v1.WriteFileResponse
-	nil,                        // 10: hypercall.guest.v1.ExecRequest.EnvEntry
+	(*AllocationIdentity)(nil),        // 0: hypercall.guest.v1.AllocationIdentity
+	(*GetInfoRequest)(nil),            // 1: hypercall.guest.v1.GetInfoRequest
+	(*GetInfoResponse)(nil),           // 2: hypercall.guest.v1.GetInfoResponse
+	(*ExecRequest)(nil),               // 3: hypercall.guest.v1.ExecRequest
+	(*ExecEvent)(nil),                 // 4: hypercall.guest.v1.ExecEvent
+	(*ExecResult)(nil),                // 5: hypercall.guest.v1.ExecResult
+	(*ReadFileRequest)(nil),           // 6: hypercall.guest.v1.ReadFileRequest
+	(*ReadFileResponse)(nil),          // 7: hypercall.guest.v1.ReadFileResponse
+	(*WriteFileRequest)(nil),          // 8: hypercall.guest.v1.WriteFileRequest
+	(*WriteFileResponse)(nil),         // 9: hypercall.guest.v1.WriteFileResponse
+	(*StartControlledRequest)(nil),    // 10: hypercall.guest.v1.StartControlledRequest
+	(*InspectControlledRequest)(nil),  // 11: hypercall.guest.v1.InspectControlledRequest
+	(*ContinueControlledRequest)(nil), // 12: hypercall.guest.v1.ContinueControlledRequest
+	(*PrepareCaptureRequest)(nil),     // 13: hypercall.guest.v1.PrepareCaptureRequest
+	(*ReleaseCaptureRequest)(nil),     // 14: hypercall.guest.v1.ReleaseCaptureRequest
+	(*RebindCloneRequest)(nil),        // 15: hypercall.guest.v1.RebindCloneRequest
+	(*ControlledState)(nil),           // 16: hypercall.guest.v1.ControlledState
+	nil,                               // 17: hypercall.guest.v1.ExecRequest.EnvEntry
 }
 var file_hypercall_guest_v1_guest_proto_depIdxs = []int32{
 	0,  // 0: hypercall.guest.v1.GetInfoResponse.identity:type_name -> hypercall.guest.v1.AllocationIdentity
-	10, // 1: hypercall.guest.v1.ExecRequest.env:type_name -> hypercall.guest.v1.ExecRequest.EnvEntry
+	17, // 1: hypercall.guest.v1.ExecRequest.env:type_name -> hypercall.guest.v1.ExecRequest.EnvEntry
 	5,  // 2: hypercall.guest.v1.ExecEvent.result:type_name -> hypercall.guest.v1.ExecResult
-	1,  // 3: hypercall.guest.v1.Guest.GetInfo:input_type -> hypercall.guest.v1.GetInfoRequest
-	3,  // 4: hypercall.guest.v1.Guest.Exec:input_type -> hypercall.guest.v1.ExecRequest
-	6,  // 5: hypercall.guest.v1.Guest.ReadFile:input_type -> hypercall.guest.v1.ReadFileRequest
-	8,  // 6: hypercall.guest.v1.Guest.WriteFile:input_type -> hypercall.guest.v1.WriteFileRequest
-	2,  // 7: hypercall.guest.v1.Guest.GetInfo:output_type -> hypercall.guest.v1.GetInfoResponse
-	4,  // 8: hypercall.guest.v1.Guest.Exec:output_type -> hypercall.guest.v1.ExecEvent
-	7,  // 9: hypercall.guest.v1.Guest.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
-	9,  // 10: hypercall.guest.v1.Guest.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
-	7,  // [7:11] is the sub-list for method output_type
-	3,  // [3:7] is the sub-list for method input_type
-	3,  // [3:3] is the sub-list for extension type_name
-	3,  // [3:3] is the sub-list for extension extendee
-	0,  // [0:3] is the sub-list for field type_name
+	0,  // 3: hypercall.guest.v1.ControlledState.identity:type_name -> hypercall.guest.v1.AllocationIdentity
+	10, // 4: hypercall.guest.v1.Guest.StartControlled:input_type -> hypercall.guest.v1.StartControlledRequest
+	11, // 5: hypercall.guest.v1.Guest.InspectControlled:input_type -> hypercall.guest.v1.InspectControlledRequest
+	12, // 6: hypercall.guest.v1.Guest.ContinueControlled:input_type -> hypercall.guest.v1.ContinueControlledRequest
+	13, // 7: hypercall.guest.v1.Guest.PrepareCapture:input_type -> hypercall.guest.v1.PrepareCaptureRequest
+	14, // 8: hypercall.guest.v1.Guest.ReleaseCapture:input_type -> hypercall.guest.v1.ReleaseCaptureRequest
+	15, // 9: hypercall.guest.v1.Guest.RebindClone:input_type -> hypercall.guest.v1.RebindCloneRequest
+	1,  // 10: hypercall.guest.v1.Guest.GetInfo:input_type -> hypercall.guest.v1.GetInfoRequest
+	3,  // 11: hypercall.guest.v1.Guest.Exec:input_type -> hypercall.guest.v1.ExecRequest
+	6,  // 12: hypercall.guest.v1.Guest.ReadFile:input_type -> hypercall.guest.v1.ReadFileRequest
+	8,  // 13: hypercall.guest.v1.Guest.WriteFile:input_type -> hypercall.guest.v1.WriteFileRequest
+	16, // 14: hypercall.guest.v1.Guest.StartControlled:output_type -> hypercall.guest.v1.ControlledState
+	16, // 15: hypercall.guest.v1.Guest.InspectControlled:output_type -> hypercall.guest.v1.ControlledState
+	16, // 16: hypercall.guest.v1.Guest.ContinueControlled:output_type -> hypercall.guest.v1.ControlledState
+	16, // 17: hypercall.guest.v1.Guest.PrepareCapture:output_type -> hypercall.guest.v1.ControlledState
+	16, // 18: hypercall.guest.v1.Guest.ReleaseCapture:output_type -> hypercall.guest.v1.ControlledState
+	2,  // 19: hypercall.guest.v1.Guest.RebindClone:output_type -> hypercall.guest.v1.GetInfoResponse
+	2,  // 20: hypercall.guest.v1.Guest.GetInfo:output_type -> hypercall.guest.v1.GetInfoResponse
+	4,  // 21: hypercall.guest.v1.Guest.Exec:output_type -> hypercall.guest.v1.ExecEvent
+	7,  // 22: hypercall.guest.v1.Guest.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
+	9,  // 23: hypercall.guest.v1.Guest.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
+	14, // [14:24] is the sub-list for method output_type
+	4,  // [4:14] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_hypercall_guest_v1_guest_proto_init() }
@@ -736,7 +1122,7 @@ func file_hypercall_guest_v1_guest_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hypercall_guest_v1_guest_proto_rawDesc), len(file_hypercall_guest_v1_guest_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
