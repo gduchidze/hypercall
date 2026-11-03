@@ -1,0 +1,47 @@
+# Local development only. Review docs/development/host.md before starting.
+minimumLimaVersion: 2.2.1
+vmType: vz
+arch: aarch64
+nestedVirtualization: true
+cpus: 2
+memory: 4GiB
+disk: 20GiB
+images:
+  - location: https://cloud-images.ubuntu.com/releases/noble/release-20260926/ubuntu-24.04-server-cloudimg-arm64.img
+    arch: aarch64
+    digest: sha256:1d6bffe64b848468ac97f821d369a4846d983de1800ccf6b5ec8853e85cefc55
+mounts: []
+mountInotify: false
+propagateProxyEnv: false
+ssh:
+  loadDotSSHPubKeys: false
+  forwardAgent: false
+  forwardX11: false
+  overVsock: true
+containerd:
+  system: false
+  user: false
+hostResolver:
+  enabled: false
+portForwards:
+  - guestIP: 0.0.0.0
+    guestPortRange: [1, 65535]
+    proto: any
+    ignore: true
+provision:
+  - mode: system
+    script: |
+      #!/bin/sh
+      set -eu
+      # Lima's default user-mode network exposes the Mac loopback through this
+      # host endpoint. Block it and cloud metadata in the development Linux VM.
+      command -v iptables >/dev/null
+      iptables -N HYPERCALL_DEV 2>/dev/null || true
+      iptables -F HYPERCALL_DEV
+      iptables -A HYPERCALL_DEV -m conntrack --ctstate ESTABLISHED,RELATED -j RETURN
+      iptables -A HYPERCALL_DEV -d 192.168.5.2/32 -j REJECT
+      iptables -A HYPERCALL_DEV -d 169.254.169.254/32 -j REJECT
+      iptables -C OUTPUT -j HYPERCALL_DEV 2>/dev/null || iptables -I OUTPUT 1 -j HYPERCALL_DEV
+      # No guest workloads are admitted here. Probe KVM access separately with
+      # hypercall-host doctor; do not grant world-write permissions to /dev/kvm.
+      test -c /dev/kvm
