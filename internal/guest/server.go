@@ -15,6 +15,7 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 
@@ -53,6 +54,9 @@ type Config struct {
 }
 
 type Server struct {
+	opMu        sync.RWMutex
+	captureGate bool
+	controlled  *controlledProcess
 	guestv1.UnimplementedGuestServer
 	root           *os.Root
 	identity       *guestv1.AllocationIdentity
@@ -125,7 +129,14 @@ func New(cfg Config) (*Server, error) {
 }
 
 // Close is called after all RPCs are stopped.
-func (s *Server) Close() error { return s.root.Close() }
+func (s *Server) Close() error {
+	s.opMu.Lock()
+	defer s.opMu.Unlock()
+	if s.controlled != nil {
+		_ = s.controlled.cleanup()
+	}
+	return s.root.Close()
+}
 
 func (s *Server) authenticate(ctx context.Context) error {
 	values := metadata.ValueFromIncomingContext(ctx, "authorization")
@@ -142,8 +153,13 @@ func (s *Server) authenticate(ctx context.Context) error {
 }
 
 func (s *Server) GetInfo(ctx context.Context, _ *guestv1.GetInfoRequest) (*guestv1.GetInfoResponse, error) {
+	s.opMu.RLock()
+	defer s.opMu.RUnlock()
 	if err := s.authenticate(ctx); err != nil {
 		return nil, err
 	}
-	return &guestv1.GetInfoResponse{ProtocolVersion: "hypercall.guest.v1", Identity: proto.Clone(s.identity).(*guestv1.AllocationIdentity), MaxFileBytes: MaxFileBytes, MaxExecOutputBytes: MaxExecOutputBytes}, nil
+	if s.captureGate {
+		return nil, status.Error(codes.Unauthenticated, "session renewal required at capture gate")
+	}
+	return &guestv1.GetInfoResponse{ProtocolVersion: "hypercall.guest.v1", Identity: proto.Clone(s.identity).(*guestv1.AllocationIdentity), MaxFileBytes: MaxFileBytes, MaxExecOutputBytes: MaxExecOutputBytes, ServerTimeUnixNano: time.Now().UnixNano()}, nil
 }

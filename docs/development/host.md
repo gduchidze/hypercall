@@ -211,10 +211,24 @@ deliberately survive shutdown. Admission consumes an epoch even if boot fails;
 retries require a higher epoch. Each state directory admits at most 4096 distinct
 sandbox fence identities before operator maintenance is required.
 
-The opt-in Go KVM suite runs this driver. `scripts/qualify-phase1a.sh` documents
-its required environment variables; `make test-kvm` explicitly opts in. Without
-opt-in the KVM suite reports skips, which are not acceptance evidence. Missing
-configuration or any failed required gate fails an opted-in run.
+The opt-in Go KVM suite runs this driver through `make test-kvm`, with a
+nine-minute timeout. Run it as root on the isolated qualification host with the
+pinned Go and uv tools on PATH, and set these environment variables to absolute
+paths:
+
+| Variable | Value |
+| --- | --- |
+| `HYPERCALL_HOST_CONFIG` | Pinned template's `runtime.json` |
+| `HYPERCALL_CGROUP_DIR` | Dedicated delegated cgroup v2 parent |
+| `HYPERCALL_QUALIFICATION_STATE` | Private, fresh runtime state directory |
+| `HYPERCALL_PYTHON` | Python executable with the locked dependencies |
+| `HYPERCALL_PYTHON_PROBE` | Checkout's `scripts/qualify-python.py` |
+| `HYPERCALL_TESTDRIVER` | Built `bin/hypercall-testdriver` |
+
+Optionally set `HYPERCALL_QUALIFICATION_REPORT` to save the JSON report. The Make
+target sets `HYPERCALL_KVM_TEST=1`; without that opt-in, direct Go test runs skip
+the suite. Skips are not acceptance evidence. Missing configuration or any
+failed required gate fails an opted-in run.
 CLI fixtures test real subprocess exits/JSON, hash rejection before execution,
 version pinning, changed disk detection, prompt FIFO rejection, and pathname
 replacement during executable interpretation. Native Mac tests exercise the

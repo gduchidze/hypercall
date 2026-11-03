@@ -18,6 +18,11 @@ import (
 )
 
 func (s *Server) ReadFile(ctx context.Context, req *guestv1.ReadFileRequest) (*guestv1.ReadFileResponse, error) {
+	s.opMu.RLock()
+	defer s.opMu.RUnlock()
+	if err := s.ordinary(); err != nil {
+		return nil, err
+	}
 	if err := s.authenticate(ctx); err != nil {
 		return nil, err
 	}
@@ -57,6 +62,11 @@ func (s *Server) ReadFile(ctx context.Context, req *guestv1.ReadFileRequest) (*g
 // renames within an opened parent directory. Failed staging never truncates an
 // existing destination. Parent directories must already exist.
 func (s *Server) WriteFile(ctx context.Context, req *guestv1.WriteFileRequest) (*guestv1.WriteFileResponse, error) {
+	s.opMu.RLock()
+	defer s.opMu.RUnlock()
+	if err := s.ordinary(); err != nil {
+		return nil, err
+	}
 	if err := s.authenticate(ctx); err != nil {
 		return nil, err
 	}

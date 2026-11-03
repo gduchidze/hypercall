@@ -52,11 +52,8 @@ func (s *suite) session(a sandbox.Observation) (session, error) {
 	}
 	return session{}, errors.New("trusted operator could not locate private bootstrap session")
 }
-func dialVSock(ctx context.Context, path string) (net.Conn, error) {
-	return sandbox.DialVSock(ctx, path)
-}
 func rawClient(path string) (*grpc.ClientConn, error) {
-	return grpc.NewClient("passthrough:///guest", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return dialVSock(ctx, path) }))
+	return grpc.NewClient("passthrough:///guest", grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) { return sandbox.DialVSock(ctx, path) }))
 }
 func info(ctx context.Context, path, credential string) (*guestv1.GetInfoResponse, error) {
 	c, err := rawClient(path)
@@ -180,7 +177,7 @@ func (s *suite) python(a sandbox.Observation) (map[string]any, error) {
 			}
 			go func() {
 				defer local.Close()
-				remote, e := dialVSock(ctx, a.VSockPath)
+				remote, e := sandbox.DialVSock(ctx, a.VSockPath)
 				if e != nil {
 					return
 				}
