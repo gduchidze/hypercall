@@ -1,4 +1,4 @@
-// Package sandbox owns the host-local cold-boot lifecycle. It is an adapter for
+// Package sandbox owns the host-local sandbox lifecycle. It is an adapter for
 // the controller, not a scheduler or a public control plane. Scope is supplied
 // by a trusted, authenticated host caller; request identity is not authentication.
 package sandbox
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	"github.com/gduchidze/hypercall/internal/snapshot"
 )
 
 var (
@@ -60,6 +61,9 @@ type Limits struct {
 type CreateRequest struct {
 	Allocation Allocation `json:"allocation"`
 	Limits     Limits     `json:"limits"`
+	// AbsoluteExpiresAt caps the runtime lifetime across retries. Persist this
+	// unchanged in snapshot operation journals; zero preserves standalone TTL.
+	AbsoluteExpiresAt time.Time `json:"absolute_expires_at,omitempty"`
 }
 
 func (r CreateRequest) Validate() error {
@@ -71,6 +75,23 @@ func (r CreateRequest) Validate() error {
 		return fmt.Errorf("%w: limits outside supported envelope (1..8 CPUs, 128..8192 MiB, 1 MiB..1 GiB workspace within guest memory, 8..512 PIDs, 1s..1h TTL)", ErrInvalid)
 	}
 	return nil
+}
+
+// Deadline resolves the admitted relative limit without extending an absolute
+// controller lease. Validate remains time-independent so expired durable
+// journals can still be decoded and reconciled after a host restart.
+func (r CreateRequest) Deadline(now time.Time) (time.Time, error) {
+	if e := r.Validate(); e != nil {
+		return time.Time{}, e
+	}
+	until := now.Add(r.Limits.TTL)
+	if !r.AbsoluteExpiresAt.IsZero() && r.AbsoluteExpiresAt.Before(until) {
+		until = r.AbsoluteExpiresAt
+	}
+	if !until.After(now) {
+		return time.Time{}, fmt.Errorf("%w: absolute allocation lease expired", ErrInvalid)
+	}
+	return until, nil
 }
 
 type State string
@@ -96,13 +117,14 @@ type Observation struct {
 // Config is copied by New. ArtifactConfigPath uses the hostdoctor schema and
 // pinned official Firecracker/jailer 1.14.0. StateDir must be private and durable
 // across host-process restarts; CgroupDir is a delegated cgroups-v2 parent.
-// mkfs.ext4 is required for a bounded, read-only per-allocation bootstrap disk.
+// mkfs.ext4 is required for bounded per-allocation bootstrap and workspace disks.
 type Scope struct {
 	TenantID  string
 	ProjectID string
 }
 
 type Config struct {
+	SnapshotStore      *snapshot.Store
 	Scope              Scope
 	ArtifactConfigPath string
 	StateDir           string

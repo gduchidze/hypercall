@@ -1,0 +1,45 @@
+apiVersion: hypercall.io/v1
+kind: Workspace
+metadata:
+  name: workspace
+spec:
+  private_writes: true
+---
+apiVersion: hypercall.io/v1
+kind: ModelConfig
+metadata:
+  name: fixture-model
+spec:
+  provider: fixture
+  model: deterministic
+  revision: fixture-v1
+  artifact_digest: sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+---
+apiVersion: hypercall.io/v1
+kind: Gateway
+metadata:
+  name: fixture-gateway
+spec:
+  routes:
+    fixture: https://fixture.invalid/v1
+---
+apiVersion: hypercall.io/v1
+kind: Task
+metadata:
+  name: fixture-task
+spec:
+  workspace:
+    id: workspace
+  models:
+    - id: fixture-model
+  gateway:
+    id: fixture-gateway
+  template_digest: sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  agent_digest: sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc
+  dataset_digest: sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
+  command: [python, agent.py]
+  limits:
+    cpu: 1
+    memory_mb: 128
+    disk_mb: 64
+    timeout_seconds: 30

@@ -1,0 +1,30 @@
+type: google.api.Service
+config_version: 3
+http:
+  rules:
+    - selector: hypercall.v1.ControlPlane.PutResource
+      post: /v1/projects/{project_id}/resources
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.GetResource
+      get: /v1/projects/{project_id}/resources/{kind}/{id}
+    - selector: hypercall.v1.ControlPlane.ListResources
+      get: /v1/projects/{project_id}/resources/{kind}
+    - selector: hypercall.v1.ControlPlane.Submit
+      post: /v1/projects/{project_id}/runs:submit
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.SubmitManifest
+      post: /v1/projects/{project_id}/runs:submitManifest
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.Action
+      post: /v1/projects/{project_id}/branches/{branch_id}:action
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.Events
+      get: /v1/projects/{project_id}/branches/{branch_id}/events
+    - selector: hypercall.v1.ControlPlane.Exec
+      post: /v1/projects/{project_id}/branches/{branch_id}/commands
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.ReadFile
+      get: /v1/projects/{project_id}/branches/{branch_id}/files/{path=**}
+    - selector: hypercall.v1.ControlPlane.WriteFile
+      post: /v1/projects/{project_id}/branches/{branch_id}/files/{path=**}
+      body: '*'
