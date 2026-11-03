@@ -28,7 +28,7 @@ test-artifacts: toolchains
 
 # Explicit opt-in: missing artifacts or host requirements fail this target.
 test-kvm: toolchains
-	HYPERCALL_KVM_TEST=1 $(GO) test -count=1 -tags=kvm -v ./test/integration/kvm
+	HYPERCALL_KVM_TEST=1 $(GO) test -count=1 -tags=kvm -v -timeout=9m ./test/integration/kvm
 
 build: toolchains
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 $(GO) build ./...
