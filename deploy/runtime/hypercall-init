@@ -1,0 +1,108 @@
+#!/usr/bin/python3 -I
+"""Trusted PID 1 for the immutable Hypercall Phase 1A guest template."""
+import ctypes
+import json
+import os
+from pathlib import Path
+import signal
+import subprocess
+import sys
+
+
+def command(*args):
+    subprocess.run(args, check=True, env={'PATH': '/usr/sbin:/usr/bin:/sbin:/bin', 'LANG': 'C'})
+
+
+def mount(source, target, kind, options):
+    Path(target).mkdir(parents=True, exist_ok=True)
+    command('/usr/bin/mount', '-t', kind, '-o', options, source, target)
+
+
+def write(path, value):
+    Path(path).write_text(str(value))
+
+
+def boot():
+    os.umask(0o077)
+    mount('proc', '/proc', 'proc', 'nosuid,nodev,noexec')
+    mount('sysfs', '/sys', 'sysfs', 'nosuid,nodev,noexec')
+    # CONFIG_DEVTMPFS_MOUNT kernels populate /dev before executing PID1.
+    # util-linux rejects mounting that same filesystem twice; retain it securely.
+    if any(line.split()[1:3] == ['/dev', 'devtmpfs']
+           for line in Path('/proc/mounts').read_text().splitlines()):
+        command('/usr/bin/mount', '-t', 'devtmpfs', '-o', 'remount,nosuid', 'devtmpfs', '/dev')
+    else:
+        mount('devtmpfs', '/dev', 'devtmpfs', 'nosuid')
+    mount('tmpfs', '/run', 'tmpfs', 'nosuid,nodev,noexec,mode=0755,size=8m')
+    mount('tmpfs', '/tmp', 'tmpfs', 'nosuid,nodev,mode=1777,size=16m')
+    Path('/run/hypercall').mkdir(mode=0o700)
+    Path('/run/hypercall/session').mkdir(mode=0o700)
+    command('/usr/bin/mount', '-t', 'ext4', '-o', 'ro,noload,nosuid,nodev,noexec',
+            '/dev/vdb', '/run/hypercall/session')
+    source = Path('/run/hypercall/session/session.json')
+    info = source.stat()
+    if info.st_size > 16384 or info.st_mode & 0o777 != 0o600 or info.st_uid != 0 or not source.is_file():
+        raise ValueError('session must be a root-owned regular0600 file <=16KiB')
+    session = source.read_bytes()
+    limits_path = Path('/run/hypercall/session/limits.json')
+    if limits_path.stat().st_size > 4096:
+        raise ValueError('limits exceeds4KiB')
+    limits = json.loads(limits_path.read_bytes())
+    bounds = {'memory_bytes': (16 << 20, 1 << 40), 'pids_max': (1, 65536),
+              'workspace_bytes': (1 << 20, 1 << 40), 'cpu_quota_us': (1000, 6400000),
+              'cpu_period_us': (1000, 1000000)}
+    if set(limits) != set(bounds):
+        raise ValueError('limits fields do not match bootstrap contract')
+    for key, (low, high) in bounds.items():
+        if type(limits[key]) is not int or not low <= limits[key] <= high:
+            raise ValueError('invalid limit: ' + key)
+    target = Path('/run/hypercall/session.json')
+    target.write_bytes(session)
+    target.chmod(0o600)
+    command('/usr/bin/umount', '/run/hypercall/session')
+    mount('tmpfs', '/workspace', 'tmpfs',
+          'nosuid,nodev,mode=0700,uid=1000,gid=1000,size=' + str(limits['workspace_bytes']))
+    mount('cgroup2', '/sys/fs/cgroup', 'cgroup2', 'nosuid,nodev,noexec')
+    root = Path('/sys/fs/cgroup')
+    (root / 'agent').mkdir()
+    write(root / 'agent/cgroup.procs', os.getpid())
+    write(root / 'cgroup.subtree_control', '+memory +pids +cpu')
+    workload = root / 'workload'
+    workload.mkdir()
+    # Workloads may inspect their own limits, while controller writes stay root-only.
+    workload.chmod(0o755)
+    write(workload / 'memory.max', limits['memory_bytes'])
+    write(workload / 'memory.swap.max', 0)
+    write(workload / 'memory.oom.group', 1)
+    write(workload / 'pids.max', limits['pids_max'])
+    write(workload / 'cpu.max', f"{limits['cpu_quota_us']} {limits['cpu_period_us']}")
+    write(workload / 'cgroup.subtree_control', '+memory +pids +cpu')
+    agent = subprocess.Popen(['/usr/local/bin/hypercall-guest', '--workspace', '/workspace',
+                              '--session-config', str(target), '--uid', '1000', '--gid', '1000',
+                              '--vsock-port', '1024', '--workload-cgroup', str(workload)],
+                             env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'})
+    def stop(_signum, _frame):
+        agent.terminate()
+    signal.signal(signal.SIGTERM, stop)
+    signal.signal(signal.SIGINT, stop)
+    # PID 1 reaps all adopted workload descendants; guest failure stops the VM.
+    while True:
+        pid, status = os.waitpid(-1, 0)
+        if pid == agent.pid:
+            print('hypercall-init: guest agent exited status=' + str(status), flush=True)
+            return
+
+
+if __name__ == '__main__':
+    try:
+        if os.getpid() != 1 or os.getuid() != 0:
+            raise ValueError('bootstrap requires root PID1')
+        boot()
+    except BaseException as error:
+        print('hypercall-init: fatal: ' + str(error), file=sys.stderr, flush=True)
+    finally:
+        os.sync()
+        # Fail closed even if boot/cgroup configuration failed. Never start a shell.
+        ctypes.CDLL(None).reboot(0x4321FEDC)
+        while True:
+            signal.pause()

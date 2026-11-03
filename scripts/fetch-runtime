@@ -1,0 +1,80 @@
+#!/usr/bin/env python3
+"""Fetch only locked trusted runtime inputs; never execute downloaded content."""
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import sys
+import tempfile
+import urllib.request
+
+DEFAULT_LOCK = Path(__file__).resolve().parents[1] / 'deploy/runtime/artifacts.lock.json'
+
+
+def digest(path):
+    h = hashlib.sha256()
+    with open(path, 'rb') as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+            h.update(chunk)
+    return h.hexdigest()
+
+
+def verify(path, expected):
+    if path.is_symlink() or not path.is_file() or path.stat().st_size == 0:
+        raise ValueError(f'{path}: require nonempty regular file without symlink')
+    if digest(path) != expected:
+        raise ValueError(f'{path}: SHA-256 mismatch; rejected before use')
+
+
+def fetch(lock, arch, cache, offline=False):
+    if lock['schema_version'] != 1:
+        raise ValueError('unsupported artifact lock schema')
+    selected = lock['architectures'][arch]
+    destination = cache / arch
+    destination.mkdir(parents=True, exist_ok=True, mode=0o700)
+    for name, spec in selected.items():
+        if name not in ('kernel', 'kernel.config', 'firecracker.tgz', 'rootfs.tar.xz',
+                        'kernel.COPYING', 'kernel.GPL-2.0', 'kernel.Linux-syscall-note', 'kernel-build-recipe.sh'):
+            continue
+        path = destination / name
+        if path.exists() or path.is_symlink():
+            verify(path, spec['sha256'])
+            continue
+        if offline:
+            raise ValueError(f'{path}: locked input absent in offline mode')
+        if not spec['url'].startswith('https://'):
+            raise ValueError('locked downloads must use HTTPS')
+        descriptor, temporary = tempfile.mkstemp(prefix='.download-', dir=destination)
+        try:
+            with os.fdopen(descriptor, 'wb') as stream, urllib.request.urlopen(spec['url'], timeout=60) as response:
+                if not response.url.startswith('https://'):
+                    raise ValueError('download redirected away from HTTPS')
+                for chunk in iter(lambda: response.read(1024 * 1024), b''):
+                    stream.write(chunk)
+            verify(Path(temporary), spec['sha256'])
+            os.chmod(temporary, 0o444)
+            os.replace(temporary, path)
+        finally:
+            if os.path.exists(temporary):
+                os.unlink(temporary)
+    return destination
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--lock', type=Path, default=DEFAULT_LOCK)
+    parser.add_argument('--arch', choices=['arm64', 'amd64'], required=True)
+    parser.add_argument('--cache', type=Path, required=True)
+    parser.add_argument('--offline', action='store_true')
+    args = parser.parse_args()
+    lock = json.loads(args.lock.read_text())
+    print(fetch(lock, args.arch, args.cache.resolve(), args.offline))
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, KeyError) as error:
+        print(f'fetch-runtime: {error}', file=sys.stderr)
+        sys.exit(1)

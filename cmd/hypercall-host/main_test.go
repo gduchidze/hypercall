@@ -165,6 +165,30 @@ func TestDoctorVerifiesConfiguredArtifactsWithoutClaimingBoot(t *testing.T) {
 	}
 }
 
+func TestDoctorVersionIgnoresSeparateDiagnosticStderr(t *testing.T) {
+	dir, config := artifactFixture(t)
+	contents := []byte("#!/bin/sh\nprintf 'Firecracker vfixture\\n\\n'\nprintf 'timestamp: Firecracker exiting successfully\\n' >&2\n")
+	artifact := config["firecracker"].(map[string]any)
+	if err := os.WriteFile(artifact["path"].(string), contents, 0700); err != nil {
+		t.Fatal(err)
+	}
+	artifact["sha256"] = fmt.Sprintf("%x", sha256.Sum256(contents))
+	r := runDoctor(t, "--config", writeConfig(t, dir, config))
+	requireCheck(t, r, "runtime.firecracker.version", "passed")
+}
+
+func TestDoctorAcceptsPinnedVersionBannerBeforeFirecrackerExitLog(t *testing.T) {
+	dir, config := artifactFixture(t)
+	contents := []byte("#!/bin/sh\nprintf 'Firecracker vfixture\\n\\n2026-11-03T00:00:00 [anonymous-instance:main] Firecracker exiting successfully. exit_code=0\\n'\n")
+	artifact := config["firecracker"].(map[string]any)
+	if err := os.WriteFile(artifact["path"].(string), contents, 0700); err != nil {
+		t.Fatal(err)
+	}
+	artifact["sha256"] = fmt.Sprintf("%x", sha256.Sum256(contents))
+	r := runDoctor(t, "--config", writeConfig(t, dir, config))
+	requireCheck(t, r, "runtime.firecracker.version", "passed")
+}
+
 func TestDoctorDetectsChangedTemplateDisk(t *testing.T) {
 	dir, config := artifactFixture(t)
 	if err := os.WriteFile(filepath.Join(dir, "rootfs"), []byte("tampered disk"), 0600); err != nil {
