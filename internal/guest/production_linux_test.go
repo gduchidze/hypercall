@@ -4,11 +4,13 @@ package guest_test
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
 	"github.com/gduchidze/hypercall/internal/guest"
@@ -16,6 +18,43 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
+
+func TestCancellationStopsDescendantsThatCreateNewSessions(t *testing.T) {
+	if os.Geteuid() != 0 {
+		t.Skip("requires Linux root and cgroup v2 delegation")
+	}
+	client, _ := startGuest(t, func(cfg *guest.Config) {
+		cfg.TrustedLocal = false
+		cfg.UID, cfg.GID = 65534, 65534
+		cfg.ExecHelper = workloadExecutable(t)
+		cfg.WorkloadCgroup = workloadCgroup(t)
+		if err := os.Chown(cfg.Workspace, cfg.UID, cfg.GID); err != nil {
+			t.Fatal(err)
+		}
+	})
+	ctx, cancel := context.WithCancel(authorized(t))
+	defer cancel()
+	stream, err := client.Exec(ctx, &guestv1.ExecRequest{Argv: []string{"/bin/sh", "-c", `setsid /bin/sh -c 'echo ready; sleep 0.5; echo escaped > escaped' & wait`}, TimeoutMs: 3000})
+	if err != nil {
+		t.Fatal(err)
+	}
+	first, err := stream.Recv()
+	if err != nil || !strings.Contains(string(first.GetStdout()), "ready") {
+		t.Fatalf("descendant not ready: %v %v", first, err)
+	}
+	cancel()
+	for err == nil {
+		_, err = stream.Recv()
+	}
+	if status.Code(err) != codes.Canceled {
+		t.Fatalf("cancellation: %v", err)
+	}
+	time.Sleep(700 * time.Millisecond)
+	_, _, result, err := collect(t, client, authorized(t), &guestv1.ExecRequest{Argv: []string{"/bin/sh", "-c", "test ! -e escaped"}, TimeoutMs: 1000})
+	if err != nil || result == nil || result.ExitCode != 0 {
+		t.Fatalf("detached descendant survived cancellation: %v %v", result, err)
+	}
+}
 
 // This exercises real Linux uid/gid dropping and transfer ownership, separately
 // from trusted local RPC tests. It does not qualify VM/cgroup isolation.
@@ -29,6 +68,7 @@ func TestProductionWorkloadCanReadTransfersAndWriteOutputAsNonRoot(t *testing.T)
 		// Go's root-owned build directory can be 0700. Place this test helper
 		// in a dedicated searchable directory, like the installed guest binary.
 		cfg.ExecHelper = workloadExecutable(t)
+		cfg.WorkloadCgroup = workloadCgroup(t)
 		if err := os.Chown(cfg.Workspace, cfg.UID, cfg.GID); err != nil {
 			t.Fatal(err)
 		}
@@ -44,6 +84,37 @@ func TestProductionWorkloadCanReadTransfersAndWriteOutputAsNonRoot(t *testing.T)
 	if err != nil || string(read.GetData()) != "guest" {
 		t.Fatalf("workload output: %v %v", read, err)
 	}
+	_, _, result, err = collect(t, client, authorized(t), &guestv1.ExecRequest{Argv: []string{"/bin/sh", "-c", `group=/sys/fs/cgroup$(cut -d: -f3 /proc/self/cgroup); cat "$group/cgroup.procs" && test ! -w "$group/pids.max" && grep -q '^NoNewPrivs:[[:space:]]*1$' /proc/self/status`}, TimeoutMs: 1000})
+	if err != nil || result == nil || result.ExitCode != 0 {
+		t.Fatalf("workload cannot inspect its containment without modifying it: %v %v", result, err)
+	}
+}
+
+func workloadCgroup(t *testing.T) string {
+	t.Helper()
+	parent := os.Getenv("HYPERCALL_GUEST_TEST_CGROUP")
+	if parent == "" {
+		parent = "/sys/fs/cgroup"
+	}
+	path, err := os.MkdirTemp(parent, "hypercall-guest-test-")
+	if err != nil {
+		t.Fatalf("create delegated workload cgroup: %v", err)
+	}
+	if err := os.Chmod(path, 0755); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() {
+		_ = os.WriteFile(filepath.Join(path, "cgroup.kill"), []byte("1"), 0)
+		if err := os.Remove(path); err != nil {
+			t.Errorf("workload cgroup cleanup: %v", err)
+		}
+	})
+	for name, value := range map[string]string{"memory.max": "268435456", "pids.max": "64", "cpu.max": "100000 100000", "cgroup.subtree_control": "+cpu +memory +pids"} {
+		if err := os.WriteFile(filepath.Join(path, name), []byte(value), 0); err != nil {
+			t.Fatal(err)
+		}
+	}
+	return path
 }
 
 func workloadExecutable(t *testing.T) string {

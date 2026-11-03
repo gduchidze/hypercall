@@ -18,7 +18,7 @@ server-configured; a fresh allocation/epoch must receive a fresh credential.
 Credential expiry terminates an admitted command. No credential is logged.
 
 ```sh
-hypercall-guest --workspace /workspace --session-config /run/hypercall/session.json --uid 1000 --gid 1000
+hypercall-guest --workspace /workspace --session-config /run/hypercall/session.json --uid 1000 --gid 1000 --workload-cgroup /sys/fs/cgroup/workload
 ```
 
 `--test-unix-socket PATH` explicitly enables **trusted local tests only**, using
@@ -26,6 +26,11 @@ same-user commands with no VM isolation. It refuses an existing socket path.
 Unix mode never starts by default. TCP is not supported. Commands use a child
 helper with `fchdir` on the inherited, confined directory descriptor, after any
 UID/GID drop and before replacing the helper with the requested executable.
+Linux helpers set `no_new_privs`. Production requires a root-owned cgroup v2
+subtree with finite CPU, memory and PID limits and those controllers delegated.
+Each command enters its own child cgroup atomically before executing. Cancellation,
+timeout and foreground completion kill all members, including `setsid` descendants.
+The workload UID must have no write access to the cgroup hierarchy.
 
 Commands use explicit argv, workspace-relative cwd, a required positive timeout
 up to ten minutes, and no inherited environment. PATH is fixed to
@@ -33,10 +38,14 @@ up to ten minutes, and no inherited environment. PATH is fixed to
 must appear in `--allow-env` (default `LANG,LC_ALL,TZ,PYTHONUNBUFFERED`); the map,
 names, values and total request bytes are bounded. At most 16 commands run at
 once. Output is raw bytes, split into stdout/stderr events, with a shared 1 MiB
-budget. Exceeding the budget kills the group and marks the terminal result.
+budget. Exceeding the budget kills the command descendants and marks the terminal result.
 Nonzero exits and command timeouts are terminal results; malformed requests and
 RPC cancellation are gRPC errors. A successful stream has exactly one terminal
 result, following all output. A receiver stalled for one second is rejected.
+With the pinned Go/Python gRPC versions, a client deadline can surface as
+`DEADLINE_EXCEEDED` or as `CANCELLED` with HTTP/2 reset code 8 when the server's
+deadline timer wins. Both abort the RPC and its command; command-level timeouts
+remain explicit terminal results.
 
 Read/write transfers are unary binary bodies limited to 1 MiB. Paths must be
 relative, without `..`; `os.Root` confines resolution even across symlink races.
@@ -50,10 +59,9 @@ Structured logs contain authentication rejection, operation byte counts and
 command duration/result, without command arguments, file paths or output.
 
 The RPC tests run real processes over gRPC bufconn. Linux root tests additionally
-exercise workload UID/GID and transfer ownership; a tmpfs-capability test checks
-ENOSPC atomicity. These do not qualify KVM boot, vsock connectivity, VM security,
-cgroups, guest crash recovery or hostile descendants. Process-group kill cannot
-contain a descendant that escapes its group. Workload cgroups and whole-VM stop
-must own that recovery. `os.Root` does not prohibit bind mounts, hard links or
+exercise workload UID/GID, transfer ownership and cgroup cancellation of detached
+descendants; a tmpfs-capability test checks ENOSPC atomicity. These do not qualify
+KVM boot, vsock connectivity or guest crash recovery. Whole-VM stop owns recovery
+after guest daemon failure. `os.Root` does not prohibit bind mounts, hard links or
 special filesystem mounts; the template must provide a private workspace and
 deny workload mount privileges. Qualification belongs to the Linux VM suite.

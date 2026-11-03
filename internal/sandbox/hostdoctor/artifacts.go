@@ -184,8 +184,8 @@ func (r contextReader) Read(p []byte) (int, error) {
 }
 
 func checkVersion(ctx context.Context, id string, artifact Artifact, file *os.File) Check {
-	if artifact.Version == "" || strings.TrimSpace(artifact.Version) != artifact.Version {
-		return blocked(id, "configure exact nonempty --version output, without leading or trailing whitespace")
+	if artifact.Version == "" || strings.TrimSpace(artifact.Version) != artifact.Version || strings.ContainsAny(artifact.Version, "\r\n") {
+		return blocked(id, "configure exact nonempty --version banner on one line, without leading or trailing whitespace")
 	}
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
@@ -197,9 +197,11 @@ func checkVersion(ctx context.Context, id string, artifact Artifact, file *os.Fi
 	cmd.ExtraFiles = extra
 	cmd.Env = []string{"PATH=/usr/bin:/bin", "LANG=C", "LC_ALL=C"}
 	cmd.WaitDelay = 500 * time.Millisecond
-	var output limitedOutput
+	var output, diagnostics limitedOutput
 	cmd.Stdout = &output
-	cmd.Stderr = &output
+	// Bound both streams independently. The pinned Firecracker release emits
+	// its version banner followed by a timestamped successful-exit log on stdout.
+	cmd.Stderr = &diagnostics
 	runErr := cmd.Run()
 	if err := cleanup(); err != nil {
 		return blocked(id, "clean up private executable: "+err.Error())
@@ -207,7 +209,7 @@ func checkVersion(ctx context.Context, id string, artifact Artifact, file *os.Fi
 	if err := runErr; err != nil {
 		return blocked(id, "configured artifact --version failed: "+err.Error())
 	}
-	actual := strings.TrimSpace(string(output.data))
+	actual := strings.SplitN(strings.TrimSpace(string(output.data)), "\n", 2)[0]
 	check := passed(id, "configured artifact --version matches exact pinned output")
 	if actual != artifact.Version {
 		check = blocked(id, "configured artifact --version does not match pinned output")
