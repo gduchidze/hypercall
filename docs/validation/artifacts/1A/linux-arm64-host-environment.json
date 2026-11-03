@@ -1,0 +1,49 @@
+{
+  "captured_at_utc": "2026-11-03T14:52:26.955122+00:00",
+  "qualification_scope": "Local development host prerequisites only; runtime artifacts absent; no boot/isolation/Phase1A or production qualification",
+  "command": [
+    "/opt/homebrew/bin/limactl",
+    "shell",
+    "hypercall-dev",
+    "--",
+    "sudo",
+    "/tmp/hypercall-host-qualified",
+    "doctor",
+    "--json"
+  ],
+  "exit_code": 1,
+  "stderr": "",
+  "source_revision": "uncommitted working tree; no commit created",
+  "source_sha256": {
+    "cmd/hypercall-host/main.go": "98eb97982c246924a5c9f927329f4177f2b03d21a0ca0434f852ad225cc6a6b1",
+    "cmd/hypercall-host/main_test.go": "24b190c23bc9054d6b94396a920bc5cf71201610584ae9ec2d746d1c2da7d5f5",
+    "internal/sandbox/hostdoctor/artifacts.go": "066422128268c5aea9031868c1ecabb31c259bd3f687131e76379eb4fd63eab6",
+    "internal/sandbox/hostdoctor/doctor.go": "9e21d9b2e0e11f4f0d2f865a9e6474cdc01d01a5130b27411ae52a2618c77513",
+    "internal/sandbox/hostdoctor/open_other.go": "d1abbdc3ce90e28dd54bd99d08d30a9eb6cb4eb60f5a0e7f092e306017d5fa4d",
+    "internal/sandbox/hostdoctor/open_unix.go": "5fc199505e24cf461535677e60c3e27c607f610ac53c3958a10ad4e0992015fd",
+    "internal/sandbox/hostdoctor/platform_linux.go": "8b4ec2a88f8ee3a03510cf5c53c1c191b8f703c60c72baa818c56d610024c1ba",
+    "internal/sandbox/hostdoctor/platform_other.go": "2c0f47031b328d34e2c7a404863b5525fb58991c649771da1d02b528792bf6bb"
+  },
+  "executable_sha256": "ac24bf1f96a7a8067304f4269581afb83b806de2b49276b8a513310f347edc9f",
+  "guest_executable_sha256": "ac24bf1f96a7a8067304f4269581afb83b806de2b49276b8a513310f347edc9f",
+  "build_command": "GOOS=linux GOARCH=arm64 go build -trimpath -buildvcs=false -o /tmp/hypercall-host-linux-arm64 ./cmd/hypercall-host",
+  "go_version": "go version go1.27.3 darwin/arm64",
+  "lima_version": "limactl version 2.2.1",
+  "macos_version": "27.0.1",
+  "mac_hardware": "Mac17,2",
+  "mac_cpu": "Apple M5",
+  "linux_uname": "Linux lima-hypercall-dev 6.8.0-142-generic #142-Ubuntu SMP PREEMPT_DYNAMIC Wed Sep  2 14:30:29 UTC 2026 aarch64 aarch64 aarch64 GNU/Linux",
+  "vm": {
+    "name": "hypercall-dev",
+    "architecture": "aarch64",
+    "vm_type": "vz",
+    "nested_virtualization": true,
+    "cpus": 2,
+    "memory": "4GiB",
+    "disk": "20GiB",
+    "image_url": "https://cloud-images.ubuntu.com/releases/noble/release-20260926/ubuntu-24.04-server-cloudimg-arm64.img",
+    "image_sha256": "1d6bffe64b848468ac97f821d369a4846d983de1800ccf6b5ec8853e85cefc55",
+    "template": "deploy/dev/lima-arm64.yaml",
+    "template_sha256": "fb27e02e94cc61f52ea011050f0f969a3ef26670a5dc48a0cdc8018e61618aee"
+  }
+}

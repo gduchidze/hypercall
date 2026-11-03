@@ -1,0 +1,69 @@
+syntax = "proto3";
+
+package hypercall.guest.v1;
+
+option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1;guestv1";
+
+// Guest is the private host-to-guest interface. Production uses vsock. Every RPC
+// requires exactly one `authorization: Bearer <session credential>` metadata
+// value. The credential is provisioned out of band and binds the allocation;
+// request fields never establish authority. Credentials must change on a fork.
+service Guest {
+  rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
+  rpc Exec(ExecRequest) returns (stream ExecEvent);
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
+  rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+}
+
+message AllocationIdentity {
+  string tenant_id = 1;
+  string project_id = 2;
+  string sandbox_id = 3;
+  string execution_id = 4;
+  uint64 epoch = 5;
+}
+
+message GetInfoRequest {}
+message GetInfoResponse {
+  // Current protocol is "hypercall.guest.v1".
+  string protocol_version = 1;
+  AllocationIdentity identity = 2;
+  uint32 max_file_bytes = 3;
+  uint32 max_exec_output_bytes = 4;
+}
+
+message ExecRequest {
+  // Explicit argv; no implicit shell. Detached processes and PTYs are excluded.
+  repeated string argv = 1;
+  // Relative to the configured workspace; empty means ".". No path escape.
+  string cwd = 2;
+  // Bounded overrides of the guest's minimal environment; never inherit host env.
+  map<string, string> env = 3;
+  // Required positive timeout, subject to a server maximum. RPC deadlines and
+  // disconnection also cancel the foreground process group.
+  uint32 timeout_ms = 4;
+}
+message ExecEvent {
+  // Ordered output followed by exactly one result on a successful RPC. A gRPC
+  // error (including cancellation) terminates the stream without a result.
+  oneof event {
+    bytes stdout = 1;
+    bytes stderr = 2;
+    ExecResult result = 3;
+  }
+}
+message ExecResult {
+  int32 exit_code = 1;
+  bool timed_out = 2;
+  bool output_truncated = 3;
+}
+
+// Unary transfers are deliberately bounded to 1 MiB for phase 1A. Paths are
+// relative to the workspace; absolute paths, traversal and symlink escape fail.
+message ReadFileRequest { string path = 1; }
+message ReadFileResponse { bytes data = 1; }
+message WriteFileRequest {
+  string path = 1;
+  bytes data = 2;
+}
+message WriteFileResponse { uint64 bytes_written = 1; }

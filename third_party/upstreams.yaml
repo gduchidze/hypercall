@@ -1,0 +1,114 @@
+# Original Hypercall implementation; no upstream implementation/fixture imports.
+# License/NOTICE copies below are provenance material, not source adaptation.
+version: 1
+recorded_on: 2026-11-03
+upstreams:
+  - repository: https://github.com/google/ax
+    commit: 1dd2e923a351ccb369266f8145c8b218cce96c76
+    use: reference_only
+    source_paths: [DESIGN.md, docs/manifests.md, internal/server, internal/controller, runner]
+    destination_paths: []
+    copied_or_translated_code: false
+    license_sources: [LICENSE]
+    preserved_notices: [third_party/licenses/ax-Apache-2.0.txt]
+    changes: None; control-plane integration deferred to Phase 2A.
+    verification: Architecture source audit only; upstream tests not run.
+
+  - repository: https://github.com/e2b-dev/runtime
+    requested_repository: https://github.com/e2b-dev/infra
+    commit: 0446bafb471fe3a12ec961e35f58df36e9bfbbb9
+    use: behavioral_reference
+    source_paths:
+      - docs/ARCHITECTURE.md
+      - packages/envd/go.mod
+      - packages/shared/go.mod
+      - packages/envd/spec/process/process.proto
+      - packages/envd/spec/filesystem/filesystem.proto
+      - packages/envd/internal/services/process/start.go
+      - packages/envd/internal/services/process/signal.go
+      - packages/envd/internal/services/process/start_test.go
+      - packages/envd/internal/services/process/handler/handler.go
+      - packages/envd/internal/permissions/path.go
+      - packages/envd/internal/permissions/authenticate.go
+      - packages/envd/internal/permissions/keepalive_test.go
+      - packages/envd/internal/services/filesystem/stat_test.go
+      - packages/envd/internal/services/filesystem/utils_test.go
+      - packages/envd/internal/services/filesystem/service_test.go
+      - packages/envd/internal/api/upload.go
+      - packages/envd/internal/api/download.go
+      - packages/envd/internal/api/upload_test.go
+      - packages/orchestrator/pkg/sandbox/fc/process.go
+      - packages/orchestrator/pkg/sandbox/fc/config.go
+      - packages/orchestrator/pkg/sandbox/fc/script_builder.go
+    destination_paths: []
+    informed_paths: [proto/hypercall/guest/v1/guest.proto, internal/guest, internal/sandbox, cmd/hypercall-host]
+    copied_or_translated_code: false
+    license_sources: [LICENSE]
+    preserved_notices: [third_party/licenses/e2b-runtime-Apache-2.0.txt]
+    changes: Original Hypercall foreground command/file and host qualification design. Private authenticated gRPC/vsock bearer sessions bind allocation and expiry; foreground disconnect cancellation replaces upstream detached behavior. Bounded output/env/timeouts, os.Root confinement, FD cwd and atomic staging/rename adapt the behavior without copying upstream implementation. No upstream scheduler or storage stack imported.
+    verification: Selected source/dependency audit; local Hypercall checks recorded in docs/validation/1A.md. Upstream tests not run.
+
+  - repository: https://github.com/e2b-dev/E2B
+    commit: fd72526782d379cbb8ee71c3297bfb2ce3be82ce
+    use: behavioral_reference
+    source_paths:
+      - packages/python-sdk/e2b/sandbox_sync/commands/command.py
+      - packages/python-sdk/e2b/sandbox_sync/commands/command_handle.py
+      - packages/python-sdk/e2b/sandbox_sync/filesystem/filesystem.py
+    destination_paths: []
+    informed_paths: [proto/hypercall/guest/v1/guest.proto, test/contract/test_guest.py]
+    copied_or_translated_code: false
+    license_sources: [packages/python-sdk/LICENSE]
+    preserved_notices: [third_party/licenses/e2b-python-sdk-MIT.txt]
+    changes: Original narrow guest contract; no E2B SDK compatibility promise or SDK code import.
+    verification: Architecture behavior grounding only; upstream tests not run.
+
+  - repository: https://github.com/promptfoo/promptfoo
+    commit: f2b012e3c9f9ffb7b23edf4cf88ea63febf72f5a
+    use: reference_only
+    source_paths: [src/evaluator.ts, src/assertions, src/types, src/util/config, test]
+    destination_paths: []
+    copied_or_translated_code: false
+    license_sources: [LICENSE]
+    preserved_notices: [third_party/licenses/promptfoo-MIT.txt]
+    changes: None; Go evaluator compatibility subset and fixture translations deferred to Phase 3.
+    verification: Architecture source audit only; upstream tests not run.
+
+  - repository: https://github.com/firecracker-microvm/firecracker
+    commit: 7137308817dc65e2ae85a39269bd09f3884f662d
+    revision: v1.14.0
+    use: behavioral_reference
+    source_paths: [docs/getting-started.md, src/jailer/src/main.rs]
+    destination_paths: []
+    informed_paths: [internal/sandbox, cmd/hypercall-host]
+    copied_or_translated_code: false
+    license_sources: [LICENSE]
+    preserved_notices: [third_party/licenses/firecracker-Apache-2.0.txt]
+    changes: Original host qualification checks; no imported lifecycle driver or qualified executable artifact.
+    verification: Source audit and local Hypercall doctor tests; no real microVM boot qualified.
+
+  - repository: https://github.com/e2b-dev/e2b-firecracker
+    revision: v1.14-0.2.0
+    use: unavailable_reference
+    source_paths: []
+    destination_paths: []
+    copied_or_translated_code: false
+    changes: Requested E2B fork inaccessible; official Firecracker reference is not a qualified substitution.
+    verification: Checkout unavailable; no code or executable imported.
+
+  - repository: https://github.com/lima-vm/lima
+    commit: 27bc4c4b101e27994e01e36566a0f2091bbca507
+    revision: v2.2.1
+    use: optional_development_reference
+    source_paths: [templates/default.yaml, templates/_images/ubuntu-24.04.yaml]
+    destination_paths: []
+    informed_paths: [deploy/dev/lima-arm64.yaml]
+    copied_or_translated_code: false
+    license_sources: [LICENSE, NOTICE]
+    preserved_notices: [third_party/licenses/lima-Apache-2.0.txt, third_party/licenses/lima-NOTICE.txt]
+    changes: Independently authored local ARM64 development VM template; no upstream source copied.
+    verification: Lima 2.2.1 template validation and Linux host KVM API/cgroups/namespaces prerequisites passed; runtime artifacts absent, no Firecracker boot. See docs/validation/1A.md.
+
+# Runtime dependencies are resolved by Go/uv, not vendored source. Their complete
+# pinned graphs are go.mod/go.sum and pyproject.toml/uv.lock. A release SBOM and
+# distribution license audit remain required before shipping binaries/images.

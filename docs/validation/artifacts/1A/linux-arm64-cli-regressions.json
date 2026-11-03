@@ -1,0 +1,259 @@
+{
+  "platform": "linux/arm64",
+  "binary_sha256": "ac24bf1f96a7a8067304f4269581afb83b806de2b49276b8a513310f347edc9f",
+  "fixture_scope": "CLI external-filesystem regressions; not real Firecracker boot qualification",
+  "results": {
+    "configured_versions_and_manifest_integrity": "passed",
+    "configuration_fifo_rejected_without_waiting": "passed",
+    "artifact_fifo_rejected_without_waiting": "passed",
+    "verified_descriptor_survives_pathname_replacement": "passed"
+  },
+  "fifo_seconds": {
+    "configuration": 0.003124166000020523,
+    "binary": 0.0029052499999124848
+  },
+  "normal_report": {
+    "schema_version": 1,
+    "scope": "host-prerequisites",
+    "os": "linux",
+    "architecture": "arm64",
+    "ready": false,
+    "checks": [
+      {
+        "id": "host.platform",
+        "status": "passed",
+        "detail": "Linux architecture supported for host prerequisite qualification; artifacts must match this architecture"
+      },
+      {
+        "id": "host.kvm",
+        "status": "blocked",
+        "detail": "open /dev/kvm read/write: open /dev/kvm: permission denied"
+      },
+      {
+        "id": "host.cgroups",
+        "status": "blocked",
+        "detail": "configured directory is not on cgroups v2"
+      },
+      {
+        "id": "host.namespaces",
+        "status": "blocked",
+        "detail": "create isolated mount/network/PID/IPC/UTS namespace child: fork/exec /bin/true: operation not permitted"
+      },
+      {
+        "id": "runtime.configuration",
+        "status": "passed",
+        "detail": "parsed explicit runtime artifact configuration schema 1"
+      },
+      {
+        "id": "runtime.firecracker.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "483486d8938762c0ca99f3b141c45c75b04d5c49ea38695a6a70d43f39c06952",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/firecracker",
+          "sha256": "483486d8938762c0ca99f3b141c45c75b04d5c49ea38695a6a70d43f39c06952"
+        }
+      },
+      {
+        "id": "runtime.firecracker.version",
+        "status": "passed",
+        "detail": "configured artifact --version matches exact pinned output",
+        "evidence": {
+          "expected_version": "Firecracker vfixture",
+          "version": "Firecracker vfixture"
+        }
+      },
+      {
+        "id": "runtime.jailer.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "848d68249231b25e11f14eedc7e808690e6e88d002fefd0f76f65e2ea26d05a3",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/jailer",
+          "sha256": "848d68249231b25e11f14eedc7e808690e6e88d002fefd0f76f65e2ea26d05a3"
+        }
+      },
+      {
+        "id": "runtime.jailer.version",
+        "status": "passed",
+        "detail": "configured artifact --version matches exact pinned output",
+        "evidence": {
+          "expected_version": "Jailer vfixture",
+          "version": "Jailer vfixture"
+        }
+      },
+      {
+        "id": "template.manifest.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "a0692dd673e931695ed29a407907da88693eb9c7d1ca7b44f66bce7fc952e64d",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/template.json",
+          "sha256": "a0692dd673e931695ed29a407907da88693eb9c7d1ca7b44f66bce7fc952e64d"
+        }
+      },
+      {
+        "id": "template.manifest",
+        "status": "passed",
+        "detail": "manifest schema and host architecture match; hashes establish integrity, not boot compatibility"
+      },
+      {
+        "id": "template.kernel.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "98d5d41e3a381a410a0b734ed472fa403c9b9429f7d68ffa6b13f3fd998991dd",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/kernel",
+          "sha256": "98d5d41e3a381a410a0b734ed472fa403c9b9429f7d68ffa6b13f3fd998991dd"
+        }
+      },
+      {
+        "id": "template.rootfs.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "f6b3775bd7377d15f29eaee090463f459df90bd17d09aa8b24a6db8ec5f84bda",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/rootfs",
+          "sha256": "f6b3775bd7377d15f29eaee090463f459df90bd17d09aa8b24a6db8ec5f84bda"
+        }
+      },
+      {
+        "id": "template.guest_agent.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "0af1480cb9ca0d7b63b9e4bf57dc96c8a6b870bf66c3935506327814eabb9654",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/guest-agent",
+          "sha256": "0af1480cb9ca0d7b63b9e4bf57dc96c8a6b870bf66c3935506327814eabb9654"
+        }
+      }
+    ],
+    "blockers": [
+      "host.kvm",
+      "host.cgroups",
+      "host.namespaces"
+    ]
+  },
+  "pathname_swap_report": {
+    "schema_version": 1,
+    "scope": "host-prerequisites",
+    "os": "linux",
+    "architecture": "arm64",
+    "ready": false,
+    "checks": [
+      {
+        "id": "host.platform",
+        "status": "passed",
+        "detail": "Linux architecture supported for host prerequisite qualification; artifacts must match this architecture"
+      },
+      {
+        "id": "host.kvm",
+        "status": "blocked",
+        "detail": "open /dev/kvm read/write: open /dev/kvm: permission denied"
+      },
+      {
+        "id": "host.cgroups",
+        "status": "blocked",
+        "detail": "configured directory is not on cgroups v2"
+      },
+      {
+        "id": "host.namespaces",
+        "status": "blocked",
+        "detail": "create isolated mount/network/PID/IPC/UTS namespace child: fork/exec /bin/true: operation not permitted"
+      },
+      {
+        "id": "runtime.configuration",
+        "status": "passed",
+        "detail": "parsed explicit runtime artifact configuration schema 1"
+      },
+      {
+        "id": "runtime.firecracker.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "52dac30a42937d4bf3e8252d5077b567854e47b395e85aa566ead8154c8102eb",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/firecracker",
+          "sha256": "52dac30a42937d4bf3e8252d5077b567854e47b395e85aa566ead8154c8102eb"
+        }
+      },
+      {
+        "id": "runtime.firecracker.version",
+        "status": "passed",
+        "detail": "configured artifact --version matches exact pinned output",
+        "evidence": {
+          "expected_version": "Firecracker vfixture",
+          "version": "Firecracker vfixture"
+        }
+      },
+      {
+        "id": "runtime.jailer.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "848d68249231b25e11f14eedc7e808690e6e88d002fefd0f76f65e2ea26d05a3",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/jailer",
+          "sha256": "848d68249231b25e11f14eedc7e808690e6e88d002fefd0f76f65e2ea26d05a3"
+        }
+      },
+      {
+        "id": "runtime.jailer.version",
+        "status": "passed",
+        "detail": "configured artifact --version matches exact pinned output",
+        "evidence": {
+          "expected_version": "Jailer vfixture",
+          "version": "Jailer vfixture"
+        }
+      },
+      {
+        "id": "template.manifest.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "a0692dd673e931695ed29a407907da88693eb9c7d1ca7b44f66bce7fc952e64d",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/template.json",
+          "sha256": "a0692dd673e931695ed29a407907da88693eb9c7d1ca7b44f66bce7fc952e64d"
+        }
+      },
+      {
+        "id": "template.manifest",
+        "status": "passed",
+        "detail": "manifest schema and host architecture match; hashes establish integrity, not boot compatibility"
+      },
+      {
+        "id": "template.kernel.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "98d5d41e3a381a410a0b734ed472fa403c9b9429f7d68ffa6b13f3fd998991dd",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/kernel",
+          "sha256": "98d5d41e3a381a410a0b734ed472fa403c9b9429f7d68ffa6b13f3fd998991dd"
+        }
+      },
+      {
+        "id": "template.rootfs.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "f6b3775bd7377d15f29eaee090463f459df90bd17d09aa8b24a6db8ec5f84bda",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/rootfs",
+          "sha256": "f6b3775bd7377d15f29eaee090463f459df90bd17d09aa8b24a6db8ec5f84bda"
+        }
+      },
+      {
+        "id": "template.guest_agent.integrity",
+        "status": "passed",
+        "detail": "verified explicitly configured artifact SHA-256",
+        "evidence": {
+          "expected_sha256": "0af1480cb9ca0d7b63b9e4bf57dc96c8a6b870bf66c3935506327814eabb9654",
+          "path": "/tmp/hypercall-cli-regression-8rf0x0y6/guest-agent",
+          "sha256": "0af1480cb9ca0d7b63b9e4bf57dc96c8a6b870bf66c3935506327814eabb9654"
+        }
+      }
+    ],
+    "blockers": [
+      "host.kvm",
+      "host.cgroups",
+      "host.namespaces"
+    ]
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "record_kind": "coordinator_observed_test_summary_not_raw_log",
+  "recorded_on": "2026-11-03",
+  "scope": "Go guest RPC behavior in Lima Linux ARM64 root session; private Unix test transport",
+  "platform": "linux/arm64",
+  "go_version": "1.27.3",
+  "binary_path": "/tmp/hypercall-guest-linux-arm64.test",
+  "binary_sha256": "cb0b2825dfa5c7217556a30bdfae4f965280085725ea9287c85af91a4606e867",
+  "source_sha256": {
+    "internal/guest/exec.go": "e35c6fac6e03bd15a27c765cc8308dd09ec03a3b17af3635e17dd5518abfe105",
+    "internal/guest/files.go": "8b5b291b0a672d2e71a16505446867edac91516a3390ec4b6e19e890206deed6",
+    "internal/guest/listener_linux.go": "2b303ea13bacf2ad7dc343f0755ce87f899a4c882266af8663e9b6e4613408ed",
+    "internal/guest/listener_other.go": "434c21dd6b132005562c02f98cec661752f7d6e7bc180d939b7b02363baaba06",
+    "internal/guest/production_linux_test.go": "86ed6231ad95b1fd517845ec3935a316c40e29073718c6a94e263c625b90a5c9",
+    "internal/guest/server.go": "4c3b9ae176730ccd418e03693737892eacbc5cb1dc5ff38b5683d65e3e09c757",
+    "internal/guest/server_test.go": "ee97d7f9bf50dc6ba49c8a1f45cf43d533d1418aeb698bb1eb77e0eb51d7475d"
+  },
+  "build_command": "CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go test -c -o /tmp/hypercall-guest-linux-arm64.test ./internal/guest",
+  "copy_command": "limactl copy /tmp/hypercall-guest-linux-arm64.test hypercall-dev:/tmp/hypercall-guest-linux-arm64.test",
+  "run_command": "limactl shell hypercall-dev -- sudo /tmp/hypercall-guest-linux-arm64.test -test.v -test.timeout=60s",
+  "result": {
+    "status": "passed",
+    "top_level_tests": 12,
+    "skipped": 0,
+    "race_instrumentation": false
+  },
+  "coverage": [
+    "authenticated RPC identity and credential expiry",
+    "bounded binary file transfer",
+    "foreground command output, nonzero status, timeouts and cancellation",
+    "process-group cleanup",
+    "production workload UID 65534 and file ownership",
+    "tmpfs ENOSPC preserves existing file atomically"
+  ],
+  "limits": [
+    "Not a raw test log; result observed by coordinator",
+    "No Firecracker or jailer boot",
+    "No authenticated vsock qualification",
+    "No VM isolation, lifecycle or performance qualification",
+    "No Linux race instrumentation; native race results recorded in 1A.md"
+  ]
+}
