@@ -63,6 +63,11 @@ func (s *Server) validateExec(req *guestv1.ExecRequest) error {
 // executing; cancellation and completion kill all descendants, including those
 // that create a new session. Trusted local tests use process groups only.
 func (s *Server) Exec(req *guestv1.ExecRequest, stream grpc.ServerStreamingServer[guestv1.ExecEvent]) (resultErr error) {
+	s.opMu.RLock()
+	defer s.opMu.RUnlock()
+	if err := s.ordinary(); err != nil {
+		return err
+	}
 	if err := s.authenticate(stream.Context()); err != nil {
 		return err
 	}

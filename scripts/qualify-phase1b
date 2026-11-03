@@ -1,0 +1,29 @@
+#!/bin/sh
+# Execute real Linux/KVM snapshot qualification with explicit operator inputs.
+set -eu
+: "${HYPERCALL_TESTDRIVER:?absolute testdriver path required}"
+: "${HYPERCALL_HOST_CONFIG:?absolute runtime configuration required}"
+: "${HYPERCALL_QUALIFICATION_STATE:?fresh private disk-backed state path required}"
+: "${HYPERCALL_CGROUP_DIR:?delegated cgroups v2 parent required}"
+case "${HYPERCALL_SNAPSHOT_MODE:-local}" in
+ local) command=snapshot-qualify ;;
+ capture) command=snapshot-capture ;;
+ restore) command=snapshot-restore ;;
+ *) echo 'HYPERCALL_SNAPSHOT_MODE must be local, capture or restore' >&2; exit 2 ;;
+esac
+set -- "$command" --config "$HYPERCALL_HOST_CONFIG" --state-dir "$HYPERCALL_QUALIFICATION_STATE" --cgroup-dir "$HYPERCALL_CGROUP_DIR"
+if [ -n "${HYPERCALL_GCS_BUCKET:-}" ]; then
+ : "${HYPERCALL_GCS_PREFIX:?authorized unique GCS qualification prefix required}"
+ : "${HYPERCALL_GCS_TOKEN_FILE:?private absolute refreshed OAuth token path required}"
+ if [ -n "${HYPERCALL_SNAPSHOT_STORE:-}" ]; then echo 'select GCS or file storage, not both' >&2; exit 2; fi
+ set -- "$@" --gcs-bucket "$HYPERCALL_GCS_BUCKET" --gcs-prefix "$HYPERCALL_GCS_PREFIX" --gcs-token-file "$HYPERCALL_GCS_TOKEN_FILE"
+else
+ : "${HYPERCALL_SNAPSHOT_STORE:?private snapshot object directory required}"
+ set -- "$@" --snapshot-store "$HYPERCALL_SNAPSHOT_STORE"
+fi
+if [ "$command" != snapshot-qualify ]; then
+ : "${HYPERCALL_SNAPSHOT_HANDOFF:?private handoff path required for cross-host mode}"
+fi
+if [ -n "${HYPERCALL_SNAPSHOT_HANDOFF:-}" ]; then set -- "$@" --handoff "$HYPERCALL_SNAPSHOT_HANDOFF"; fi
+if [ -n "${HYPERCALL_QUALIFICATION_REPORT:-}" ]; then set -- "$@" --output "$HYPERCALL_QUALIFICATION_REPORT"; fi
+exec "$HYPERCALL_TESTDRIVER" "$@"

@@ -15,9 +15,11 @@ func (b *Backend) guest(a Allocation) (*instance, error) {
 	if err != nil {
 		return nil, err
 	}
+	h.rpcMu.RLock()
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if h.cleaned || h.record.Observation.State != StateRunning || h.lifetime.Err() != nil {
+		h.rpcMu.RUnlock()
 		return nil, ErrUnavailable
 	}
 	return h, nil
@@ -30,6 +32,7 @@ func (b *Backend) Exec(ctx context.Context, a Allocation, req *guestv1.ExecReque
 	if err != nil {
 		return err
 	}
+	defer h.rpcMu.RUnlock()
 	ctx, cancel := context.WithCancel(authContext(ctx, h.credential))
 	defer cancel()
 	stream, err := h.client.Exec(ctx, req)
@@ -67,6 +70,7 @@ func (b *Backend) ReadFile(ctx context.Context, a Allocation, req *guestv1.ReadF
 	if err != nil {
 		return nil, err
 	}
+	defer h.rpcMu.RUnlock()
 	return h.client.ReadFile(authContext(ctx, h.credential), req)
 }
 func (b *Backend) WriteFile(ctx context.Context, a Allocation, req *guestv1.WriteFileRequest) (*guestv1.WriteFileResponse, error) {
@@ -77,5 +81,6 @@ func (b *Backend) WriteFile(ctx context.Context, a Allocation, req *guestv1.Writ
 	if err != nil {
 		return nil, err
 	}
+	defer h.rpcMu.RUnlock()
 	return h.client.WriteFile(authContext(ctx, h.credential), req)
 }

@@ -1,4 +1,4 @@
-// Package sandbox owns the host-local cold-boot lifecycle. It is an adapter for
+// Package sandbox owns the host-local sandbox lifecycle. It is an adapter for
 // the controller, not a scheduler or a public control plane. Scope is supplied
 // by a trusted, authenticated host caller; request identity is not authentication.
 package sandbox
@@ -12,6 +12,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	"github.com/gduchidze/hypercall/internal/snapshot"
 )
 
 var (
@@ -96,13 +97,14 @@ type Observation struct {
 // Config is copied by New. ArtifactConfigPath uses the hostdoctor schema and
 // pinned official Firecracker/jailer 1.14.0. StateDir must be private and durable
 // across host-process restarts; CgroupDir is a delegated cgroups-v2 parent.
-// mkfs.ext4 is required for a bounded, read-only per-allocation bootstrap disk.
+// mkfs.ext4 is required for bounded per-allocation bootstrap and workspace disks.
 type Scope struct {
 	TenantID  string
 	ProjectID string
 }
 
 type Config struct {
+	SnapshotStore      *snapshot.Store
 	Scope              Scope
 	ArtifactConfigPath string
 	StateDir           string
