@@ -1,0 +1,244 @@
+#!/usr/bin/env python3
+"""Build trusted pinned inputs in a dedicated Linux VM and private namespaces."""
+import argparse
+import hashlib
+import importlib.machinery
+import json
+import os
+from pathlib import Path, PurePosixPath
+import platform
+import shutil
+import subprocess
+import struct
+import sys
+import tarfile
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+fetcher = importlib.machinery.SourceFileLoader('runtime_fetch', str(ROOT / 'scripts/fetch-runtime')).load_module()
+
+
+def run(*args, **kwargs):
+    subprocess.run([str(arg) for arg in args], check=True, **kwargs)
+
+
+def artifact(path, version=None):
+    result = {'path': str(path), 'sha256': fetcher.digest(path)}
+    if version:
+        result['version'] = version
+    return result
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--lock', type=Path, default=fetcher.DEFAULT_LOCK)
+    parser.add_argument('--arch', choices=['arm64', 'amd64'], required=True)
+    parser.add_argument('--cache', type=Path, required=True)
+    parser.add_argument('--output', type=Path, required=True)
+    parser.add_argument('--guest-agent', type=Path, required=True)
+    parser.add_argument('--guest-sha256', required=True)
+    parser.add_argument('--guest-notices', type=Path, required=True)
+    parser.add_argument('--guest-notices-sha256', required=True)
+    parser.add_argument('--namespace-child', action='store_true', help=argparse.SUPPRESS)
+    args = parser.parse_args()
+    if platform.system() != 'Linux' or os.geteuid() != 0:
+        raise ValueError('build requires root in a dedicated Linux builder VM, with no host mounts')
+    host = {'aarch64': 'arm64', 'x86_64': 'amd64'}.get(platform.machine())
+    if args.arch != host:
+        raise ValueError('build architecture must match the isolated builder')
+    args.cache = args.cache.resolve()
+    args.output = args.output.resolve()
+    args.guest_agent = args.guest_agent.resolve()
+    args.guest_notices = args.guest_notices.resolve()
+    fetcher.verify(args.guest_notices, args.guest_notices_sha256)
+    fetcher.verify(args.guest_agent, args.guest_sha256)
+    with args.guest_agent.open('rb') as stream:
+        header = stream.read(64)
+        if len(header) != 64 or header[:6] != b'\x7fELF\x02\x01':
+            raise ValueError('guest agent must be a static little-endian64-bit Linux ELF')
+        machine = struct.unpack_from('<H', header, 18)[0]
+        if machine != {'arm64': 183, 'amd64': 62}[args.arch]:
+            raise ValueError('guest agent ELF architecture does not match template')
+        offset = struct.unpack_from('<Q', header, 32)[0]
+        size, count = struct.unpack_from('<HH', header, 54)
+        for index in range(count):
+            stream.seek(offset + index * size)
+            entry = stream.read(4)
+            if len(entry) != 4 or struct.unpack('<I', entry)[0] in (2, 3):
+                raise ValueError('guest agent must be statically linked without interpreter')
+    lock = json.loads(args.lock.read_text())
+    inputs = fetcher.fetch(lock, args.arch, args.cache, offline=True)
+    if args.output.exists():
+        raise ValueError('output must not exist; immutable artifacts are never overwritten')
+    if not args.namespace_child:
+        run('unshare', '--mount', '--net', '--pid', '--fork', '--mount-proc', '--propagation', 'private',
+            sys.executable, __file__, *sys.argv[1:], '--namespace-child')
+        return
+    version = subprocess.check_output(['mke2fs', '-V'], stderr=subprocess.STDOUT, text=True).splitlines()[0]
+    if version != 'mke2fs 1.47.0 (5-Feb-2023)':
+        raise ValueError('builder requires pinned e2fsprogs: mke2fs1.47.0 (5-Feb-2023)')
+    os.umask(0o077)
+    args.output.parent.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix='.template-', dir=args.output.parent))
+    try:
+        notices = temporary / 'guest-notices'
+        notices.mkdir(mode=0o755)
+        notices.chmod(0o755)
+        total = 0
+        names = set()
+        with tarfile.open(args.guest_notices) as archive:
+            for member in archive:
+                name = PurePosixPath(member.name)
+                total += member.size
+                if (not member.isfile() or name.is_absolute() or '..' in name.parts
+                        or not name.parts or chr(92) in member.name or len(member.name) > 1024
+                        or total > 64 << 20 or member.name in names):
+                    raise ValueError('guest notices requires unique relative regular files totaling <=64MiB')
+                names.add(member.name)
+                target = notices.joinpath(*name.parts)
+                target.parent.mkdir(parents=True, exist_ok=True)
+                for parent in [target.parent, *target.parents]:
+                    if parent == notices.parent:
+                        break
+                    parent.chmod(0o755)
+                with archive.extractfile(member) as source, target.open('xb') as destination:
+                    shutil.copyfileobj(source, destination)
+                target.chmod(0o644)
+        notice_manifest = json.loads((notices / 'manifest.json').read_text())
+        if notice_manifest.get('schema_version') != 1 or notice_manifest.get('guest_sha256') != args.guest_sha256:
+            raise ValueError('guest notices manifest must match guest SHA-256 and schema1')
+        for item in notice_manifest['files']:
+            name = PurePosixPath(item['path'])
+            if name.is_absolute() or '..' in name.parts:
+                raise ValueError('invalid guest notice manifest path')
+            fetcher.verify(notices.joinpath(*name.parts), item['sha256'])
+        tree = temporary / 'root'
+        tree.mkdir()
+        # The archive is a locked Canonical distribution input, never a tenant upload.
+        run('tar', '--extract', '--xz', '--numeric-owner', '--file', inputs / 'rootfs.tar.xz', '--directory', tree)
+        for directory in ['dev', 'proc', 'sys', 'run', 'tmp', 'workspace', 'usr/local/bin']:
+            (tree / directory).mkdir(parents=True, exist_ok=True)
+        (tree / 'usr/share/doc/hypercall').mkdir(mode=0o755, exist_ok=True)
+        (tree / 'usr/share/doc/hypercall').chmod(0o755)
+        shutil.copytree(notices, tree / 'usr/share/doc/hypercall/licenses')
+        shutil.copyfile(args.guest_agent, tree / 'usr/local/bin/hypercall-guest')
+        os.chmod(tree / 'usr/local/bin/hypercall-guest', 0o755)
+        shutil.copyfile(ROOT / 'deploy/runtime/hypercall-init', tree / 'sbin/hypercall-init')
+        os.chmod(tree / 'sbin/hypercall-init', 0o755)
+        # Remove image-specific machine identity; no cloud init or login daemon runs.
+        (tree / 'etc/machine-id').write_text('')
+        for name in ['etc/hostname', 'etc/resolv.conf']:
+            path = tree / name
+            if path.is_symlink():
+                path.unlink()
+            path.write_text('hypercall\n' if name.endswith('hostname') else '')
+        # No setuid/setgid executables or writable user home from the base image.
+        for directory, dirs, files in os.walk(tree, followlinks=False):
+            for name in files:
+                path = Path(directory) / name
+                if not path.is_symlink():
+                    path.chmod(path.stat().st_mode & ~0o6000)
+        for name, record, field in [('passwd', 'hypercall:x:1000:1000:Hypercall:/workspace:/bin/sh', 2),
+                                    ('group', 'hypercall:x:1000:', 2)]:
+            path = tree / 'etc' / name
+            lines = [line for line in path.read_text().splitlines()
+                     if line.split(':')[field] != '1000']
+            path.write_text('\n'.join(lines + [record]) + '\n')
+        epoch = lock['source_date_epoch']
+        for directory, dirs, files in os.walk(tree, topdown=False, followlinks=False):
+            for name in files + dirs:
+                os.utime(Path(directory) / name, (epoch, epoch), follow_symlinks=False)
+            os.utime(directory, (epoch, epoch), follow_symlinks=False)
+        publish = temporary / 'publish'
+        publish.mkdir()
+        disk = publish / 'rootfs.ext4'
+        with disk.open('wb') as stream:
+            stream.truncate(1024 << 20)
+        env = dict(os.environ, E2FSPROGS_FAKE_TIME=str(epoch), SOURCE_DATE_EPOCH=str(epoch), TZ='UTC', LC_ALL='C')
+        run('mke2fs', '-q', '-F', '-t', 'ext4', '-b', '4096', '-I', '256', '-m', '0',
+            '-O', '^has_journal,^metadata_csum_seed', '-U', '54bacf2b-48c2-45a8-a187-e352ca3169ea',
+            '-E', 'lazy_itable_init=0,hash_seed=84f53e89-f9c5-4d44-ab56-2f36b6532601',
+            '-L', 'hypercall-root', '-d', tree, disk, env=env)
+        # mke2fs -d copies source ctime, which cannot be set with utime. Normalize
+        # all allocated file inode times via debugfs, including image-created dirs.
+        commands = temporary / 'normalize.debugfs'
+        with commands.open('w') as stream:
+            paths = ['/', '/lost+found']
+            for directory, dirs, files in os.walk(tree, followlinks=False):
+                paths.extend('/' + str((Path(directory) / name).relative_to(tree)) for name in dirs + files)
+            for path in paths:
+                if '\n' in path or '\r' in path:
+                    raise ValueError('unsupported image path for deterministic metadata')
+                if chr(34) in path:
+                    raise ValueError('unsupported quoted image path')
+                for field in ['atime', 'ctime', 'mtime', 'crtime']:
+                    stream.write(f'set_inode_field "{path}" {field} @{epoch}\n')
+        result = subprocess.run(['debugfs', '-w', '-f', str(commands), str(disk)],
+                                stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, env=env, check=True)
+        if len(result.stderr.splitlines()) > 1:
+            raise ValueError('metadata normalization failed: ' + result.stderr)
+        shutil.copyfile(inputs / 'kernel', publish / 'kernel')
+        shutil.copyfile(args.guest_agent, publish / 'hypercall-guest')
+        fcarch = {'arm64': 'aarch64', 'amd64': 'x86_64'}[args.arch]
+        with tarfile.open(inputs / 'firecracker.tgz') as archive:
+            for name in ['firecracker', 'jailer']:
+                expected = f'release-v1.14.0-{fcarch}/{name}-v1.14.0-{fcarch}'
+                member = archive.getmember(expected)
+                if not member.isfile():
+                    raise ValueError('release binary is not a regular archive member')
+                with archive.extractfile(member) as source, (publish / name).open('wb') as destination:
+                    shutil.copyfileobj(source, destination)
+                fetcher.verify(publish / name, lock['architectures'][args.arch][name + '_sha256'])
+                os.chmod(publish / name, 0o555)
+            licenses = publish / 'licenses'
+            licenses.mkdir()
+            for name in ['LICENSE', 'THIRD-PARTY']:
+                member = archive.getmember(f'release-v1.14.0-{fcarch}/' + name)
+                with archive.extractfile(member) as source, (licenses / ('firecracker-' + name)).open('wb') as destination:
+                    shutil.copyfileobj(source, destination)
+        shutil.copytree(notices, licenses / 'guest')
+        for source, target in [('kernel.COPYING', 'linux-COPYING'), ('kernel.GPL-2.0', 'linux-GPL-2.0'),
+                               ('kernel.Linux-syscall-note', 'linux-syscall-note'),
+                               ('kernel.config', 'linux-kernel.config'),
+                               ('kernel-build-recipe.sh', 'firecracker-kernel-build-recipe.sh')]:
+            shutil.copyfile(inputs / source, licenses / target)
+        (licenses / 'linux-source.json').write_text(json.dumps(lock['kernel_source'], indent=2) + '\n')
+        manifest = {'schema_version': 1, 'architecture': args.arch,
+                    'kernel': artifact(publish / 'kernel'), 'rootfs': artifact(disk),
+                    'guest_agent': artifact(publish / 'hypercall-guest')}
+        # Paths describe the final immutable directory, rather than staging paths.
+        for value in manifest.values():
+            if isinstance(value, dict):
+                value['path'] = str(args.output / Path(value['path']).name)
+        template = publish / 'template.json'
+        template.write_text(json.dumps(manifest, indent=2) + '\n')
+        runtime = {'schema_version': 1, 'firecracker': artifact(publish / 'firecracker', 'Firecracker v1.14.0'),
+                   'jailer': artifact(publish / 'jailer', 'Jailer v1.14.0'), 'template': artifact(template)}
+        for value in runtime.values():
+            if isinstance(value, dict):
+                value['path'] = str(args.output / Path(value['path']).name)
+        (publish / 'runtime.json').write_text(json.dumps(runtime, indent=2) + '\n')
+        provenance = {'schema_version': 1, 'inputs': lock, 'guest_sha256': args.guest_sha256,
+                      'guest_notices_sha256': args.guest_notices_sha256,
+                      'bootstrap_sha256': fetcher.digest(ROOT / 'deploy/runtime/hypercall-init'),
+                      'builder': {'mke2fs': version, 'architecture': args.arch},
+                      'qualification': 'cold boot only; no snapshot, restore, or fork qualification'}
+        (publish / 'provenance.json').write_text(json.dumps(provenance, indent=2) + '\n')
+        for directory, dirs, files in os.walk(publish):
+            for name in dirs:
+                (Path(directory) / name).chmod(0o555)
+            for name in files:
+                path = Path(directory) / name
+                path.chmod(0o555 if path.parent == publish and name in ('firecracker', 'jailer') else 0o444)
+        os.rename(publish, args.output)
+        print(args.output / 'runtime.json')
+    finally:
+        shutil.rmtree(temporary)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except (OSError, ValueError, KeyError, subprocess.SubprocessError, tarfile.TarError) as error:
+        print(f'build-template: {error}', file=sys.stderr)
+        sys.exit(1)

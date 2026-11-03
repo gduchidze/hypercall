@@ -59,10 +59,10 @@ func (s *Server) validateExec(req *guestv1.ExecRequest) error {
 	return nil
 }
 
-// Exec is foreground-only. Cancellation kills the group and Wait reaps the
-// direct child. A malicious descendant can leave its process group; the guest
-// VM and workload cgroup must contain that case before sandbox qualification.
-func (s *Server) Exec(req *guestv1.ExecRequest, stream grpc.ServerStreamingServer[guestv1.ExecEvent]) error {
+// Exec is foreground-only. Production commands enter a private cgroup before
+// executing; cancellation and completion kill all descendants, including those
+// that create a new session. Trusted local tests use process groups only.
+func (s *Server) Exec(req *guestv1.ExecRequest, stream grpc.ServerStreamingServer[guestv1.ExecEvent]) (resultErr error) {
 	if err := s.authenticate(stream.Context()); err != nil {
 		return err
 	}
@@ -112,7 +112,24 @@ func (s *Server) Exec(req *guestv1.ExecRequest, stream grpc.ServerStreamingServe
 	if !s.trustedLocal {
 		cmd.SysProcAttr.Credential = &syscall.Credential{Uid: uint32(s.uid), Gid: uint32(s.gid), Groups: []uint32{uint32(s.gid)}}
 	}
-	cmd.Cancel = func() error { return killGroup(cmd) }
+	group, err := commandCgroup(s.workloadCgroup, cmd)
+	if err != nil {
+		return status.Error(codes.FailedPrecondition, "workload containment unavailable")
+	}
+	defer func() {
+		if err := group.close(); err != nil {
+			s.logger.Error("workload containment cleanup failed", "error", err)
+			if resultErr == nil {
+				resultErr = status.Error(codes.Internal, "workload containment cleanup failed")
+			}
+		}
+	}()
+	cmd.Cancel = func() error {
+		if err := group.kill(); err != nil {
+			s.logger.Error("workload cgroup cancellation failed", "error", err)
+		}
+		return killGroup(cmd)
+	}
 	cmd.WaitDelay = time.Second
 	events := make(chan *guestv1.ExecEvent, 8)
 	output := &outputBudget{ctx: ctx, cancel: cancel, events: events}
@@ -125,6 +142,9 @@ func (s *Server) Exec(req *guestv1.ExecRequest, stream grpc.ServerStreamingServe
 	waited := make(chan error, 1)
 	go func() {
 		err := cmd.Wait()
+		if killErr := group.kill(); killErr != nil {
+			err = killErr
+		}
 		// Foreground completion also ends children which retained the group.
 		_ = killGroup(cmd)
 		waited <- err
@@ -255,6 +275,9 @@ func RunExecHelper() {
 		os.Exit(126)
 	}
 	_ = syscall.Close(3)
+	if err := preventPrivilegeGain(); err != nil {
+		os.Exit(126)
+	}
 	path, err := executablePath(os.Args[2])
 	if err != nil {
 		os.Exit(127)

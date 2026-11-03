@@ -46,7 +46,10 @@ type Config struct {
 	ExecHelper string
 	UID, GID   int
 	AllowedEnv []string
-	Logger     *slog.Logger
+	// WorkloadCgroup is an empty, delegated cgroup v2 subtree with finite
+	// memory, CPU and PID limits. Required for production execution.
+	WorkloadCgroup string
+	Logger         *slog.Logger
 }
 
 type Server struct {
@@ -61,6 +64,7 @@ type Server struct {
 	allowedEnv     map[string]bool
 	logger         *slog.Logger
 	execSlots      chan struct{}
+	workloadCgroup string
 }
 
 func New(cfg Config) (*Server, error) {
@@ -83,6 +87,9 @@ func New(cfg Config) (*Server, error) {
 	}
 	if !filepath.IsAbs(cfg.ExecHelper) {
 		return nil, errors.New("absolute guest helper executable required")
+	}
+	if err := validateWorkloadCgroup(cfg.WorkloadCgroup, cfg.TrustedLocal); err != nil {
+		return nil, err
 	}
 	if !filepath.IsAbs(cfg.Workspace) {
 		return nil, errors.New("absolute workspace required")
@@ -114,7 +121,7 @@ func New(cfg Config) (*Server, error) {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	return &Server{root: root, identity: proto.Clone(cfg.Identity).(*guestv1.AllocationIdentity), credentialHash: sha256.Sum256([]byte(cfg.Credential)), expiresAt: cfg.ExpiresAt, trustedLocal: cfg.TrustedLocal, execHelper: cfg.ExecHelper, uid: cfg.UID, gid: cfg.GID, allowedEnv: allowed, logger: logger, execSlots: make(chan struct{}, 16)}, nil
+	return &Server{root: root, identity: proto.Clone(cfg.Identity).(*guestv1.AllocationIdentity), credentialHash: sha256.Sum256([]byte(cfg.Credential)), expiresAt: cfg.ExpiresAt, trustedLocal: cfg.TrustedLocal, execHelper: cfg.ExecHelper, uid: cfg.UID, gid: cfg.GID, allowedEnv: allowed, logger: logger, execSlots: make(chan struct{}, 16), workloadCgroup: cfg.WorkloadCgroup}, nil
 }
 
 // Close is called after all RPCs are stopped.

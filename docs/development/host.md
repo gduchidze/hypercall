@@ -2,8 +2,8 @@
 
 `hypercall-host doctor` checks prerequisites only. A ready report does not prove
 microVM boot, guest communication, isolation, cleanup under failure, or runtime
-qualification. There is no runtime backend, fake lifecycle, snapshot, or fork in
-this command. Run it with the same identity, capabilities, and delegated cgroup
+qualification. The separate sandbox backend and acceptance driver exercise the
+runtime lifecycle. Run doctor with the same identity, capabilities, and delegated cgroup
 directory intended for the host process.
 
 ## Build and inspect
@@ -76,8 +76,9 @@ in the root filesystem, protocol compatibility, kernel capability, or bootabilit
 
 The manifest architecture must equal the host architecture. After a binary's
 digest matches, doctor runs its `--version` with a five-second deadline, a minimal
-environment, and bounded output. The configured version is the exact trimmed
-output. On Linux it executes the verified open descriptor through `/proc/self/fd`,
+environment, and bounded output. The configured version is the exact first
+stdout line; Firecracker adds a timestamped exit log after its version banner.
+On Linux it executes the verified open descriptor through `/proc/self/fd`,
 so replacing the configured pathname cannot redirect execution. Darwin does not
 support that execution path; it copies the descriptor to a private directory
 owned by the effective UID with mode 0700, rechecks the copied bytes' digest, and
@@ -90,9 +91,9 @@ privileged or same-owner process from modifying the same inode or the diagnostic
 private files. It is a diagnostic for trusted operator-controlled artifacts, not
 an enforcement mechanism against their owner. No original artifact pathname is
 reopened for version execution or verified manifest parsing.
-No Firecracker build is implicitly substituted for E2B's custom fork. The E2B
-`v1.14-0.2.0` artifact/capability gap requires resolution before lifecycle reuse;
-an official Firecracker prerequisite probe does not qualify those custom features.
+The cold-boot adapter explicitly selects official Firecracker/jailer 1.14.0.
+The unavailable E2B custom fork and its snapshot extensions are not qualified by
+this selection. Snapshot, restore and fork are separate work.
 
 ```sh
 bin/hypercall-host doctor --json --config /srv/hypercall/artifacts/runtime.json \
@@ -148,24 +149,77 @@ global settings can change the effective configuration.
 ARM64 development results do not qualify an x86_64 deployment or establish
 cross-architecture snapshot portability.
 
-## Tests and remaining acceptance work
+## Pinned templates and sandbox execution
+
+[artifacts.lock.json](../../deploy/runtime/artifacts.lock.json) pins the official
+Firecracker release, guest kernel and Canonical root filesystem inputs. Fetching
+verifies every digest before use. Build templates inside a dedicated Linux VM
+without host mounts, using the matching architecture and e2fsprogs 1.47.0:
+
+```sh
+scripts/fetch-runtime --arch arm64 --cache /srv/hypercall/inputs
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -buildvcs=false -ldflags=-buildid= \
+  -o bin/hypercall-guest ./cmd/hypercall-guest
+scripts/guest-notices --guest-agent bin/hypercall-guest --output bin/guest-notices.tar
+sudo scripts/build-template --arch arm64 --cache /srv/hypercall/inputs \
+  --output /srv/hypercall/template --guest-agent "$PWD/bin/hypercall-guest" \
+  --guest-sha256 "$(sha256sum bin/hypercall-guest | cut -d ' ' -f 1)" \
+  --guest-notices "$PWD/bin/guest-notices.tar" \
+  --guest-notices-sha256 "$(sha256sum bin/guest-notices.tar | cut -d ' ' -f 1)"
+```
+
+On a Mac, fetch and cross-build locally, then use `limactl copy` to transfer the
+checkout's build scripts, locked inputs, guest binary and notices into the Linux builder.
+The builder uses private mount, PID and network namespaces and offline inputs.
+It emits an immutable rootfs, kernel, guest binary, manifests, provenance and
+upstream license material. Keep that generated license material with distributed
+artifacts. Rootfs metadata is normalized for reproducible bytes.
+
+The private Go backend takes a trusted tenant/project scope, explicit artifact
+configuration, root-owned mode-0700 state directory, delegated cgroup parent and
+unprivileged jailer UID/GID. Use a short state path on a disk-backed filesystem;
+the backend stages images and Unix socket paths have a length limit. Never use
+a small `/run` tmpfs for image staging.
+
+Guests have a read-only root filesystem and per-allocation bootstrap drive,
+ephemeral bounded workspace, authenticated vsock RPC, finite CPU/memory/PID/time
+limits and no network device. This profile denies all network egress. Provider
+access and persistent workspaces are not part of this profile. Workload processes
+enter guest cgroups before executing; jailer processes enter host cgroups before
+starting. Runtime recovery kills recorded orphan cgroups before removing their
+private disks and secrets. Configure the host supervisor to restart after failure
+so recovery can run.
+
+## Real runtime acceptance
 
 ```sh
 go test -race ./cmd/hypercall-host ./internal/sandbox/hostdoctor
-go test -tags=kvm -v ./test/integration/kvm
-HYPERCALL_KVM_TEST=1 HYPERCALL_HOST_CONFIG=/srv/hypercall/artifacts/runtime.json \
-  HYPERCALL_CGROUP_DIR=/sys/fs/cgroup/hypercall \
-  go test -count=1 -tags=kvm -v ./test/integration/kvm
+make build-testdriver
+sudo bin/hypercall-testdriver qualify \
+  --config /srv/hypercall/template/runtime.json \
+  --state-dir /var/lib/hcq --cgroup-dir /sys/fs/cgroup/hypercall \
+  --python "$PWD/.venv/bin/python" --python-probe "$PWD/scripts/qualify-python.py"
 ```
 
-Without explicit opt-in the KVM test reports a skip, which is not acceptance
-evidence. With opt-in, missing artifacts or any unsuitable prerequisite fails.
+The cgroup parent must already have `cpu memory pids` delegated. The acceptance
+driver exercises destructive failure scenarios only within its dedicated runtime
+state and allocations. Use a dedicated development host and preserve its JSON
+report with the source and artifact hashes. Python needs the locked dependencies
+and generated package (`uv sync --frozen`).
+Use a fresh state directory for each qualification run: host-local epoch fences
+deliberately survive shutdown. Admission consumes an epoch even if boot fails;
+retries require a higher epoch. Each state directory admits at most 4096 distinct
+sandbox fence identities before operator maintenance is required.
+
+The opt-in Go KVM suite runs this driver. `scripts/qualify-phase1a.sh` documents
+its required environment variables; `make test-kvm` explicitly opts in. Without
+opt-in the KVM suite reports skips, which are not acceptance evidence. Missing
+configuration or any failed required gate fails an opted-in run.
 CLI fixtures test real subprocess exits/JSON, hash rejection before execution,
 version pinning, changed disk detection, prompt FIFO rejection, and pathname
 replacement during executable interpretation. Native Mac tests exercise the
 private verified-copy path. They deliberately use a non-cgroup
 temporary directory and fixture executables so they cannot qualify a host.
-The next runtime work must implement and test actual jailer boot, vsock commands
-and files, scoped authorization, limits, cancellation, cleanup, and failure
-recovery on pinned artifacts. No upstream test suite was run by this original
-host-diagnostic implementation.
+The runtime driver checks actual jailer boot, vsock commands/files, Python RPC,
+authorization, limits, network denial, independent VMs, cancellation, stop,
+crash recovery and cleanup. Native checks alone do not qualify these behaviors.

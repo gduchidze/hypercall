@@ -1,6 +1,6 @@
 # Hypercall
 
-A Go guest runtime and host qualification toolkit for agent sandboxes.
+A Go runtime for isolated agent workloads in Firecracker microVMs.
 
 ![Go 1.27.3](https://img.shields.io/badge/Go-1.27.3-00ADD8?logo=go&logoColor=white)
 ![Python 3.13.9](https://img.shields.io/badge/Python-3.13.9-3776AB?logo=python&logoColor=white)
@@ -8,9 +8,15 @@ A Go guest runtime and host qualification toolkit for agent sandboxes.
 
 ## Features
 
+- **MicroVM lifecycle:** jailed cold boots, scoped allocation identities, expiry,
+  monotonic epochs, stop, and recovery after a host process crashes.
 - **Guest execution:** authenticated gRPC commands with binary output, deadlines,
   cancellation, environment restrictions, and a non-root workload identity.
 - **File transfer:** bounded binary reads and atomic writes within a workspace.
+- **Containment:** host and guest cgroup limits, read-only templates, private
+  workspaces, and a network profile that denies all egress.
+- **Reproducible images:** pinned runtime inputs, isolated builds, immutable
+  manifests, and dependency notices packaged with generated artifacts.
 - **Host diagnostics:** real Linux KVM, cgroup, namespace, and artifact checks.
 - **Shared contracts:** generated Go and Python bindings with live interoperability
   tests.
@@ -28,13 +34,15 @@ make verify
 ```
 
 `make verify` checks generated-source drift, Go race tests, Python interoperability,
-macOS/Linux cross-builds, Python wheel packaging, and `go vet`.
+artifact integrity tests, macOS/Linux cross-builds, Python wheel packaging, and
+`go vet`.
 
 ```sh
 make generate       # Regenerate Go and Python bindings
 make test-contract  # Run Python against the real Go guest
 make build          # Check target builds and package the Python bindings
 make host-doctor    # Report host prerequisites as JSON
+make build-testdriver # Build the real KVM acceptance operator
 ```
 
 The host doctor returns nonzero when requirements or pinned artifacts are missing.
@@ -48,10 +56,14 @@ Native macOS cannot provide Linux KVM; use the [Lima development setup](docs/dev
 
 ## Status
 
-Guest RPC behavior and host prerequisites are tested. Firecracker VM lifecycle,
-end-to-end vsock communication, isolation under failure, and snapshot/fork support
-are still under development. Local command tests execute trusted processes and
-do not establish VM isolation.
+The cold-boot profile is tested on Linux ARM64 with real nested KVM: authenticated
+vsock, Go/Python commands and files, resource exhaustion, cancellation, network
+denial, independent VMs, and cleanup after guest or host failure.
+
+Workspaces are ephemeral and network access is disabled. Linux AMD64 is
+cross-built but still needs runtime qualification. Snapshot, restore, and fork
+are not implemented. Native Mac command tests use trusted processes; the
+separate Linux KVM suite establishes VM behavior.
 
 ## License
 
