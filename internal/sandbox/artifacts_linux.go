@@ -20,6 +20,7 @@ import (
 	"time"
 
 	"github.com/gduchidze/hypercall/internal/sandbox/hostdoctor"
+	"github.com/gduchidze/hypercall/internal/snapshot"
 )
 
 type assets struct{ firecracker, jailer, kernel, rootfs string }
@@ -168,6 +169,7 @@ func (b *Backend) stage(ctx context.Context) error {
 			return fmt.Errorf("%w: pinned %s version failed", ErrInvalid, item.name)
 		}
 	}
+	b.compatibilityBase = snapshot.Compatibility{FirecrackerVersion: cfg.Firecracker.Version, SnapshotFormatVersion: "8.0.0", TemplateSHA256: cfg.Template.SHA256, RootFSSHA256: m.RootFS.SHA256, KernelSHA256: m.Kernel.SHA256, GuestSHA256: m.GuestAgent.SHA256, DeviceLayoutVersion: "root-session-workspace-vsock-no-network-v1", BarrierProtocolVersion: "controlled-python-v2-host-clock", RNGPolicy: "host256-rndaddentropy-rndreseedcrng-python-v1"}
 	b.assets = assets{filepath.Join(dir, "firecracker"), filepath.Join(dir, "jailer"), filepath.Join(dir, "kernel"), filepath.Join(dir, "rootfs.ext4")}
 	return nil
 }

@@ -38,6 +38,36 @@ class GuestStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.StartControlled = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/StartControlled',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.StartControlledRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+                _registered_method=True)
+        self.InspectControlled = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/InspectControlled',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.InspectControlledRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+                _registered_method=True)
+        self.ContinueControlled = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/ContinueControlled',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ContinueControlledRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+                _registered_method=True)
+        self.PrepareCapture = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/PrepareCapture',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.PrepareCaptureRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+                _registered_method=True)
+        self.ReleaseCapture = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/ReleaseCapture',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ReleaseCaptureRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+                _registered_method=True)
+        self.RebindClone = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/RebindClone',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.RebindCloneRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoResponse.FromString,
+                _registered_method=True)
         self.GetInfo = channel.unary_unary(
                 '/hypercall.guest.v1.Guest/GetInfo',
                 request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoRequest.SerializeToString,
@@ -67,6 +97,44 @@ class GuestServicer(object):
     request fields never establish authority. Credentials must change on a fork.
     """
 
+    def StartControlled(self, request, context):
+        """Guest-owned bounded qualification process; survives host transport reset.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def InspectControlled(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ContinueControlled(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PrepareCapture(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReleaseCapture(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RebindClone(self, request, context):
+        """Authenticated against freshly provisioned unmounted session block disk.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def GetInfo(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -94,6 +162,36 @@ class GuestServicer(object):
 
 def add_GuestServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'StartControlled': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartControlled,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.StartControlledRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.SerializeToString,
+            ),
+            'InspectControlled': grpc.unary_unary_rpc_method_handler(
+                    servicer.InspectControlled,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.InspectControlledRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.SerializeToString,
+            ),
+            'ContinueControlled': grpc.unary_unary_rpc_method_handler(
+                    servicer.ContinueControlled,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ContinueControlledRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.SerializeToString,
+            ),
+            'PrepareCapture': grpc.unary_unary_rpc_method_handler(
+                    servicer.PrepareCapture,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.PrepareCaptureRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.SerializeToString,
+            ),
+            'ReleaseCapture': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReleaseCapture,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ReleaseCaptureRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.SerializeToString,
+            ),
+            'RebindClone': grpc.unary_unary_rpc_method_handler(
+                    servicer.RebindClone,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.RebindCloneRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoResponse.SerializeToString,
+            ),
             'GetInfo': grpc.unary_unary_rpc_method_handler(
                     servicer.GetInfo,
                     request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoRequest.FromString,
@@ -128,6 +226,168 @@ class Guest(object):
     value. The credential is provisioned out of band and binds the allocation;
     request fields never establish authority. Credentials must change on a fork.
     """
+
+    @staticmethod
+    def StartControlled(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/StartControlled',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.StartControlledRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def InspectControlled(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/InspectControlled',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.InspectControlledRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ContinueControlled(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/ContinueControlled',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ContinueControlledRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PrepareCapture(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/PrepareCapture',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.PrepareCaptureRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReleaseCapture(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/ReleaseCapture',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ReleaseCaptureRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.ControlledState.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RebindClone(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/RebindClone',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.RebindCloneRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def GetInfo(request,

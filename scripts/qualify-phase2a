@@ -1,0 +1,367 @@
+#!/usr/bin/env python3
+"""Opt-in real-host Phase 2A workflow. Never starts a host service or provisions VMs directly."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import ipaddress
+import json
+import os
+from pathlib import Path
+import re
+import socket
+import stat
+import subprocess
+import sys
+import tempfile
+import time
+from urllib.parse import urlsplit
+from urllib.request import ProxyHandler, Request, build_opener
+
+from hypercall import Client, HypercallError
+import yaml
+
+
+class QualificationFailure(Exception):
+    pass
+
+
+def require(condition, code):
+    if not condition:
+        raise QualificationFailure(code)
+
+
+def regular(name, *, private=False, executable=False):
+    path = Path(name)
+    require(path.is_absolute() and not path.is_symlink(), "absolute_regular_path_required")
+    info = path.stat()
+    require(stat.S_ISREG(info.st_mode) and not info.st_mode & 0o022, "unsafe_file_permissions")
+    if private:
+        require(not info.st_mode & 0o077, "private_file_required")
+    if executable:
+        require(os.access(path, os.X_OK), "executable_required")
+    return path
+
+
+def address(value, *, loopback=False):
+    parsed = urlsplit("//" + value)
+    require(parsed.hostname and parsed.port and not parsed.path and not parsed.username,
+            "host_port_required")
+    if loopback:
+        require(ipaddress.ip_address(parsed.hostname).is_loopback, "literal_loopback_required")
+    return parsed.hostname, parsed.port
+
+
+def configuration(path):
+    config = json.loads(regular(path, private=True).read_text())
+    fields = {"profile", "server_binary", "server_sha256", "cli_binary", "cli_sha256",
+              "keys_file", "manifest_file", "tenant_id", "project_id", "grpc_address",
+              "http_address", "host_address", "host_ca", "host_cert", "host_key",
+              "host_server_name", "architecture"}
+    require(set(config) == fields and all(isinstance(v, str) and v for v in config.values()),
+            "complete_known_configuration_required")
+    require(config["profile"] == "controlled_python_v1_firecracker", "real_profile_required")
+    require(config["architecture"] in {"aarch64", "x86_64"}, "real_architecture_required")
+    require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", config["tenant_id"]), "invalid_tenant")
+    require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", config["project_id"]), "invalid_project")
+    for kind in ("server", "cli"):
+        binary = regular(config[kind + "_binary"], executable=True)
+        expected = config[kind + "_sha256"]
+        require(re.fullmatch(r"[0-9a-f]{64}", expected), "binary_sha256_required")
+        with binary.open("rb") as source:
+            require(hashlib.file_digest(source, "sha256").hexdigest() == expected,
+                    "binary_sha256_mismatch")
+    for key in ("keys_file", "host_key"):
+        regular(config[key], private=True)
+    for key in ("manifest_file", "host_ca", "host_cert"):
+        regular(config[key])
+    address(config["grpc_address"], loopback=True)
+    address(config["http_address"], loopback=True)
+    address(config["host_address"])
+    require(config["grpc_address"] != config["http_address"], "distinct_api_ports_required")
+    manifest = Path(config["manifest_file"]).read_text()
+    require(len(manifest.encode()) <= 1 << 20, "manifest_too_large")
+    # The public API remains the authoritative strict manifest parser. This
+    # additional preflight prevents starting an unintended foreground workload.
+    documents = list(yaml.safe_load_all(manifest))
+    require(1 <= len(documents) <= 64 and all(isinstance(doc, dict) for doc in documents), "definition_manifest_required")
+    tasks = [doc for doc in documents if doc.get("kind") == "Task"]
+    require(len(tasks) == 1 and documents[-1] is tasks[0], "one_final_task_required")
+    task = tasks[0].get("spec", {})
+    require(task.get("execution_mode") == "controlled_python_v1" and not task.get("command") and not task.get("env")
+            and isinstance(task.get("controlled_counter", 0), int) and task.get("controlled_counter", 0) >= 0
+            and 300 <= task.get("limits", {}).get("timeout_seconds", 0) <= 600,
+            "bounded_real_controlled_task_required")
+    return config
+
+
+def unused(value):
+    host, port = address(value, loopback=True)
+    family = socket.AF_INET6 if ":" in host else socket.AF_INET
+    with socket.socket(family) as probe:
+        probe.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        probe.bind((host, port))
+
+
+def inspect_rest(endpoint, project, branch_id, key):
+    request = Request("http://" + endpoint + "/v1/projects/" + project + "/resources/Branch/" + branch_id,
+                      headers={"Authorization": "Bearer " + key})
+    # This authenticated endpoint is local. Never forward its bearer through
+    # an unrelated environment proxy when NO_PROXY has not been configured.
+    with build_opener(ProxyHandler({})).open(request, timeout=10) as response:
+        return json.load(response)
+
+
+class Workflow:
+    def __init__(self, config, key, report):
+        self.config, self.key, self.report = config, key, report
+        self.process = None
+        self.log = tempfile.TemporaryFile()
+        self.client = Client(config["grpc_address"], project=config["project_id"], api_key=key,
+                             plaintext=True, timeout=10)
+        self.branch_id = None
+        self.prefix = "runtime-2a-" + os.urandom(12).hex()
+        self.report["idempotency_prefix"] = self.prefix
+
+    def start(self):
+        config = self.config
+        unused(config["grpc_address"])
+        unused(config["http_address"])
+        args = [config["server_binary"], "--grpc-listen", config["grpc_address"],
+                "--http-listen", config["http_address"], "--keys-file", config["keys_file"],
+                "--insecure-loopback", "--host-controlled-snapshots", "--host-address", config["host_address"],
+                "--host-ca", config["host_ca"], "--host-cert", config["host_cert"],
+                "--host-key", config["host_key"], "--host-server-name", config["host_server_name"]]
+        environment = dict(os.environ)
+        environment.pop("HYPERCALL_API_KEY", None)
+        self.process = subprocess.Popen(args, stdin=subprocess.DEVNULL, stdout=self.log,
+                                        stderr=self.log, env=environment)
+        until = time.monotonic() + 30
+        while time.monotonic() < until:
+            require(self.process.poll() is None, "server_start_failed")
+            try:
+                self.client.list("Task", limit=1, timeout=1)
+                return
+            except HypercallError as error:
+                require(error.code in {"unavailable", "deadline_exceeded", "cancelled"}, "server_auth_or_database_failed")
+                time.sleep(0.1)
+        raise QualificationFailure("server_start_deadline")
+
+    def stop(self):
+        if self.process is not None:
+            self.process.terminate()
+            try:
+                self.process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                self.process.kill()
+                self.process.wait(timeout=5)
+            self.process = None
+
+    def wait(self, kind, identity, predicate, timeout=120):
+        until = time.monotonic() + timeout
+        while time.monotonic() < until:
+            resource = self.client.inspect(kind, identity)
+            if predicate(resource):
+                return resource
+            if kind == "Operation":
+                require(resource.operation_status.state not in {"failed", "superseded"}, "operation_failed")
+            time.sleep(0.2)
+        raise QualificationFailure("lifecycle_deadline")
+
+    def completed(self, operation):
+        return self.wait("Operation", operation.metadata.id,
+                         lambda value: value.operation_status.state == "succeeded")
+
+    def command(self, arguments):
+        result = self.client.run_command(self.branch_id, arguments, timeout=10)
+        require(result.exit_code == 0 and not result.timed_out and not result.output_truncated,
+                "guest_command_failed")
+        return result
+
+    def cli(self, action, *arguments, key=None):
+        config = self.config
+        argv = [config["cli_binary"], "--endpoint", config["grpc_address"], "--project", config["project_id"],
+                "--plaintext", "--timeout", "120s"]
+        if key:
+            argv += ["--key", key]
+        environment = dict(os.environ, HYPERCALL_API_KEY=self.key)
+        result = subprocess.run(argv + [action, *arguments], check=True, capture_output=True,
+                                timeout=125, env=environment)
+        return json.loads(result.stdout)
+
+    def state(self, branch, expected_counter):
+        state = json.loads(self.client.read_file(self.branch_id, "controlled-state.json"))
+        expected = {"tenant_id": self.config["tenant_id"], "project_id": self.config["project_id"],
+                    "sandbox_id": branch.branch_status.sandbox_id,
+                    "execution_id": branch.branch_status.execution_id, "epoch": branch.branch_status.epoch}
+        require(state["counter"] == expected_counter and state["identity"] == expected, "guest_identity_or_counter_mismatch")
+
+    def checkpoint(self, checkpoint, task):
+        spec = checkpoint.checkpoint_spec
+        require(spec.verified and spec.branch_id == self.branch_id and spec.native_checkpoint_id
+                and spec.protocol_version == "hypercall.snapshot.v1", "native_checkpoint_required")
+        require(spec.manifest_digest == "sha256:" + hashlib.sha256(spec.snapshot_manifest).hexdigest(),
+                "native_manifest_digest_mismatch")
+        native = json.loads(spec.snapshot_manifest)
+        require(native["schema_version"] == 1 and native["scope"] == {
+            "tenant_id": self.config["tenant_id"], "project_id": self.config["project_id"],
+            "checkpoint_id": spec.native_checkpoint_id}, "native_manifest_scope_mismatch")
+        compatibility = native["compatibility"]
+        require(compatibility["architecture"] == self.config["architecture"]
+                and compatibility["firecracker_version"] == "Firecracker v1.14.0"
+                and compatibility["snapshot_format_version"] == "8.0.0"
+                and compatibility["barrier_protocol_version"] == "controlled-python-v2-host-clock"
+                and compatibility["memory_mib"] == task.limits.memory_mb
+                and compatibility["vcpus"] == task.limits.cpu
+                and "sha256:" + compatibility["template_sha256"] == task.template_digest
+                and "sha256:" + compatibility["guest_sha256"] == task.agent_digest,
+                "native_runtime_profile_mismatch")
+        artifacts = {artifact["kind"]: artifact for artifact in native["artifacts"]}
+        require(len(native["artifacts"]) == 3 and set(artifacts) == {"memory", "vmstate", "disk"},
+                "complete_native_artifacts_required")
+        require(artifacts["memory"]["size"] == task.limits.memory_mb << 20
+                and artifacts["disk"]["size"] == task.limits.disk_mb << 20
+                and artifacts["vmstate"]["size"] > 0, "full_native_snapshot_required")
+        prefix = f"tenants/{self.config['tenant_id']}/projects/{self.config['project_id']}/checkpoints/{spec.native_checkpoint_id}/"
+        for artifact in artifacts.values():
+            require(artifact["key"].startswith(prefix) and re.fullmatch(r"[0-9a-f]{64}", artifact["sha256"]),
+                    "native_artifact_scope_or_digest_mismatch")
+        self.report["native_snapshot"] = {"manifest_digest": spec.manifest_digest,
+                                          "memory_bytes": artifacts["memory"]["size"],
+                                          "architecture": compatibility["architecture"]}
+
+    def run(self):
+        self.report["phase"] = "server_start"
+        self.start()
+        self.report["phase"] = "submission"
+        submitted = self.cli("submit", self.config["manifest_file"], key=self.prefix + "-submit")
+        self.branch_id = submitted["branch"]["metadata"]["id"]
+        self.report.update(run_id=submitted["run"]["metadata"]["id"], branch_id=self.branch_id)
+        run = self.client.inspect("Run", self.report["run_id"])
+        task = run.run_spec.task.task_spec
+        require(task.execution_mode == "controlled_python_v1" and not task.command and not task.env
+                and 300 <= task.limits.timeout_seconds <= 600, "bounded_real_controlled_task_required")
+        branch = self.wait("Branch", self.branch_id, lambda value: value.branch_status.observed == "running")
+        self.report["phase"] = "guest_commands_and_files"
+        self.state(branch, task.controlled_counter)
+        result = self.command(["/usr/bin/python3", "-I", "-c", "import sys;sys.stdout.buffer.write(b'phase2a-command\\x00')"])
+        require(result.stdout == b"phase2a-command\x00", "guest_command_output_mismatch")
+        marker = b"phase2a-private-marker\x00\xff"
+        self.client.write_file(self.branch_id, "phase2a-marker.bin", marker)
+        require(self.client.read_file(self.branch_id, "phase2a-marker.bin") == marker, "guest_file_roundtrip_failed")
+        self.report["checks"]["start_command_files"] = "passed"
+        self.report["phase"] = "native_suspend"
+        operation = self.client.suspend(self.branch_id, idempotency_key=self.prefix + "-suspend")
+        self.report["suspend_operation_id"] = operation.metadata.id
+        self.completed(operation)
+        paused = self.client.inspect("Branch", self.branch_id)
+        require(paused.branch_status.observed == "suspended", "suspension_not_observed")
+        self.checkpoint(self.client.inspect("Checkpoint", paused.branch_status.checkpoint_id), task)
+        self.report["checks"]["native_suspend"] = "passed"
+        self.report["checkpoint_id"] = paused.branch_status.checkpoint_id
+        cursor = self.client.events(self.branch_id).next_sequence
+        self.report["phase"] = "paused_controller_restart"
+        self.stop()
+        self.start()
+        require(self.client.inspect("Branch", self.branch_id).branch_status.checkpoint_id == paused.branch_status.checkpoint_id,
+                "checkpoint_lost_on_controller_restart")
+        resumed = self.cli("resume", self.branch_id, key=self.prefix + "-resume")
+        self.report["resume_operation_id"] = resumed["metadata"]["id"]
+        self.report["phase"] = "native_resume"
+        selected = resumed["operation_spec"]["checkpoint_id"]
+        require(selected == paused.branch_status.checkpoint_id, "resume_checkpoint_changed")
+        self.wait("Operation", resumed["metadata"]["id"], lambda value: value.operation_status.state == "succeeded")
+        running = self.client.inspect("Branch", self.branch_id)
+        require(running.branch_status.observed == "running" and running.branch_status.epoch > paused.branch_status.epoch
+                and running.branch_status.sandbox_id != paused.branch_status.sandbox_id
+                and running.branch_status.execution_id != paused.branch_status.execution_id,
+                "resume_identity_not_fresh")
+        self.state(running, task.controlled_counter)
+        require(self.client.read_file(self.branch_id, "phase2a-marker.bin") == marker, "restored_file_mismatch")
+        self.report["checks"]["native_resume_after_controller_restart"] = "passed"
+        self.report["phase"] = "running_controller_restart"
+        self.stop()
+        self.start()
+        same = self.client.inspect("Branch", self.branch_id)
+        require(same.branch_status.execution_id == running.branch_status.execution_id
+                and same.branch_status.sandbox_id == running.branch_status.sandbox_id,
+                "running_assignment_changed_on_controller_restart")
+        self.state(same, task.controlled_counter)
+        self.report["checks"]["running_controller_restart"] = "passed"
+        inspected = inspect_rest(self.config["http_address"], self.config["project_id"], self.branch_id, self.key)
+        require(inspected["metadata"]["id"] == self.branch_id, "rest_inspect_mismatch")
+        self.report["phase"] = "events_and_cancellation"
+        self.completed(self.client.cancel(self.branch_id, idempotency_key=self.prefix + "-cancel"))
+        require(self.client.inspect("Branch", self.branch_id).branch_status.observed == "cancelled", "cancellation_unconfirmed")
+        events = self.client.events(self.branch_id, limit=1000)
+        require([event.sequence for event in events.events] == list(range(1, events.next_sequence + 1)), "event_history_incomplete")
+        require(all(event.sequence > cursor for event in self.client.events(self.branch_id, after=cursor).events),
+                "event_cursor_did_not_resume")
+        self.report["checks"]["rest_events_cancel"] = "passed"
+        self.report["phase"] = "complete"
+        self.report["status"] = "passed"
+
+    def close(self):
+        if self.branch_id and self.report["status"] != "passed":
+            self.report["cleanup"] = "unconfirmed; preserve host state and reconcile execution lease"
+            if self.process and self.process.poll() is None:
+                try:
+                    self.completed(self.client.cancel(self.branch_id, idempotency_key=self.prefix + "-cleanup"))
+                    self.report["cleanup"] = "confirmed"
+                except Exception:
+                    pass
+        try:
+            self.stop()
+        finally:
+            try:
+                self.client.close()
+            finally:
+                self.log.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", required=True, help="absolute private operator JSON configuration")
+    parser.add_argument("--report", required=True, help="absolute new redacted report file")
+    args = parser.parse_args()
+    require(os.environ.get("HYPERCALL_RUNTIME_2A_TEST") == "1", "HYPERCALL_RUNTIME_2A_TEST=1_required")
+    require(os.environ.get("HYPERCALL_DATABASE_URL"), "HYPERCALL_DATABASE_URL_required")
+    key = os.environ.get("HYPERCALL_API_KEY", "")
+    require(len(key) >= 32, "scoped_API_key_required")
+    config = configuration(args.config)
+    destination = Path(args.report)
+    require(destination.is_absolute() and not destination.exists(), "new_absolute_report_required")
+    # Reserve the output safely before any process or remote lifecycle mutation.
+    descriptor = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    report = {"schema_version": 1, "profile": config["profile"], "status": "failed", "checks": {},
+              "server_sha256": config["server_sha256"], "cli_sha256": config["cli_sha256"],
+              "manifest_sha256": hashlib.sha256(Path(config["manifest_file"]).read_bytes()).hexdigest(),
+              "scope_of_claim": "Phase 2A real-host workflow; no Phase 1B fan-out or semantic-agent qualification"}
+    workflow = Workflow(config, key, report)
+    try:
+        workflow.run()
+    except Exception as error:
+        report["failure"] = error.code if isinstance(error, HypercallError) else (str(error) if isinstance(error, QualificationFailure) else type(error).__name__)
+    finally:
+        try:
+            workflow.close()
+        except Exception as error:
+            report["status"] = "failed"
+            report["cleanup"] = "unconfirmed; preserve host state and reconcile execution lease"
+            report["cleanup_failure"] = type(error).__name__
+        finally:
+            with os.fdopen(descriptor, "w") as output:
+                json.dump(report, output, indent=2)
+                output.write("\n")
+    print("Phase 2A runtime workflow: " + report["status"])
+    return 0 if report["status"] == "passed" else 1
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as error:
+        # Configuration failures never echo keys, connection URLs, or file data.
+        code = str(error) if isinstance(error, QualificationFailure) else type(error).__name__
+        print("Phase 2A qualification refused: " + code, file=sys.stderr)
+        raise SystemExit(2)

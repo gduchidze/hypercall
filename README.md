@@ -53,6 +53,7 @@ Native macOS cannot provide Linux KVM; use the [Lima development setup](docs/dev
 - [Guest service and security model](internal/guest/README.md)
 - [Protocol and code generation](proto/README.md)
 - [Host setup and qualification](docs/development/host.md)
+- [Snapshot/fork qualification](docs/development/snapshots.md)
 
 ## Status
 
@@ -61,10 +62,27 @@ vsock, Go/Python commands and files, resource exhaustion, cancellation, network
 denial, independent VMs, and cleanup after guest or host failure.
 
 Workspaces are ephemeral and network access is disabled. Linux AMD64 is
-cross-built but still needs runtime qualification. Snapshot, restore, and fork
-are not implemented. Native Mac command tests use trusted processes; the
+cross-built but still needs runtime qualification. The bounded Phase 2A controlled-Python workflow passed on real ARM64/KVM,
+including native full-memory suspend/restore across controller restarts, fresh
+execution identity, retained memory/files and confirmed cancellation.
+Two-child fork continuity currently fails after guest health timeouts; cross-host
+restore and live GCS remain untested. The full snapshot/fork concurrency
+envelope remains unqualified; [qualification status](docs/development/snapshots.md#qualification-status)
+records the results and remaining gates. Native Mac command tests use trusted processes; the
 separate Linux KVM suite establishes VM behavior.
 
 ## License
 
 [BSD-3-Clause](LICENSE).
+
+
+The authorized Phase 2A local control-plane increment adds tenant-scoped durable
+resources, Postgres jobs/events/outbox, authenticated gRPC/REST, the Go CLI and
+Python clients. Durable suspend/resume has passed both conformance tests and the
+[real-host controlled-profile workflow](docs/development/phase2a-runtime.md),
+including fresh execution epochs and retained active budgets. See [control-plane setup and limits](docs/development/control-plane.md),
+[CLI/SDK usage](docs/development/clients.md), and
+[actual validation evidence](docs/validation/2A.md). Its default sandbox backend
+fails closed unless an explicitly configured host is supplied. The bounded Phase
+2A controlled-profile runtime workflow passed; the full Phase 1B fan-out, cross-host
+and live-GCS gates and general production qualification remain open.

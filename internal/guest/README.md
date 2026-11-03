@@ -65,3 +65,23 @@ KVM boot, vsock connectivity or guest crash recovery. Whole-VM stop owns recover
 after guest daemon failure. `os.Root` does not prohibit bind mounts, hard links or
 special filesystem mounts; the template must provide a private workspace and
 deny workload mount privileges. Qualification belongs to the Linux VM suite.
+
+Phase 1B uses a separate guest-owned controlled Python process rather than
+foreground `Exec` reconnection. It preserves an in-memory counter, writes
+`controlled-state.json`, and creates an unchanged `controlled-origin.txt` disk
+sentinel. Its stdin/stdout pipes remain inside the guest across transport reset.
+The template mounts a private writable ext4 workspace at `/dev/vdc`; snapshots
+capture that disk while paused after the workload barrier and guest `sync`.
+
+The capture gate rejects ordinary operations until the source session has been
+verified or a clone has rebound. A clone reads a new root-only session image from
+unmounted `/dev/vdb`, first issuing `BLKFLSBUF`, and rejects inherited credentials.
+It verifies fresh scoped sandbox/execution identity and the new bearer before
+accepting a host UTC sample. With the gate closed it validates session expiry
+against that sample and updates `CLOCK_REALTIME`; `CLOCK_MONOTONIC` is retained.
+It rotates the bearer and expiry, uses privileged `RNDADDENTROPY` and `RNDRESEEDCRNG` with 256 fresh host bits,
+then explicitly reseeds the controlled Python RNG. This supports the pinned ARM
+kernel 6.1.155 without claiming ARM VMGenID support or generic userspace RNG
+renewal. No network device or provider routing exists in this qualification
+workload. Any renewal failure leaves the gate closed and the host terminates the
+child. See [snapshot qualification](../../docs/development/snapshots.md).

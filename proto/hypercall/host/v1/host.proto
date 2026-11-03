@@ -1,0 +1,35 @@
+syntax = "proto3";
+package hypercall.host.v1;
+option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/host/v1;hostv1";
+import "hypercall/guest/v1/guest.proto";
+import "hypercall/v1/control.proto";
+// Private mTLS control-plane to host protocol. Certificate identity authorizes a
+// configured tenant/project; payload scope never establishes authentication.
+service Host {
+ rpc Ensure(Assignment) returns (Observation);
+ rpc Observe(Assignment) returns (Observation);
+ rpc Stop(Assignment) returns (Observation);
+ rpc Suspend(Assignment) returns (Observation);
+ rpc Resume(ResumeRequest) returns (Observation);
+ rpc Exec(ExecRequest) returns (stream hypercall.guest.v1.ExecEvent);
+ rpc ReadFile(ReadFileRequest) returns (hypercall.guest.v1.ReadFileResponse);
+ rpc WriteFile(WriteFileRequest) returns (hypercall.guest.v1.WriteFileResponse);
+}
+message Assignment {
+ string tenant_id = 1;
+ string project_id = 2;
+ string branch_id = 3;
+ string execution_id = 4;
+ int64 epoch = 5;
+ int64 lease_until_unix_nano = 6;
+ // Canonical Hypercall RunSpec JSON schema v1; immutable resolved resources.
+ // Never contains guest credentials. Required on Ensure, omitted on proxy calls.
+ bytes resolved_run_json = 7;
+ // Physical VM allocation; a resumed branch receives a fresh sandbox identity.
+ string sandbox_id = 8;
+}
+message Observation { string state = 1; hypercall.v1.CheckpointSpec checkpoint = 2; }
+message ResumeRequest { Assignment assignment = 1; hypercall.v1.CheckpointSpec checkpoint = 2; }
+message ExecRequest { Assignment assignment = 1; hypercall.guest.v1.ExecRequest command = 2; }
+message ReadFileRequest { Assignment assignment = 1; hypercall.guest.v1.ReadFileRequest file = 2; }
+message WriteFileRequest { Assignment assignment = 1; hypercall.guest.v1.WriteFileRequest file = 2; }

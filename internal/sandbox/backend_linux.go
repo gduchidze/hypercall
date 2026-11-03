@@ -19,23 +19,29 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	"github.com/gduchidze/hypercall/internal/snapshot"
 	"google.golang.org/grpc"
 )
 
 type Backend struct {
-	mu       sync.Mutex
-	cfg      Config
-	root     *os.Root
-	cgroot   *os.Root
-	lock     *os.File
-	assets   assets
-	assetDir string
-	active   map[Allocation]*instance
-	stopped  map[Allocation]Observation
-	fences   map[string]uint64
-	closed   bool
+	mu                sync.Mutex
+	snapshotMu        sync.Mutex
+	compatibilityBase snapshot.Compatibility
+	ownerID           string
+	cfg               Config
+	root              *os.Root
+	cgroot            *os.Root
+	lock              *os.File
+	assets            assets
+	assetDir          string
+	active            map[Allocation]*instance
+	stopped           map[Allocation]Observation
+	fences            map[string]uint64
+	closed            bool
 }
 type instance struct {
+	rpcMu      sync.RWMutex
+	restore    *restoreSpec
 	mu         sync.Mutex
 	cleaned    bool
 	lifetime   context.Context
@@ -47,10 +53,13 @@ type instance struct {
 	done       chan struct{}
 }
 type record struct {
-	SchemaVersion int         `json:"schema_version"`
-	Token         string      `json:"token"`
-	Observation   Observation `json:"observation"`
-	Limits        Limits      `json:"limits"`
+	SchemaVersion           int         `json:"schema_version"`
+	CheckpointID            string      `json:"checkpoint_id,omitempty"`
+	SnapshotReference       string      `json:"snapshot_reference,omitempty"`
+	PendingReferenceRelease bool        `json:"pending_reference_release,omitempty"`
+	Token                   string      `json:"token"`
+	Observation             Observation `json:"observation"`
+	Limits                  Limits      `json:"limits"`
 }
 
 func New(ctx context.Context, c Config) (backend *Backend, result error) {
@@ -141,7 +150,19 @@ func New(ctx context.Context, c Config) (backend *Backend, result error) {
 	if err = root.MkdirAll("jails", 0700); err != nil {
 		return nil, err
 	}
+	if err = root.MkdirAll("materialized", 0700); err != nil {
+		return nil, err
+	}
+	if err = root.MkdirAll("captures", 0700); err != nil {
+		return nil, err
+	}
+	if err = root.MkdirAll("operations", 0700); err != nil {
+		return nil, err
+	}
 	if err = root.MkdirAll("fences", 0700); err != nil {
+		return nil, err
+	}
+	if err = b.loadSnapshotOwner(); err != nil {
 		return nil, err
 	}
 	if err = b.loadFences(); err != nil {
@@ -212,7 +233,10 @@ func (b *Backend) get(a Allocation) (*instance, error) {
 	return h, nil
 }
 
-func (b *Backend) Create(ctx context.Context, r CreateRequest) (o Observation, result error) {
+func (b *Backend) Create(ctx context.Context, r CreateRequest) (Observation, error) {
+	return b.create(ctx, r, nil, false)
+}
+func (b *Backend) create(ctx context.Context, r CreateRequest, restored *restoreSpec, retry bool) (o Observation, result error) {
 	if err := r.Validate(); err != nil {
 		return o, err
 	}
@@ -232,10 +256,18 @@ func (b *Backend) Create(ctx context.Context, r CreateRequest) (o Observation, r
 		return o, err
 	}
 	now := time.Now().UTC()
-	o = Observation{Allocation: r.Allocation, State: StateStarting, CreatedAt: now, ExpiresAt: now.Add(r.Limits.TTL), CgroupPath: filepath.Join(b.cfg.CgroupDir, token), RootDir: filepath.Join(b.cfg.StateDir, "jails", "firecracker", token, "root")}
+	expiresAt, expiryErr := r.Deadline(now)
+	if expiryErr != nil {
+		return o, expiryErr
+	}
+	o = Observation{Allocation: r.Allocation, State: StateStarting, CreatedAt: now, ExpiresAt: expiresAt, CgroupPath: filepath.Join(b.cfg.CgroupDir, token), RootDir: filepath.Join(b.cfg.StateDir, "jails", "firecracker", token, "root")}
 	o.VSockPath = filepath.Join(o.RootDir, "vsock.sock")
 	lifetime, cancel := context.WithDeadline(context.Background(), o.ExpiresAt)
-	h := &instance{record: record{SchemaVersion: 1, Token: token, Observation: o, Limits: r.Limits}, credential: hex.EncodeToString(secret), lifetime: lifetime, cancel: cancel, done: make(chan struct{})}
+	h := &instance{restore: restored, record: record{SchemaVersion: 1, Token: token, Observation: o, Limits: r.Limits}, credential: hex.EncodeToString(secret), lifetime: lifetime, cancel: cancel, done: make(chan struct{})}
+	if restored != nil {
+		h.record.CheckpointID = restored.checkpoint
+		h.record.SnapshotReference = restored.reference
+	}
 	// Reservation alone holds the global lock. No VM boot, RPC or process wait
 	// may block another allocation's TTL enforcement or cancellation.
 	b.mu.Lock()
@@ -256,18 +288,25 @@ func (b *Backend) Create(ctx context.Context, r CreateRequest) (o Observation, r
 			return o, ErrConflict
 		}
 	}
-	if _, ok := b.stopped[r.Allocation]; ok {
+	if _, ok := b.stopped[r.Allocation]; ok && !retry {
 		b.mu.Unlock()
 		cancel()
 		return o, ErrConflict
 	}
-	if err := b.advanceFence(r.Allocation); err != nil {
+	if err := b.reserveEpoch(r.Allocation, retry); err != nil {
 		b.mu.Unlock()
 		cancel()
 		return o, err
 	}
+	if retry {
+		delete(b.stopped, r.Allocation)
+	}
 	h.mu.Lock()
 	b.active[r.Allocation] = h
+	if restored != nil {
+		restored.admitted = true
+		restored.token = h.record.Token
+	}
 	b.mu.Unlock()
 	defer h.mu.Unlock()
 	defer func() {
@@ -319,16 +358,22 @@ func (b *Backend) monitor(h *instance) {
 		case <-ticker.C:
 			// Do not wait for a starting VM's mutex: its independent lifetime timer
 			// already cancels boot and no other VM's monitor is blocked by it.
+			if !h.rpcMu.TryRLock() {
+				continue
+			}
 			if !h.mu.TryLock() {
+				h.rpcMu.RUnlock()
 				continue
 			}
 			if h.cleaned {
 				h.mu.Unlock()
+				h.rpcMu.RUnlock()
 				return
 			}
 			running := h.record.Observation.State == StateRunning
 			if !running {
 				h.mu.Unlock()
+				h.rpcMu.RUnlock()
 				continue
 			}
 			populated, err := b.populated(h.record.Token)
@@ -339,7 +384,10 @@ func (b *Backend) monitor(h *instance) {
 				_, err = client.GetInfo(ctx, &guestv1.GetInfoRequest{})
 				cancel()
 			}
+			h.rpcMu.RUnlock()
 			if err != nil || !populated {
+				memoryEvents, _ := b.cgroot.ReadFile(filepath.Join(h.record.Token, "memory.events"))
+				b.cfg.Logger.Warn("sandbox health failed", "sandbox_id", h.record.Observation.Allocation.SandboxID, "error", err, "populated", populated, "memory_events", strings.TrimSpace(string(memoryEvents)))
 				if e := b.stop(h, true); e != nil {
 					b.cfg.Logger.Error("sandbox failure cleanup failed", "sandbox_id", h.record.Observation.Allocation.SandboxID)
 				}
@@ -467,6 +515,12 @@ func (b *Backend) stopLocked(h *instance) error {
 	if err := b.root.RemoveAll(filepath.Join("jails", "firecracker", h.record.Token)); err != nil {
 		return err
 	}
+	if err := b.purgeAllocationFiles(h.record.Token); err != nil {
+		return err
+	}
+	if err := b.releaseSnapshotReference(context.Background(), h.record); err != nil {
+		return err
+	}
 	if err := b.root.RemoveAll(filepath.Join("allocations", h.record.Token)); err != nil {
 		return err
 	}
@@ -522,23 +576,35 @@ func (b *Backend) Close() error {
 // locked private state directory. It never adopts a guest session after a
 // restart, guesses ownership from a PID, or kills a numeric (reusable) PID.
 func (b *Backend) Recover(ctx context.Context) ([]Observation, error) {
+	if err := b.lockSnapshot(ctx); err != nil {
+		return nil, err
+	}
+	defer b.snapshotMu.Unlock()
 	b.mu.Lock()
-	defer b.mu.Unlock()
 	if b.closed {
+		b.mu.Unlock()
 		return nil, ErrClosed
 	}
 	entries, err := readDir(b.root, "allocations")
 	if err != nil {
+		b.mu.Unlock()
 		return nil, err
 	}
-	var out []Observation
+	type orphan struct {
+		record             record
+		fenced, localClean bool
+	}
+	var prior []*orphan
+	var failures []error
+	allPriorFenced := true
+	// Enumerate and validate before touching any prior-owner process. An invalid
+	// entry remains untouched, but cannot prevent fencing other validated owners.
 	for _, entry := range entries {
-		if err = ctx.Err(); err != nil {
-			return out, err
-		}
 		token := entry.Name()
 		if !validToken(token) || !entry.IsDir() {
-			return out, errors.New("unrecognized allocation state; operator intervention required")
+			failures = append(failures, errors.New("unrecognized allocation state; operator intervention required"))
+			allPriorFenced = false
+			continue
 		}
 		current := false
 		for _, h := range b.active {
@@ -552,43 +618,113 @@ func (b *Backend) Recover(ctx context.Context) ([]Observation, error) {
 		}
 		var r record
 		if err = decodeFile(filepath.Join(b.cfg.StateDir, "allocations", token, "record.json"), &r); err != nil {
-			// A crash before publishing intent cannot have created external resources.
-			entries, e := readDir(b.root, filepath.Join("allocations", token))
-			if e != nil {
-				return out, e
-			}
-			if len(entries) == 0 || (len(entries) == 1 && entries[0].Name() == "record.tmp") {
+			pending, e := readDir(b.root, filepath.Join("allocations", token))
+			if e == nil && (len(pending) == 0 || (len(pending) == 1 && pending[0].Name() == "record.tmp")) {
 				if e = b.root.RemoveAll(filepath.Join("allocations", token)); e != nil {
-					return out, e
+					failures = append(failures, e)
 				}
 				continue
 			}
-			return out, fmt.Errorf("invalid recovery record: %w", err)
+			failures = append(failures, fmt.Errorf("invalid recovery record: %w", err))
+			allPriorFenced = false
+			continue
 		}
 		o := r.Observation
-		if r.SchemaVersion != 1 || r.Token != token || o.Allocation.Validate() != nil || o.CgroupPath != filepath.Join(b.cfg.CgroupDir, token) || o.RootDir != filepath.Join(b.cfg.StateDir, "jails", "firecracker", token, "root") || o.VSockPath != filepath.Join(o.RootDir, "vsock.sock") {
-			return out, errors.New("recovery record ownership mismatch")
+		referenceValid := (r.CheckpointID == "" && r.SnapshotReference == "" && !r.PendingReferenceRelease) || (identifier.MatchString(r.CheckpointID) && identifier.MatchString(r.SnapshotReference))
+		stateValid := o.State == StateStarting || o.State == StateRunning || o.State == StateStopped || o.State == StateFailed
+		if r.SchemaVersion != 1 || r.Token != token || o.Allocation.Validate() != nil || !referenceValid || !stateValid || o.CgroupPath != filepath.Join(b.cfg.CgroupDir, token) || o.RootDir != filepath.Join(b.cfg.StateDir, "jails", "firecracker", token, "root") || o.VSockPath != filepath.Join(o.RootDir, "vsock.sock") {
+			failures = append(failures, errors.New("recovery record ownership mismatch"))
+			allPriorFenced = false
+			continue
 		}
+		prior = append(prior, &orphan{record: r})
 		if b.fences[fenceFor(o.Allocation).name()] < o.Allocation.Epoch {
-			if err = b.advanceFence(o.Allocation); err != nil {
-				return out, err
+			if e := b.advanceFence(o.Allocation); e != nil {
+				failures = append(failures, e)
 			}
 		}
-		if err = b.killCgroup(token); err != nil {
-			return out, err
-		}
-		if err = b.root.RemoveAll(filepath.Join("jails", "firecracker", token)); err != nil {
-			return out, err
-		}
-		if err = b.root.RemoveAll(filepath.Join("allocations", token)); err != nil {
-			return out, err
-		}
-		o.State = StateStopped
-		b.rememberStopped(o)
-		out = append(out, o)
-		b.cfg.Logger.InfoContext(ctx, "sandbox recovered", "sandbox_id", o.Allocation.SandboxID, "epoch", o.Allocation.Epoch)
 	}
-	return out, nil
+	b.mu.Unlock()
+	// Local safety never waits for a cloud operation and is not cancelled halfway
+	// through an already-enumerated set. Every valid old cgroup is fenced first.
+	for _, old := range prior {
+		if e := b.killCgroup(old.record.Token); e != nil {
+			failures = append(failures, e)
+			allPriorFenced = false
+			continue
+		}
+		old.fenced = true
+	}
+	var out []Observation
+	for _, old := range prior {
+		if !old.fenced {
+			continue
+		}
+		r := old.record
+		jailErr := b.root.RemoveAll(filepath.Join("jails", "firecracker", r.Token))
+		// Remove bootstrap bearers before attempting remote reference release. Keep
+		// only the small ownership/reference record so a cloud outage is recoverable.
+		privateErr := b.purgeAllocationFiles(r.Token)
+		r.Observation.State = StateStopped
+		r.Observation.PID = 0
+		r.PendingReferenceRelease = r.CheckpointID != ""
+		recordErr := b.writeRecord(r)
+		old.record = r
+		old.localClean = jailErr == nil && privateErr == nil && recordErr == nil
+		failures = append(failures, jailErr, privateErr, recordErr)
+		b.mu.Lock()
+		b.rememberStopped(r.Observation)
+		b.mu.Unlock()
+		out = append(out, r.Observation)
+		b.cfg.Logger.InfoContext(ctx, "sandbox recovered", "sandbox_id", r.Observation.Allocation.SandboxID, "epoch", r.Observation.Allocation.Epoch)
+	}
+	if allPriorFenced {
+		failures = append(failures, b.recoverMaterialized())
+	}
+	networkFailed := false
+	for _, old := range prior {
+		if !old.fenced {
+			continue
+		}
+		if e := b.releaseSnapshotReference(ctx, old.record); e != nil {
+			failures = append(failures, e)
+			networkFailed = true
+			continue
+		}
+		if old.localClean {
+			failures = append(failures, b.root.RemoveAll(filepath.Join("allocations", old.record.Token)))
+		}
+	}
+	// Operation journals may contain pins from a crash before allocation intent.
+	// Only reconcile them once every old process is known stopped. A failed pin
+	// release remains durable and is retried by a later Recover, not immediately
+	// retried through a second journal path in this same call.
+	if allPriorFenced && !networkFailed {
+		failures = append(failures, b.recoverSnapshotOperations(ctx))
+		failures = append(failures, b.recoverCaptureIntents(ctx))
+	}
+	return out, errors.Join(failures...)
+}
+
+// purgeAllocationFiles preserves only the durable ownership/reference record.
+// The caller must first prove that this token's cgroup is empty.
+func (b *Backend) purgeAllocationFiles(token string) error {
+	dir := filepath.Join("allocations", token)
+	entries, err := readDir(b.root, dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	var failures []error
+	for _, entry := range entries {
+		if entry.Name() == "record.json" {
+			continue
+		}
+		failures = append(failures, b.root.RemoveAll(filepath.Join(dir, entry.Name())))
+	}
+	return errors.Join(failures...)
 }
 func validToken(s string) bool {
 	if len(s) != 35 || !strings.HasPrefix(s, "hc-") {

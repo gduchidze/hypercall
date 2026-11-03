@@ -25,16 +25,18 @@ class GetInfoRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetInfoResponse(_message.Message):
-    __slots__ = ("protocol_version", "identity", "max_file_bytes", "max_exec_output_bytes")
+    __slots__ = ("protocol_version", "identity", "max_file_bytes", "max_exec_output_bytes", "server_time_unix_nano")
     PROTOCOL_VERSION_FIELD_NUMBER: _ClassVar[int]
     IDENTITY_FIELD_NUMBER: _ClassVar[int]
     MAX_FILE_BYTES_FIELD_NUMBER: _ClassVar[int]
     MAX_EXEC_OUTPUT_BYTES_FIELD_NUMBER: _ClassVar[int]
+    SERVER_TIME_UNIX_NANO_FIELD_NUMBER: _ClassVar[int]
     protocol_version: str
     identity: AllocationIdentity
     max_file_bytes: int
     max_exec_output_bytes: int
-    def __init__(self, protocol_version: _Optional[str] = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., max_file_bytes: _Optional[int] = ..., max_exec_output_bytes: _Optional[int] = ...) -> None: ...
+    server_time_unix_nano: int
+    def __init__(self, protocol_version: _Optional[str] = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., max_file_bytes: _Optional[int] = ..., max_exec_output_bytes: _Optional[int] = ..., server_time_unix_nano: _Optional[int] = ...) -> None: ...
 
 class ExecRequest(_message.Message):
     __slots__ = ("argv", "cwd", "env", "timeout_ms")
@@ -100,3 +102,51 @@ class WriteFileResponse(_message.Message):
     BYTES_WRITTEN_FIELD_NUMBER: _ClassVar[int]
     bytes_written: int
     def __init__(self, bytes_written: _Optional[int] = ...) -> None: ...
+
+class StartControlledRequest(_message.Message):
+    __slots__ = ("counter",)
+    COUNTER_FIELD_NUMBER: _ClassVar[int]
+    counter: int
+    def __init__(self, counter: _Optional[int] = ...) -> None: ...
+
+class InspectControlledRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ContinueControlledRequest(_message.Message):
+    __slots__ = ("delta",)
+    DELTA_FIELD_NUMBER: _ClassVar[int]
+    delta: int
+    def __init__(self, delta: _Optional[int] = ...) -> None: ...
+
+class PrepareCaptureRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class ReleaseCaptureRequest(_message.Message):
+    __slots__ = ("host_unix_nano",)
+    HOST_UNIX_NANO_FIELD_NUMBER: _ClassVar[int]
+    host_unix_nano: int
+    def __init__(self, host_unix_nano: _Optional[int] = ...) -> None: ...
+
+class RebindCloneRequest(_message.Message):
+    __slots__ = ("host_unix_nano",)
+    HOST_UNIX_NANO_FIELD_NUMBER: _ClassVar[int]
+    host_unix_nano: int
+    def __init__(self, host_unix_nano: _Optional[int] = ...) -> None: ...
+
+class ControlledState(_message.Message):
+    __slots__ = ("counter", "file_data", "pid", "at_barrier", "identity", "random_probe")
+    COUNTER_FIELD_NUMBER: _ClassVar[int]
+    FILE_DATA_FIELD_NUMBER: _ClassVar[int]
+    PID_FIELD_NUMBER: _ClassVar[int]
+    AT_BARRIER_FIELD_NUMBER: _ClassVar[int]
+    IDENTITY_FIELD_NUMBER: _ClassVar[int]
+    RANDOM_PROBE_FIELD_NUMBER: _ClassVar[int]
+    counter: int
+    file_data: bytes
+    pid: int
+    at_barrier: bool
+    identity: AllocationIdentity
+    random_probe: bytes
+    def __init__(self, counter: _Optional[int] = ..., file_data: _Optional[bytes] = ..., pid: _Optional[int] = ..., at_barrier: bool = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., random_probe: _Optional[bytes] = ...) -> None: ...

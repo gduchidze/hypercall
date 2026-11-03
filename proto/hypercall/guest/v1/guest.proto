@@ -9,6 +9,14 @@ option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1;gu
 // value. The credential is provisioned out of band and binds the allocation;
 // request fields never establish authority. Credentials must change on a fork.
 service Guest {
+  // Guest-owned bounded qualification process; survives host transport reset.
+  rpc StartControlled(StartControlledRequest) returns (ControlledState);
+  rpc InspectControlled(InspectControlledRequest) returns (ControlledState);
+  rpc ContinueControlled(ContinueControlledRequest) returns (ControlledState);
+  rpc PrepareCapture(PrepareCaptureRequest) returns (ControlledState);
+  rpc ReleaseCapture(ReleaseCaptureRequest) returns (ControlledState);
+  // Authenticated against freshly provisioned unmounted session block disk.
+  rpc RebindClone(RebindCloneRequest) returns (GetInfoResponse);
   rpc GetInfo(GetInfoRequest) returns (GetInfoResponse);
   rpc Exec(ExecRequest) returns (stream ExecEvent);
   rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
@@ -30,6 +38,8 @@ message GetInfoResponse {
   AllocationIdentity identity = 2;
   uint32 max_file_bytes = 3;
   uint32 max_exec_output_bytes = 4;
+  // Guest UTC after authenticated renewal; never a monotonic clock.
+  int64 server_time_unix_nano = 5;
 }
 
 message ExecRequest {
@@ -67,3 +77,18 @@ message WriteFileRequest {
   bytes data = 2;
 }
 message WriteFileResponse { uint64 bytes_written = 1; }
+
+message StartControlledRequest { int64 counter = 1; }
+message InspectControlledRequest {}
+message ContinueControlledRequest { int64 delta = 1; }
+message PrepareCaptureRequest {}
+message ReleaseCaptureRequest { int64 host_unix_nano = 1; }
+message RebindCloneRequest { int64 host_unix_nano = 1; }
+message ControlledState {
+ int64 counter = 1;
+ bytes file_data = 2;
+ int64 pid = 3;
+ bool at_barrier = 4;
+ AllocationIdentity identity = 5;
+ bytes random_probe = 6;
+}

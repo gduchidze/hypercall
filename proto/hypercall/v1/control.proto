@@ -1,0 +1,92 @@
+syntax = "proto3";
+package hypercall.v1;
+option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/v1;hypercallv1";
+
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+import "hypercall/guest/v1/guest.proto";
+
+// Tenant identity comes exclusively from authenticated credentials. Every request
+// additionally names a project authorized by that identity.
+service ControlPlane {
+  rpc PutResource(PutResourceRequest) returns (Resource);
+  rpc GetResource(GetResourceRequest) returns (Resource);
+  rpc ListResources(ListResourcesRequest) returns (ListResourcesResponse);
+  rpc Submit(SubmitRequest) returns (Submission);
+  rpc SubmitManifest(SubmitManifestRequest) returns (Submission);
+  rpc Action(ActionRequest) returns (Resource);
+  rpc Events(EventsRequest) returns (EventsResponse);
+  rpc Exec(ExecRequest) returns (stream hypercall.guest.v1.ExecEvent);
+  rpc ReadFile(ReadFileRequest) returns (hypercall.guest.v1.ReadFileResponse);
+  rpc WriteFile(WriteFileRequest) returns (hypercall.guest.v1.WriteFileResponse);
+}
+message Metadata {
+  string id = 1;
+  string tenant_id = 2; // Output only.
+  string project_id = 3; // Output only; request project_id establishes scope.
+  string name = 4;
+  string schema_version = 5;
+  int64 revision = 6;
+  string digest = 7;
+  google.protobuf.Timestamp created_at = 8;
+}
+message Ref { string id = 1; string digest = 2; }
+message Limits { int32 cpu = 1; int32 memory_mb = 2; int32 disk_mb = 3; int32 timeout_seconds = 4; }
+message TaskSpec {
+  Ref workspace = 1;
+  repeated Ref models = 2;
+  Ref gateway = 3;
+  string template_digest = 4;
+  string agent_digest = 5;
+  string dataset_digest = 6;
+  repeated string command = 7;
+  map<string,string> env = 8;
+  Limits limits = 9;
+  // Empty uses the ordinary command profile. Snapshot-capable adapters may
+  // support the bounded Phase 1B controlled_python_v1 profile explicitly.
+  string execution_mode = 10;
+  int64 controlled_counter = 11;
+}
+message Repository { string url = 1; string commit = 2; }
+message InputFile { string path = 1; bytes content = 2; string digest = 3; }
+message WorkspaceSpec { repeated Repository repositories = 1; repeated InputFile files = 2; bool private_writes = 3; }
+message ModelConfigSpec { string provider = 1; string model = 2; string revision = 3; string artifact_digest = 4; map<string,string> parameters = 5; }
+message GatewaySpec { map<string,string> routes = 1; repeated string secret_refs = 2; repeated string allowed_hosts = 3; }
+message RunSpec { Resource task = 1; Resource workspace = 2; repeated Resource models = 3; Resource gateway = 4; }
+message BranchSpec { string run_id = 1; Resource model = 2; string parent_checkpoint_id = 3; }
+// Phase 2A exposes inspection only; runtime checkpoint creation requires Phase 1B.
+message CheckpointSpec { string manifest_digest = 1; string manifest_uri = 2; string protocol_version = 3; int64 event_position = 4; bool verified = 5; string branch_id = 6; map<string,string> compatibility = 7; string native_checkpoint_id = 8; bytes snapshot_manifest = 9; }
+message OperationSpec { string branch_id = 1; string action = 2; string checkpoint_id = 3; }
+message BranchStatus { string desired = 1; string observed = 2; string execution_id = 3; int64 epoch = 4; google.protobuf.Timestamp lease_until = 5; int64 last_event = 6; string error = 7; string checkpoint_id = 8; int64 budget_remaining_ms = 9; string sandbox_id = 10; }
+message OperationStatus { string state = 1; string error = 2; }
+message Resource {
+  Metadata metadata = 1;
+  string kind = 2;
+  oneof spec {
+    TaskSpec task_spec = 3;
+    WorkspaceSpec workspace_spec = 4;
+    ModelConfigSpec model_config_spec = 5;
+    GatewaySpec gateway_spec = 6;
+    RunSpec run_spec = 7;
+    BranchSpec branch_spec = 8;
+    CheckpointSpec checkpoint_spec = 9;
+    OperationSpec operation_spec = 10;
+  }
+  oneof state { BranchStatus branch_status = 11; OperationStatus operation_status = 12; }
+}
+message PutResourceRequest { string project_id = 1; Resource resource = 2; string idempotency_key = 3; }
+message GetResourceRequest { string project_id = 1; string kind = 2; string id = 3; }
+message ListResourcesRequest { string project_id = 1; string kind = 2; string after = 3; int32 limit = 4; }
+message ListResourcesResponse { repeated Resource resources = 1; string next_after = 2; }
+message SubmitRequest { string project_id = 1; string task_id = 2; string idempotency_key = 3; }
+// Strict multi-document YAML. Definitions are applied in order; one final Task
+// is submitted. Applying several definitions is not an atomic transaction.
+message SubmitManifestRequest { string project_id = 1; string manifest_yaml = 2; string idempotency_key = 3; }
+message Submission { Resource run = 1; Resource branch = 2; Resource operation = 3; }
+message ActionRequest { string project_id = 1; string branch_id = 2; string action = 3; string idempotency_key = 4; }
+message Event { string id = 1; string branch_id = 2; int64 sequence = 3; int64 epoch = 4; string type = 5; google.protobuf.Struct data = 6; google.protobuf.Timestamp created_at = 7; }
+message EventsRequest { string project_id = 1; string branch_id = 2; int64 after_sequence = 3; int32 limit = 4; }
+message EventsResponse { repeated Event events = 1; int64 next_sequence = 2; }
+message ExecRequest { string project_id = 1; string branch_id = 2; hypercall.guest.v1.ExecRequest command = 3; }
+message ReadFileRequest { string project_id = 1; string branch_id = 2; string path = 3; }
+message WriteFileRequest { string project_id = 1; string branch_id = 2; string path = 3; bytes data = 4; }
