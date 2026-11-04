@@ -173,6 +173,48 @@ class Client(_Configuration):
         assert result is not None
         return CommandResult(bytes(stdout), bytes(stderr), result.exit_code, result.timed_out, result.output_truncated)
 
+    def fork(self, checkpoint_id: str, models: list[pb.Ref], *, idempotency_key: str,
+             timeout: float | None = None) -> pb.ForkResult:
+        return self._call("Fork", self._request(pb.ForkRequest, checkpoint_id=checkpoint_id, models=models,
+                          idempotency_key=idempotency_key), timeout=timeout, mutation=True)
+
+    def calls(self, branch_id: str, *, after: int = 0, limit: int = 100,
+              timeout: float | None = None) -> pb.CallsResponse:
+        return self._call("Calls", self._request(pb.CallsRequest, branch_id=branch_id,
+                          after_sequence=after, limit=limit), timeout=timeout)
+
+    def steps(self, branch_id: str, *, after: int = 0, limit: int = 100,
+              timeout: float | None = None) -> pb.StepsResponse:
+        return self._call("Steps", self._request(pb.StepsRequest, branch_id=branch_id,
+                          after_step=after, limit=limit), timeout=timeout)
+
+    def iter_calls(self, branch_id: str, *, after: int = 0, page_size: int = 100,
+                   timeout: float | None = None) -> Iterator[pb.AgentCall]:
+        while True:
+            page = self.calls(branch_id, after=after, limit=page_size, timeout=timeout)
+            if not page.calls:
+                return
+            if page.next_sequence <= after:
+                raise HypercallError("data_loss", "call cursor did not advance")
+            yield from page.calls
+            after = page.next_sequence
+
+    def iter_steps(self, branch_id: str, *, after: int = 0, page_size: int = 100,
+                   timeout: float | None = None) -> Iterator[pb.AgentStep]:
+        while True:
+            page = self.steps(branch_id, after=after, limit=page_size, timeout=timeout)
+            if not page.steps:
+                return
+            if page.next_step <= after:
+                raise HypercallError("data_loss", "step cursor did not advance")
+            yield from page.steps
+            after = page.next_step
+
+    def compare(self, left_branch: str, right_branch: str, *, comparator: str,
+                timeout: float | None = None) -> pb.Divergence:
+        return self._call("Compare", self._request(pb.CompareRequest, left_branch=left_branch,
+                          right_branch=right_branch, comparator=comparator), timeout=timeout)
+
 
 class AsyncClient(_Configuration):
     def __init__(self, endpoint: str, **kwargs):
@@ -270,3 +312,47 @@ class AsyncClient(_Configuration):
                 result = event.result
         assert result is not None
         return CommandResult(bytes(stdout), bytes(stderr), result.exit_code, result.timed_out, result.output_truncated)
+
+    async def fork(self, checkpoint_id: str, models: list[pb.Ref], *, idempotency_key: str,
+                   timeout: float | None = None) -> pb.ForkResult:
+        return await self._call("Fork", self._request(pb.ForkRequest, checkpoint_id=checkpoint_id, models=models,
+                                idempotency_key=idempotency_key), timeout=timeout, mutation=True)
+
+    async def calls(self, branch_id: str, *, after: int = 0, limit: int = 100,
+                    timeout: float | None = None) -> pb.CallsResponse:
+        return await self._call("Calls", self._request(pb.CallsRequest, branch_id=branch_id,
+                                after_sequence=after, limit=limit), timeout=timeout)
+
+    async def steps(self, branch_id: str, *, after: int = 0, limit: int = 100,
+                    timeout: float | None = None) -> pb.StepsResponse:
+        return await self._call("Steps", self._request(pb.StepsRequest, branch_id=branch_id,
+                                after_step=after, limit=limit), timeout=timeout)
+
+    async def iter_calls(self, branch_id: str, *, after: int = 0, page_size: int = 100,
+                         timeout: float | None = None) -> AsyncIterator[pb.AgentCall]:
+        while True:
+            page = await self.calls(branch_id, after=after, limit=page_size, timeout=timeout)
+            if not page.calls:
+                return
+            if page.next_sequence <= after:
+                raise HypercallError("data_loss", "call cursor did not advance")
+            for call in page.calls:
+                yield call
+            after = page.next_sequence
+
+    async def iter_steps(self, branch_id: str, *, after: int = 0, page_size: int = 100,
+                         timeout: float | None = None) -> AsyncIterator[pb.AgentStep]:
+        while True:
+            page = await self.steps(branch_id, after=after, limit=page_size, timeout=timeout)
+            if not page.steps:
+                return
+            if page.next_step <= after:
+                raise HypercallError("data_loss", "step cursor did not advance")
+            for step in page.steps:
+                yield step
+            after = page.next_step
+
+    async def compare(self, left_branch: str, right_branch: str, *, comparator: str,
+                      timeout: float | None = None) -> pb.Divergence:
+        return await self._call("Compare", self._request(pb.CompareRequest, left_branch=left_branch,
+                                right_branch=right_branch, comparator=comparator), timeout=timeout)

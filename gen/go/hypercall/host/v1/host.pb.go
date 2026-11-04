@@ -7,8 +7,9 @@
 package hostv1
 
 import (
-	v11 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
-	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/v1"
+	v12 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
+	v11 "github.com/gduchidze/hypercall/gen/go/hypercall/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"
@@ -35,9 +36,14 @@ type Assignment struct {
 	// Never contains guest credentials. Required on Ensure, omitted on proxy calls.
 	ResolvedRunJson []byte `protobuf:"bytes,7,opt,name=resolved_run_json,json=resolvedRunJson,proto3" json:"resolved_run_json,omitempty"`
 	// Physical VM allocation; a resumed branch receives a fresh sandbox identity.
-	SandboxId     string `protobuf:"bytes,8,opt,name=sandbox_id,json=sandboxId,proto3" json:"sandbox_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	SandboxId          string             `protobuf:"bytes,8,opt,name=sandbox_id,json=sandboxId,proto3" json:"sandbox_id,omitempty"`
+	HarnessSession     *v1.HarnessSession `protobuf:"bytes,9,opt,name=harness_session,json=harnessSession,proto3" json:"harness_session,omitempty"`
+	SelectedModelJson  []byte             `protobuf:"bytes,10,opt,name=selected_model_json,json=selectedModelJson,proto3" json:"selected_model_json,omitempty"`
+	ParentCheckpointId string             `protobuf:"bytes,11,opt,name=parent_checkpoint_id,json=parentCheckpointId,proto3" json:"parent_checkpoint_id,omitempty"`
+	ParentBranchId     string             `protobuf:"bytes,12,opt,name=parent_branch_id,json=parentBranchId,proto3" json:"parent_branch_id,omitempty"`
+	Barrier            *v1.AgentBarrier   `protobuf:"bytes,13,opt,name=barrier,proto3" json:"barrier,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *Assignment) Reset() {
@@ -126,10 +132,45 @@ func (x *Assignment) GetSandboxId() string {
 	return ""
 }
 
+func (x *Assignment) GetHarnessSession() *v1.HarnessSession {
+	if x != nil {
+		return x.HarnessSession
+	}
+	return nil
+}
+
+func (x *Assignment) GetSelectedModelJson() []byte {
+	if x != nil {
+		return x.SelectedModelJson
+	}
+	return nil
+}
+
+func (x *Assignment) GetParentCheckpointId() string {
+	if x != nil {
+		return x.ParentCheckpointId
+	}
+	return ""
+}
+
+func (x *Assignment) GetParentBranchId() string {
+	if x != nil {
+		return x.ParentBranchId
+	}
+	return ""
+}
+
+func (x *Assignment) GetBarrier() *v1.AgentBarrier {
+	if x != nil {
+		return x.Barrier
+	}
+	return nil
+}
+
 type Observation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	State         string                 `protobuf:"bytes,1,opt,name=state,proto3" json:"state,omitempty"`
-	Checkpoint    *v1.CheckpointSpec     `protobuf:"bytes,2,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
+	Checkpoint    *v11.CheckpointSpec    `protobuf:"bytes,2,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -171,7 +212,7 @@ func (x *Observation) GetState() string {
 	return ""
 }
 
-func (x *Observation) GetCheckpoint() *v1.CheckpointSpec {
+func (x *Observation) GetCheckpoint() *v11.CheckpointSpec {
 	if x != nil {
 		return x.Checkpoint
 	}
@@ -181,7 +222,7 @@ func (x *Observation) GetCheckpoint() *v1.CheckpointSpec {
 type ResumeRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Assignment    *Assignment            `protobuf:"bytes,1,opt,name=assignment,proto3" json:"assignment,omitempty"`
-	Checkpoint    *v1.CheckpointSpec     `protobuf:"bytes,2,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
+	Checkpoint    *v11.CheckpointSpec    `protobuf:"bytes,2,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -223,7 +264,7 @@ func (x *ResumeRequest) GetAssignment() *Assignment {
 	return nil
 }
 
-func (x *ResumeRequest) GetCheckpoint() *v1.CheckpointSpec {
+func (x *ResumeRequest) GetCheckpoint() *v11.CheckpointSpec {
 	if x != nil {
 		return x.Checkpoint
 	}
@@ -233,7 +274,7 @@ func (x *ResumeRequest) GetCheckpoint() *v1.CheckpointSpec {
 type ExecRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Assignment    *Assignment            `protobuf:"bytes,1,opt,name=assignment,proto3" json:"assignment,omitempty"`
-	Command       *v11.ExecRequest       `protobuf:"bytes,2,opt,name=command,proto3" json:"command,omitempty"`
+	Command       *v12.ExecRequest       `protobuf:"bytes,2,opt,name=command,proto3" json:"command,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -275,7 +316,7 @@ func (x *ExecRequest) GetAssignment() *Assignment {
 	return nil
 }
 
-func (x *ExecRequest) GetCommand() *v11.ExecRequest {
+func (x *ExecRequest) GetCommand() *v12.ExecRequest {
 	if x != nil {
 		return x.Command
 	}
@@ -285,7 +326,7 @@ func (x *ExecRequest) GetCommand() *v11.ExecRequest {
 type ReadFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Assignment    *Assignment            `protobuf:"bytes,1,opt,name=assignment,proto3" json:"assignment,omitempty"`
-	File          *v11.ReadFileRequest   `protobuf:"bytes,2,opt,name=file,proto3" json:"file,omitempty"`
+	File          *v12.ReadFileRequest   `protobuf:"bytes,2,opt,name=file,proto3" json:"file,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -327,7 +368,7 @@ func (x *ReadFileRequest) GetAssignment() *Assignment {
 	return nil
 }
 
-func (x *ReadFileRequest) GetFile() *v11.ReadFileRequest {
+func (x *ReadFileRequest) GetFile() *v12.ReadFileRequest {
 	if x != nil {
 		return x.File
 	}
@@ -337,7 +378,7 @@ func (x *ReadFileRequest) GetFile() *v11.ReadFileRequest {
 type WriteFileRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Assignment    *Assignment            `protobuf:"bytes,1,opt,name=assignment,proto3" json:"assignment,omitempty"`
-	File          *v11.WriteFileRequest  `protobuf:"bytes,2,opt,name=file,proto3" json:"file,omitempty"`
+	File          *v12.WriteFileRequest  `protobuf:"bytes,2,opt,name=file,proto3" json:"file,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -379,9 +420,61 @@ func (x *WriteFileRequest) GetAssignment() *Assignment {
 	return nil
 }
 
-func (x *WriteFileRequest) GetFile() *v11.WriteFileRequest {
+func (x *WriteFileRequest) GetFile() *v12.WriteFileRequest {
 	if x != nil {
 		return x.File
+	}
+	return nil
+}
+
+type HostAgentDelivery struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Assignment    *Assignment            `protobuf:"bytes,1,opt,name=assignment,proto3" json:"assignment,omitempty"`
+	Delivery      *v1.AgentDelivery      `protobuf:"bytes,2,opt,name=delivery,proto3" json:"delivery,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *HostAgentDelivery) Reset() {
+	*x = HostAgentDelivery{}
+	mi := &file_hypercall_host_v1_host_proto_msgTypes[6]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *HostAgentDelivery) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*HostAgentDelivery) ProtoMessage() {}
+
+func (x *HostAgentDelivery) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_host_v1_host_proto_msgTypes[6]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use HostAgentDelivery.ProtoReflect.Descriptor instead.
+func (*HostAgentDelivery) Descriptor() ([]byte, []int) {
+	return file_hypercall_host_v1_host_proto_rawDescGZIP(), []int{6}
+}
+
+func (x *HostAgentDelivery) GetAssignment() *Assignment {
+	if x != nil {
+		return x.Assignment
+	}
+	return nil
+}
+
+func (x *HostAgentDelivery) GetDelivery() *v1.AgentDelivery {
+	if x != nil {
+		return x.Delivery
 	}
 	return nil
 }
@@ -390,7 +483,7 @@ var File_hypercall_host_v1_host_proto protoreflect.FileDescriptor
 
 const file_hypercall_host_v1_host_proto_rawDesc = "" +
 	"\n" +
-	"\x1chypercall/host/v1/host.proto\x12\x11hypercall.host.v1\x1a\x1ehypercall/guest/v1/guest.proto\x1a\x1ahypercall/v1/control.proto\"\x9c\x02\n" +
+	"\x1chypercall/host/v1/host.proto\x12\x11hypercall.host.v1\x1a\x1ehypercall/guest/v1/guest.proto\x1a\x1ahypercall/v1/control.proto\x1a\"hypercall/harness/v1/harness.proto\"\xb5\x04\n" +
 	"\n" +
 	"Assignment\x12\x1b\n" +
 	"\ttenant_id\x18\x01 \x01(\tR\btenantId\x12\x1d\n" +
@@ -402,7 +495,13 @@ const file_hypercall_host_v1_host_proto_rawDesc = "" +
 	"\x15lease_until_unix_nano\x18\x06 \x01(\x03R\x12leaseUntilUnixNano\x12*\n" +
 	"\x11resolved_run_json\x18\a \x01(\fR\x0fresolvedRunJson\x12\x1d\n" +
 	"\n" +
-	"sandbox_id\x18\b \x01(\tR\tsandboxId\"a\n" +
+	"sandbox_id\x18\b \x01(\tR\tsandboxId\x12M\n" +
+	"\x0fharness_session\x18\t \x01(\v2$.hypercall.harness.v1.HarnessSessionR\x0eharnessSession\x12.\n" +
+	"\x13selected_model_json\x18\n" +
+	" \x01(\fR\x11selectedModelJson\x120\n" +
+	"\x14parent_checkpoint_id\x18\v \x01(\tR\x12parentCheckpointId\x12(\n" +
+	"\x10parent_branch_id\x18\f \x01(\tR\x0eparentBranchId\x12<\n" +
+	"\abarrier\x18\r \x01(\v2\".hypercall.harness.v1.AgentBarrierR\abarrier\"a\n" +
 	"\vObservation\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12<\n" +
 	"\n" +
@@ -429,13 +528,20 @@ const file_hypercall_host_v1_host_proto_rawDesc = "" +
 	"\n" +
 	"assignment\x18\x01 \x01(\v2\x1d.hypercall.host.v1.AssignmentR\n" +
 	"assignment\x128\n" +
-	"\x04file\x18\x02 \x01(\v2$.hypercall.guest.v1.WriteFileRequestR\x04file2\xee\x04\n" +
+	"\x04file\x18\x02 \x01(\v2$.hypercall.guest.v1.WriteFileRequestR\x04file\"\x93\x01\n" +
+	"\x11HostAgentDelivery\x12=\n" +
+	"\n" +
+	"assignment\x18\x01 \x01(\v2\x1d.hypercall.host.v1.AssignmentR\n" +
+	"assignment\x12?\n" +
+	"\bdelivery\x18\x02 \x01(\v2#.hypercall.harness.v1.AgentDeliveryR\bdelivery2\x9b\x06\n" +
 	"\x04Host\x12G\n" +
 	"\x06Ensure\x12\x1d.hypercall.host.v1.Assignment\x1a\x1e.hypercall.host.v1.Observation\x12H\n" +
 	"\aObserve\x12\x1d.hypercall.host.v1.Assignment\x1a\x1e.hypercall.host.v1.Observation\x12E\n" +
 	"\x04Stop\x12\x1d.hypercall.host.v1.Assignment\x1a\x1e.hypercall.host.v1.Observation\x12H\n" +
 	"\aSuspend\x12\x1d.hypercall.host.v1.Assignment\x1a\x1e.hypercall.host.v1.Observation\x12J\n" +
-	"\x06Resume\x12 .hypercall.host.v1.ResumeRequest\x1a\x1e.hypercall.host.v1.Observation\x12G\n" +
+	"\x06Resume\x12 .hypercall.host.v1.ResumeRequest\x1a\x1e.hypercall.host.v1.Observation\x12K\n" +
+	"\tAgentPoll\x12\x1d.hypercall.host.v1.Assignment\x1a\x1f.hypercall.harness.v1.AgentPoll\x12^\n" +
+	"\fAgentDeliver\x12$.hypercall.host.v1.HostAgentDelivery\x1a(.hypercall.guest.v1.DeliverAgentResponse\x12G\n" +
 	"\x04Exec\x12\x1e.hypercall.host.v1.ExecRequest\x1a\x1d.hypercall.guest.v1.ExecEvent0\x01\x12T\n" +
 	"\bReadFile\x12\".hypercall.host.v1.ReadFileRequest\x1a$.hypercall.guest.v1.ReadFileResponse\x12W\n" +
 	"\tWriteFile\x12#.hypercall.host.v1.WriteFileRequest\x1a%.hypercall.guest.v1.WriteFileResponseB@Z>github.com/gduchidze/hypercall/gen/go/hypercall/host/v1;hostv1b\x06proto3"
@@ -452,53 +558,67 @@ func file_hypercall_host_v1_host_proto_rawDescGZIP() []byte {
 	return file_hypercall_host_v1_host_proto_rawDescData
 }
 
-var file_hypercall_host_v1_host_proto_msgTypes = make([]protoimpl.MessageInfo, 6)
+var file_hypercall_host_v1_host_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
 var file_hypercall_host_v1_host_proto_goTypes = []any{
-	(*Assignment)(nil),            // 0: hypercall.host.v1.Assignment
-	(*Observation)(nil),           // 1: hypercall.host.v1.Observation
-	(*ResumeRequest)(nil),         // 2: hypercall.host.v1.ResumeRequest
-	(*ExecRequest)(nil),           // 3: hypercall.host.v1.ExecRequest
-	(*ReadFileRequest)(nil),       // 4: hypercall.host.v1.ReadFileRequest
-	(*WriteFileRequest)(nil),      // 5: hypercall.host.v1.WriteFileRequest
-	(*v1.CheckpointSpec)(nil),     // 6: hypercall.v1.CheckpointSpec
-	(*v11.ExecRequest)(nil),       // 7: hypercall.guest.v1.ExecRequest
-	(*v11.ReadFileRequest)(nil),   // 8: hypercall.guest.v1.ReadFileRequest
-	(*v11.WriteFileRequest)(nil),  // 9: hypercall.guest.v1.WriteFileRequest
-	(*v11.ExecEvent)(nil),         // 10: hypercall.guest.v1.ExecEvent
-	(*v11.ReadFileResponse)(nil),  // 11: hypercall.guest.v1.ReadFileResponse
-	(*v11.WriteFileResponse)(nil), // 12: hypercall.guest.v1.WriteFileResponse
+	(*Assignment)(nil),               // 0: hypercall.host.v1.Assignment
+	(*Observation)(nil),              // 1: hypercall.host.v1.Observation
+	(*ResumeRequest)(nil),            // 2: hypercall.host.v1.ResumeRequest
+	(*ExecRequest)(nil),              // 3: hypercall.host.v1.ExecRequest
+	(*ReadFileRequest)(nil),          // 4: hypercall.host.v1.ReadFileRequest
+	(*WriteFileRequest)(nil),         // 5: hypercall.host.v1.WriteFileRequest
+	(*HostAgentDelivery)(nil),        // 6: hypercall.host.v1.HostAgentDelivery
+	(*v1.HarnessSession)(nil),        // 7: hypercall.harness.v1.HarnessSession
+	(*v1.AgentBarrier)(nil),          // 8: hypercall.harness.v1.AgentBarrier
+	(*v11.CheckpointSpec)(nil),       // 9: hypercall.v1.CheckpointSpec
+	(*v12.ExecRequest)(nil),          // 10: hypercall.guest.v1.ExecRequest
+	(*v12.ReadFileRequest)(nil),      // 11: hypercall.guest.v1.ReadFileRequest
+	(*v12.WriteFileRequest)(nil),     // 12: hypercall.guest.v1.WriteFileRequest
+	(*v1.AgentDelivery)(nil),         // 13: hypercall.harness.v1.AgentDelivery
+	(*v1.AgentPoll)(nil),             // 14: hypercall.harness.v1.AgentPoll
+	(*v12.DeliverAgentResponse)(nil), // 15: hypercall.guest.v1.DeliverAgentResponse
+	(*v12.ExecEvent)(nil),            // 16: hypercall.guest.v1.ExecEvent
+	(*v12.ReadFileResponse)(nil),     // 17: hypercall.guest.v1.ReadFileResponse
+	(*v12.WriteFileResponse)(nil),    // 18: hypercall.guest.v1.WriteFileResponse
 }
 var file_hypercall_host_v1_host_proto_depIdxs = []int32{
-	6,  // 0: hypercall.host.v1.Observation.checkpoint:type_name -> hypercall.v1.CheckpointSpec
-	0,  // 1: hypercall.host.v1.ResumeRequest.assignment:type_name -> hypercall.host.v1.Assignment
-	6,  // 2: hypercall.host.v1.ResumeRequest.checkpoint:type_name -> hypercall.v1.CheckpointSpec
-	0,  // 3: hypercall.host.v1.ExecRequest.assignment:type_name -> hypercall.host.v1.Assignment
-	7,  // 4: hypercall.host.v1.ExecRequest.command:type_name -> hypercall.guest.v1.ExecRequest
-	0,  // 5: hypercall.host.v1.ReadFileRequest.assignment:type_name -> hypercall.host.v1.Assignment
-	8,  // 6: hypercall.host.v1.ReadFileRequest.file:type_name -> hypercall.guest.v1.ReadFileRequest
-	0,  // 7: hypercall.host.v1.WriteFileRequest.assignment:type_name -> hypercall.host.v1.Assignment
-	9,  // 8: hypercall.host.v1.WriteFileRequest.file:type_name -> hypercall.guest.v1.WriteFileRequest
-	0,  // 9: hypercall.host.v1.Host.Ensure:input_type -> hypercall.host.v1.Assignment
-	0,  // 10: hypercall.host.v1.Host.Observe:input_type -> hypercall.host.v1.Assignment
-	0,  // 11: hypercall.host.v1.Host.Stop:input_type -> hypercall.host.v1.Assignment
-	0,  // 12: hypercall.host.v1.Host.Suspend:input_type -> hypercall.host.v1.Assignment
-	2,  // 13: hypercall.host.v1.Host.Resume:input_type -> hypercall.host.v1.ResumeRequest
-	3,  // 14: hypercall.host.v1.Host.Exec:input_type -> hypercall.host.v1.ExecRequest
-	4,  // 15: hypercall.host.v1.Host.ReadFile:input_type -> hypercall.host.v1.ReadFileRequest
-	5,  // 16: hypercall.host.v1.Host.WriteFile:input_type -> hypercall.host.v1.WriteFileRequest
-	1,  // 17: hypercall.host.v1.Host.Ensure:output_type -> hypercall.host.v1.Observation
-	1,  // 18: hypercall.host.v1.Host.Observe:output_type -> hypercall.host.v1.Observation
-	1,  // 19: hypercall.host.v1.Host.Stop:output_type -> hypercall.host.v1.Observation
-	1,  // 20: hypercall.host.v1.Host.Suspend:output_type -> hypercall.host.v1.Observation
-	1,  // 21: hypercall.host.v1.Host.Resume:output_type -> hypercall.host.v1.Observation
-	10, // 22: hypercall.host.v1.Host.Exec:output_type -> hypercall.guest.v1.ExecEvent
-	11, // 23: hypercall.host.v1.Host.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
-	12, // 24: hypercall.host.v1.Host.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
-	17, // [17:25] is the sub-list for method output_type
-	9,  // [9:17] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	7,  // 0: hypercall.host.v1.Assignment.harness_session:type_name -> hypercall.harness.v1.HarnessSession
+	8,  // 1: hypercall.host.v1.Assignment.barrier:type_name -> hypercall.harness.v1.AgentBarrier
+	9,  // 2: hypercall.host.v1.Observation.checkpoint:type_name -> hypercall.v1.CheckpointSpec
+	0,  // 3: hypercall.host.v1.ResumeRequest.assignment:type_name -> hypercall.host.v1.Assignment
+	9,  // 4: hypercall.host.v1.ResumeRequest.checkpoint:type_name -> hypercall.v1.CheckpointSpec
+	0,  // 5: hypercall.host.v1.ExecRequest.assignment:type_name -> hypercall.host.v1.Assignment
+	10, // 6: hypercall.host.v1.ExecRequest.command:type_name -> hypercall.guest.v1.ExecRequest
+	0,  // 7: hypercall.host.v1.ReadFileRequest.assignment:type_name -> hypercall.host.v1.Assignment
+	11, // 8: hypercall.host.v1.ReadFileRequest.file:type_name -> hypercall.guest.v1.ReadFileRequest
+	0,  // 9: hypercall.host.v1.WriteFileRequest.assignment:type_name -> hypercall.host.v1.Assignment
+	12, // 10: hypercall.host.v1.WriteFileRequest.file:type_name -> hypercall.guest.v1.WriteFileRequest
+	0,  // 11: hypercall.host.v1.HostAgentDelivery.assignment:type_name -> hypercall.host.v1.Assignment
+	13, // 12: hypercall.host.v1.HostAgentDelivery.delivery:type_name -> hypercall.harness.v1.AgentDelivery
+	0,  // 13: hypercall.host.v1.Host.Ensure:input_type -> hypercall.host.v1.Assignment
+	0,  // 14: hypercall.host.v1.Host.Observe:input_type -> hypercall.host.v1.Assignment
+	0,  // 15: hypercall.host.v1.Host.Stop:input_type -> hypercall.host.v1.Assignment
+	0,  // 16: hypercall.host.v1.Host.Suspend:input_type -> hypercall.host.v1.Assignment
+	2,  // 17: hypercall.host.v1.Host.Resume:input_type -> hypercall.host.v1.ResumeRequest
+	0,  // 18: hypercall.host.v1.Host.AgentPoll:input_type -> hypercall.host.v1.Assignment
+	6,  // 19: hypercall.host.v1.Host.AgentDeliver:input_type -> hypercall.host.v1.HostAgentDelivery
+	3,  // 20: hypercall.host.v1.Host.Exec:input_type -> hypercall.host.v1.ExecRequest
+	4,  // 21: hypercall.host.v1.Host.ReadFile:input_type -> hypercall.host.v1.ReadFileRequest
+	5,  // 22: hypercall.host.v1.Host.WriteFile:input_type -> hypercall.host.v1.WriteFileRequest
+	1,  // 23: hypercall.host.v1.Host.Ensure:output_type -> hypercall.host.v1.Observation
+	1,  // 24: hypercall.host.v1.Host.Observe:output_type -> hypercall.host.v1.Observation
+	1,  // 25: hypercall.host.v1.Host.Stop:output_type -> hypercall.host.v1.Observation
+	1,  // 26: hypercall.host.v1.Host.Suspend:output_type -> hypercall.host.v1.Observation
+	1,  // 27: hypercall.host.v1.Host.Resume:output_type -> hypercall.host.v1.Observation
+	14, // 28: hypercall.host.v1.Host.AgentPoll:output_type -> hypercall.harness.v1.AgentPoll
+	15, // 29: hypercall.host.v1.Host.AgentDeliver:output_type -> hypercall.guest.v1.DeliverAgentResponse
+	16, // 30: hypercall.host.v1.Host.Exec:output_type -> hypercall.guest.v1.ExecEvent
+	17, // 31: hypercall.host.v1.Host.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
+	18, // 32: hypercall.host.v1.Host.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
+	23, // [23:33] is the sub-list for method output_type
+	13, // [13:23] is the sub-list for method input_type
+	13, // [13:13] is the sub-list for extension type_name
+	13, // [13:13] is the sub-list for extension extendee
+	0,  // [0:13] is the sub-list for field type_name
 }
 
 func init() { file_hypercall_host_v1_host_proto_init() }
@@ -512,7 +632,7 @@ func file_hypercall_host_v1_host_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hypercall_host_v1_host_proto_rawDesc), len(file_hypercall_host_v1_host_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   6,
+			NumMessages:   7,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

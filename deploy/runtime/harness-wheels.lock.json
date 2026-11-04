@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "python_abi": "cp312",
+  "python_version": "3.12",
+  "architectures": {
+    "arm64": [
+      {
+        "distribution": "grpcio",
+        "version": "1.76.0",
+        "filename": "grpcio-1.76.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+        "url": "https://files.pythonhosted.org/packages/28/50/2f0aa0498bc188048f5d9504dcc5c2c24f2eb1a9337cd0fa09a61a2e75f0/grpcio-1.76.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.whl",
+        "sha256": "d388087771c837cdb6515539f43b9d4bf0b0f23593a24054ac16f7a960be16f4",
+        "size": 6359167
+      },
+      {
+        "distribution": "protobuf",
+        "version": "6.33.0",
+        "filename": "protobuf-6.33.0-cp39-abi3-manylinux2014_aarch64.whl",
+        "url": "https://files.pythonhosted.org/packages/10/35/16d31e0f92c6d2f0e77c2a3ba93185130ea13053dd16200a57434c882f2b/protobuf-6.33.0-cp39-abi3-manylinux2014_aarch64.whl",
+        "sha256": "e0697ece353e6239b90ee43a9231318302ad8353c70e6e45499fa52396debf90",
+        "size": 324445
+      },
+      {
+        "distribution": "typing-extensions",
+        "version": "4.16.0",
+        "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+        "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+        "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "size": 45571
+      }
+    ],
+    "amd64": [
+      {
+        "distribution": "grpcio",
+        "version": "1.76.0",
+        "filename": "grpcio-1.76.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/f5/86/f6ec2164f743d9609691115ae8ece098c76b894ebe4f7c94a655c6b03e98/grpcio-1.76.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+        "sha256": "980a846182ce88c4f2f7e2c22c56aefd515daeb36149d1c897f83cf57999e0b6",
+        "size": 6573963
+      },
+      {
+        "distribution": "protobuf",
+        "version": "6.33.0",
+        "filename": "protobuf-6.33.0-cp39-abi3-manylinux2014_x86_64.whl",
+        "url": "https://files.pythonhosted.org/packages/21/51/0b1cbad62074439b867b4e04cc09b93f6699d78fd191bed2bbb44562e077/protobuf-6.33.0-cp39-abi3-manylinux2014_x86_64.whl",
+        "sha256": "35be49fd3f4fefa4e6e2aacc35e8b837d6703c37a2168a55ac21e9b1bc7559ef",
+        "size": 323172
+      },
+      {
+        "distribution": "typing-extensions",
+        "version": "4.16.0",
+        "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+        "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+        "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "size": 45571
+      }
+    ]
+  }
+}

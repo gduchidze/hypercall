@@ -30,6 +30,10 @@ const (
 	ControlPlane_Exec_FullMethodName           = "/hypercall.v1.ControlPlane/Exec"
 	ControlPlane_ReadFile_FullMethodName       = "/hypercall.v1.ControlPlane/ReadFile"
 	ControlPlane_WriteFile_FullMethodName      = "/hypercall.v1.ControlPlane/WriteFile"
+	ControlPlane_Fork_FullMethodName           = "/hypercall.v1.ControlPlane/Fork"
+	ControlPlane_Calls_FullMethodName          = "/hypercall.v1.ControlPlane/Calls"
+	ControlPlane_Steps_FullMethodName          = "/hypercall.v1.ControlPlane/Steps"
+	ControlPlane_Compare_FullMethodName        = "/hypercall.v1.ControlPlane/Compare"
 )
 
 // ControlPlaneClient is the client API for ControlPlane service.
@@ -49,6 +53,10 @@ type ControlPlaneClient interface {
 	Exec(ctx context.Context, in *ExecRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.ExecEvent], error)
 	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*v1.ReadFileResponse, error)
 	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*v1.WriteFileResponse, error)
+	Fork(ctx context.Context, in *ForkRequest, opts ...grpc.CallOption) (*ForkResult, error)
+	Calls(ctx context.Context, in *CallsRequest, opts ...grpc.CallOption) (*CallsResponse, error)
+	Steps(ctx context.Context, in *StepsRequest, opts ...grpc.CallOption) (*StepsResponse, error)
+	Compare(ctx context.Context, in *CompareRequest, opts ...grpc.CallOption) (*Divergence, error)
 }
 
 type controlPlaneClient struct {
@@ -168,6 +176,46 @@ func (c *controlPlaneClient) WriteFile(ctx context.Context, in *WriteFileRequest
 	return out, nil
 }
 
+func (c *controlPlaneClient) Fork(ctx context.Context, in *ForkRequest, opts ...grpc.CallOption) (*ForkResult, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ForkResult)
+	err := c.cc.Invoke(ctx, ControlPlane_Fork_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) Calls(ctx context.Context, in *CallsRequest, opts ...grpc.CallOption) (*CallsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CallsResponse)
+	err := c.cc.Invoke(ctx, ControlPlane_Calls_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) Steps(ctx context.Context, in *StepsRequest, opts ...grpc.CallOption) (*StepsResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(StepsResponse)
+	err := c.cc.Invoke(ctx, ControlPlane_Steps_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) Compare(ctx context.Context, in *CompareRequest, opts ...grpc.CallOption) (*Divergence, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Divergence)
+	err := c.cc.Invoke(ctx, ControlPlane_Compare_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlPlaneServer is the server API for ControlPlane service.
 // All implementations must embed UnimplementedControlPlaneServer
 // for forward compatibility.
@@ -185,6 +233,10 @@ type ControlPlaneServer interface {
 	Exec(*ExecRequest, grpc.ServerStreamingServer[v1.ExecEvent]) error
 	ReadFile(context.Context, *ReadFileRequest) (*v1.ReadFileResponse, error)
 	WriteFile(context.Context, *WriteFileRequest) (*v1.WriteFileResponse, error)
+	Fork(context.Context, *ForkRequest) (*ForkResult, error)
+	Calls(context.Context, *CallsRequest) (*CallsResponse, error)
+	Steps(context.Context, *StepsRequest) (*StepsResponse, error)
+	Compare(context.Context, *CompareRequest) (*Divergence, error)
 	mustEmbedUnimplementedControlPlaneServer()
 }
 
@@ -224,6 +276,18 @@ func (UnimplementedControlPlaneServer) ReadFile(context.Context, *ReadFileReques
 }
 func (UnimplementedControlPlaneServer) WriteFile(context.Context, *WriteFileRequest) (*v1.WriteFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteFile not implemented")
+}
+func (UnimplementedControlPlaneServer) Fork(context.Context, *ForkRequest) (*ForkResult, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Fork not implemented")
+}
+func (UnimplementedControlPlaneServer) Calls(context.Context, *CallsRequest) (*CallsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Calls not implemented")
+}
+func (UnimplementedControlPlaneServer) Steps(context.Context, *StepsRequest) (*StepsResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Steps not implemented")
+}
+func (UnimplementedControlPlaneServer) Compare(context.Context, *CompareRequest) (*Divergence, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method Compare not implemented")
 }
 func (UnimplementedControlPlaneServer) mustEmbedUnimplementedControlPlaneServer() {}
 func (UnimplementedControlPlaneServer) testEmbeddedByValue()                      {}
@@ -419,6 +483,78 @@ func _ControlPlane_WriteFile_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ControlPlane_Fork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ForkRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).Fork(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_Fork_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).Fork(ctx, req.(*ForkRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_Calls_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CallsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).Calls(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_Calls_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).Calls(ctx, req.(*CallsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_Steps_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StepsRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).Steps(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_Steps_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).Steps(ctx, req.(*StepsRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_Compare_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompareRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).Compare(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_Compare_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).Compare(ctx, req.(*CompareRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ControlPlane_ServiceDesc is the grpc.ServiceDesc for ControlPlane service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -461,6 +597,22 @@ var ControlPlane_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WriteFile",
 			Handler:    _ControlPlane_WriteFile_Handler,
+		},
+		{
+			MethodName: "Fork",
+			Handler:    _ControlPlane_Fork_Handler,
+		},
+		{
+			MethodName: "Calls",
+			Handler:    _ControlPlane_Calls_Handler,
+		},
+		{
+			MethodName: "Steps",
+			Handler:    _ControlPlane_Steps_Handler,
+		},
+		{
+			MethodName: "Compare",
+			Handler:    _ControlPlane_Compare_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

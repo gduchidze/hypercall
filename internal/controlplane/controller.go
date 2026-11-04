@@ -83,6 +83,9 @@ func (s *Store) Claim(ctx context.Context, owner string, ttl time.Duration) (Job
 		}
 	}
 	j.Assignment = Assignment{Scope: j.Scope, BranchID: j.BranchID, SandboxID: sandboxID, ExecutionID: execution, Epoch: epoch, LeaseUntil: until.Time, Run: rs}
+	if e = fillAgentAssignment(ctx, tx, &j.Assignment); e != nil {
+		return j, e
+	}
 	return j, tx.Commit()
 }
 func (s *Store) RenewClaim(ctx context.Context, j Job, ttl time.Duration) error {
@@ -135,7 +138,7 @@ func (s *Store) Finish(ctx context.Context, j Job, obs Observation) error {
 	if obs.State != "running" && obs.State != "stopped" && obs.State != "failed" && obs.State != "suspended" {
 		return failure("failed_precondition", "backend returned unsupported observation")
 	}
-	if (j.Action == "cancel" || j.Action == "expire") && obs.State != "stopped" {
+	if (j.Action == "cancel" || j.Action == "expire" || j.Action == "complete") && obs.State != "stopped" {
 		return failure("failed_precondition", "cancellation requires confirmed termination")
 	}
 	if j.Action == "suspend" && obs.State != "suspended" {
@@ -165,16 +168,27 @@ func (s *Store) Finish(ctx context.Context, j Job, obs Observation) error {
 		if obs.Checkpoint.BranchID != "" && obs.Checkpoint.BranchID != j.BranchID {
 			return failure("failed_precondition", "checkpoint belongs to another branch")
 		}
+		if isCooperative(j.Assignment.Run) {
+			if e = validateSemanticCheckpoint(j.Assignment, *obs.Checkpoint); e != nil {
+				return e
+			}
+			seq = j.Assignment.Barrier.EventSequence
+		}
 		if obs.Checkpoint.EventPosition != 0 && obs.Checkpoint.EventPosition != seq {
 			return failure("failed_precondition", "checkpoint event position contradicts committed branch cursor")
 		}
 		obs.Checkpoint.BranchID = j.BranchID
 		obs.Checkpoint.EventPosition = seq
+		var remaining int64
+		if e = tx.QueryRowContext(ctx, `SELECT GREATEST(0,FLOOR(EXTRACT(EPOCH FROM (lease_until-clock_timestamp()))*1000))::bigint FROM branches WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, j.Scope.TenantID, j.Scope.ProjectID, j.BranchID).Scan(&remaining); e != nil {
+			return e
+		}
+		obs.Checkpoint.BudgetRemainingMS = remaining
 		cp := makeResource(j.Scope, "Checkpoint", newID(), obs.Checkpoint)
 		if e = insertResource(ctx, tx, cp); e != nil {
 			return e
 		}
-		if _, e = tx.ExecContext(ctx, `UPDATE branches SET checkpoint_id=$4,budget_remaining_ms=GREATEST(0,FLOOR(EXTRACT(EPOCH FROM (lease_until-clock_timestamp()))*1000))::bigint WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, j.Scope.TenantID, j.Scope.ProjectID, j.BranchID, cp.Metadata.ID); e != nil {
+		if _, e = tx.ExecContext(ctx, `UPDATE branches SET checkpoint_id=$4,budget_remaining_ms=$5 WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, j.Scope.TenantID, j.Scope.ProjectID, j.BranchID, cp.Metadata.ID, remaining); e != nil {
 			return e
 		}
 	}
@@ -195,11 +209,17 @@ func (s *Store) Finish(ctx context.Context, j Job, obs Observation) error {
 	}
 	if j.Action != "observe" {
 		opState := "succeeded"
+		if obs.State == "running" && isCooperative(j.Assignment.Run) {
+			opState = "awaiting_session"
+		}
 		if obs.State == "failed" {
 			opState = "failed"
 		}
 		op.Status = encode(OperationStatus{State: opState})
 		if e = save(ctx, tx, op); e != nil {
+			return e
+		}
+		if e = refreshForkOperation(ctx, tx, j.Scope, op); e != nil {
 			return e
 		}
 	}
@@ -253,6 +273,9 @@ func (s *Store) Retry(ctx context.Context, j Job, cause error) error {
 		if e = save(ctx, tx, op); e != nil {
 			return e
 		}
+		if e = refreshForkOperation(ctx, tx, j.Scope, op); e != nil {
+			return e
+		}
 	}
 	return tx.Commit()
 }
@@ -299,10 +322,11 @@ func (s *Store) AppendEventID(ctx context.Context, scope Scope, branch, executio
 }
 
 type Controller struct {
-	Store    *Store
-	Backend  Backend
-	WorkerID string
-	Logger   *slog.Logger
+	agentAfter [3]string
+	Store      *Store
+	Backend    Backend
+	WorkerID   string
+	Logger     *slog.Logger
 }
 
 func (c *Controller) Tick(ctx context.Context) error {
@@ -331,7 +355,7 @@ func (c *Controller) Tick(ctx context.Context) error {
 		obs, e = backend.Ensure(callCtx, j.Assignment)
 	case "observe":
 		obs, e = backend.Observe(callCtx, j.Assignment)
-	case "cancel", "expire":
+	case "cancel", "expire", "complete":
 		obs, e = backend.Stop(callCtx, j.Assignment)
 	case "suspend":
 		obs, e = backend.Suspend(callCtx, j.Assignment)
@@ -365,6 +389,9 @@ func (c *Controller) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return ctx.Err()
 		case <-ticker.C:
+			if e := c.AgentTick(ctx); e != nil && c.Logger != nil {
+				c.Logger.Debug("agent relay pending", "code", Code(e))
+			}
 			if e := c.Tick(ctx); e != nil && Code(e) != "not_found" && c.Logger != nil {
 				if time.Since(lastWarning) >= 5*time.Second {
 					lastWarning = time.Now()
@@ -396,9 +423,18 @@ func (s *Service) assignment(ctx context.Context, scope Scope, branch string) (A
 	if !valid {
 		return a, failure("failed_precondition", "branch has no live running assignment")
 	}
-	a.Scope = scope
-	a.LeaseUntil = until.Time
-	a.BranchID = branch
+	tx, e := s.store.db.BeginTx(ctx, nil)
+	if e != nil {
+		return a, e
+	}
+	defer tx.Rollback()
+	a, e = loadAssignment(ctx, tx, scope, branch)
+	if e != nil {
+		return a, e
+	}
+	if e = tx.Commit(); e != nil {
+		return a, e
+	}
 	return a, nil
 }
 func (s *Service) Exec(ctx context.Context, scope Scope, branch string, r *guestv1.ExecRequest, send func(*guestv1.ExecEvent) error) error {

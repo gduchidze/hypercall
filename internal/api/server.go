@@ -158,7 +158,7 @@ func resource(r cp.Resource) (*pb.Resource, error) {
 		if e != nil {
 			return nil, e
 		}
-		out.Spec = &pb.Resource_BranchSpec{BranchSpec: &pb.BranchSpec{RunId: v.RunID, Model: model, ParentCheckpointId: v.ParentCheckpointID}}
+		out.Spec = &pb.Resource_BranchSpec{BranchSpec: &pb.BranchSpec{RunId: v.RunID, Model: model, ParentCheckpointId: v.ParentCheckpointID, ParentBranchId: v.ParentBranchID, ForkOperationId: v.ForkOperationID}}
 	default:
 		return nil, status.Error(codes.Internal, "unknown stored resource kind")
 	}

@@ -35,8 +35,13 @@ def boot():
         mount('devtmpfs', '/dev', 'devtmpfs', 'nosuid')
     mount('tmpfs', '/run', 'tmpfs', 'nosuid,nodev,noexec,mode=0755,size=8m')
     mount('tmpfs', '/tmp', 'tmpfs', 'nosuid,nodev,mode=1777,size=16m')
-    Path('/run/hypercall').mkdir(mode=0o700)
+    Path('/run/hypercall').mkdir(mode=0o710)
+    Path('/run/hypercall').chmod(0o710)
+    os.chown('/run/hypercall', 0, 1000)
     Path('/run/hypercall/session').mkdir(mode=0o700)
+    Path('/run/hypercall/harness').mkdir(mode=0o750)
+    Path('/run/hypercall/harness').chmod(0o750)
+    os.chown('/run/hypercall/harness', 0, 1000)
     command('/usr/bin/mount', '-t', 'ext4', '-o', 'ro,noload,nosuid,nodev,noexec',
             '/dev/vdb', '/run/hypercall/session')
     source = Path('/run/hypercall/session/session.json')
@@ -80,7 +85,9 @@ def boot():
     write(workload / 'cgroup.subtree_control', '+memory +pids +cpu')
     agent = subprocess.Popen(['/usr/local/bin/hypercall-guest', '--workspace', '/workspace',
                               '--session-config', str(target), '--uid', '1000', '--gid', '1000',
-                              '--vsock-port', '1024', '--workload-cgroup', str(workload)],
+                              '--vsock-port', '1024', '--workload-cgroup', str(workload),
+                              '--harness-socket', '/run/hypercall/harness/agent.sock',
+                              '--harness-program', '/opt/hypercall/agent.py'],
                              env={'PATH': '/usr/bin:/bin', 'LANG': 'C.UTF-8'})
     def stop(_signum, _frame):
         agent.terminate()

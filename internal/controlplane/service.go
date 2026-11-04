@@ -55,7 +55,7 @@ func validate(r Resource) (json.RawMessage, error) {
 			if len(s.Command) == 0 || s.ControlledCounter != 0 {
 				return bad("foreground mode requires command and no controlled counter")
 			}
-		case "controlled_python_v1":
+		case "controlled_python_v1", "cooperative_python_v1":
 			if len(s.Command) != 0 || len(s.Env) != 0 || s.ControlledCounter < 0 {
 				return bad("controlled Python requires empty command/env and a nonnegative counter")
 			}
@@ -64,8 +64,8 @@ func validate(r Resource) (json.RawMessage, error) {
 		default:
 			return bad("unsupported execution mode")
 		}
-		if len(s.Models) != 1 {
-			return bad("Phase 2A requires exactly one model; matrices are deferred")
+		if len(s.Models) < 1 || len(s.Models) > 2 || (s.ExecutionMode != "cooperative_python_v1" && len(s.Models) != 1) {
+			return bad("one model is required; only cooperative tasks allow two immutable candidates")
 		}
 		for _, ref := range append([]Ref{s.Workspace, s.Gateway}, s.Models...) {
 			if ref.ID == "" || !digestPattern.MatchString(ref.Digest) {
@@ -151,6 +151,9 @@ func validate(r Resource) (json.RawMessage, error) {
 			return bad("gateway requires routes")
 		}
 		for _, v := range s.Routes {
+			if v == "fixture://text-v1" || v == "fixture://echo-v1" || v == "fixture://unknown-effect-v1" {
+				continue
+			}
 			u, e := url.Parse(v)
 			if e != nil || u.Scheme != "https" || u.Host == "" || u.User != nil {
 				return bad("routes require HTTPS without embedded credentials")

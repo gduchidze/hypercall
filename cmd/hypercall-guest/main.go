@@ -14,15 +14,17 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"github.com/gduchidze/hypercall/internal/guest"
 	"google.golang.org/grpc"
 )
 
 type sessionConfig struct {
-	Identity   *guestv1.AllocationIdentity `json:"identity"`
-	Credential string                      `json:"credential"`
-	ExpiresAt  time.Time                   `json:"expires_at"`
-	Entropy    string                      `json:"entropy"`
+	HarnessSession *harnessv1.HarnessSession   `json:"harness_session,omitempty"`
+	Identity       *guestv1.AllocationIdentity `json:"identity"`
+	Credential     string                      `json:"credential"`
+	ExpiresAt      time.Time                   `json:"expires_at"`
+	Entropy        string                      `json:"entropy"`
 }
 
 func main() {
@@ -42,6 +44,8 @@ func run(logger *slog.Logger) error {
 	uid := flag.Int("uid", -1, "production workload uid (must be non-root)")
 	gid := flag.Int("gid", -1, "production workload gid (must be non-root)")
 	allowedEnv := flag.String("allow-env", "LANG,LC_ALL,TZ,PYTHONUNBUFFERED", "comma-separated explicitly allowed environment keys")
+	harnessSocket := flag.String("harness-socket", "", "private workload-owned local harness Unix socket")
+	harnessProgram := flag.String("harness-program", "/opt/hypercall/agent.py", "verified rootfs cooperative Python entrypoint")
 	workloadCgroup := flag.String("workload-cgroup", "", "production cgroup v2 subtree with finite workload limits")
 	flag.Parse()
 	if flag.NArg() != 0 {
@@ -59,7 +63,7 @@ func run(logger *slog.Logger) error {
 	if *allowedEnv != "" {
 		allowed = strings.Split(*allowedEnv, ",")
 	}
-	svc, err := guest.New(guest.Config{Workspace: *workspace, Identity: session.Identity, Credential: session.Credential, ExpiresAt: session.ExpiresAt, TrustedLocal: *testSocket != "", ExecHelper: executable, UID: *uid, GID: *gid, AllowedEnv: allowed, WorkloadCgroup: *workloadCgroup, Logger: logger})
+	svc, err := guest.New(guest.Config{HarnessSession: session.HarnessSession, HarnessSocket: *harnessSocket, HarnessProgram: *harnessProgram, Workspace: *workspace, Identity: session.Identity, Credential: session.Credential, ExpiresAt: session.ExpiresAt, TrustedLocal: *testSocket != "", ExecHelper: executable, UID: *uid, GID: *gid, AllowedEnv: allowed, WorkloadCgroup: *workloadCgroup, Logger: logger})
 	if err != nil {
 		return err
 	}
@@ -85,6 +89,24 @@ func run(logger *slog.Logger) error {
 	}
 	srv := grpc.NewServer(grpc.MaxRecvMsgSize(guest.MaxFileBytes+(64<<10)), grpc.MaxHeaderListSize(8192), grpc.MaxConcurrentStreams(32), grpc.WaitForHandlers(true))
 	guestv1.RegisterGuestServer(srv, svc)
+	var local *grpc.Server
+	if *harnessSocket != "" {
+		localListener, e := guest.ListenHarness(*harnessSocket, *uid, *gid)
+		if e != nil {
+			return e
+		}
+		defer localListener.Close()
+		local = grpc.NewServer(grpc.MaxRecvMsgSize(128<<10), grpc.MaxSendMsgSize(128<<10), grpc.MaxConcurrentStreams(8), grpc.MaxHeaderListSize(8192))
+		harnessv1.RegisterHarnessServer(local, svc)
+		defer local.Stop()
+		go func() {
+			if e := local.Serve(localListener); e != nil {
+				logger.Error("local harness listener stopped")
+				srv.Stop()
+			}
+		}()
+	}
+
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, syscall.SIGINT)
 	defer signal.Stop(signals)
@@ -93,6 +115,9 @@ func run(logger *slog.Logger) error {
 	go func() {
 		select {
 		case <-signals:
+			if local != nil {
+				local.Stop()
+			}
 			srv.Stop()
 		case <-done:
 		}

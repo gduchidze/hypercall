@@ -204,3 +204,71 @@ controller/database, using the explicitly synthetic snapshot runtime. It require
 These local test seams do not qualify Firecracker isolation, cross-host recovery,
 or a real Postgres→controller→host→KVM execution. Those remain required Phase 2A integration
 and release gates. See [Phase 2A evidence](../validation/2A.md).
+
+## Cooperative agent profile (Phase 2B)
+
+`--cooperative-agents` on the host and `--host-cooperative-agents` on the API
+explicitly enable `cooperative_python_v1`. The host requires its configured
+snapshot store and the Task's `agent_digest` to match the verified guest artifact.
+The profile uses the pinned real Python fixture agent and `hypercall.harness.v1`
+SDK hooks; it is separate from the legacy controlled-counter workload. Task argv
+and environment overrides are empty. `agent-state.json` and
+`.agent-state.pending` are reserved workspace names.
+
+The guest exposes a second gRPC service on a workload-owned mode-0600 Unix socket.
+Its parent directories allow workload traversal while the native bootstrap
+credential remains root-owned mode 0600. Python receives only a sealed harness
+session, never a control-plane/provider key or the host-to-guest bearer. The host
+polls the guest mailbox over its authenticated vsock session and delivers only
+results committed by the durable controller gateway. Concurrent/background actions
+and mutations through public Exec/WriteFile are rejected for this profile;
+ReadFile remains available while the execution is live.
+
+Each immutable session binds tenant/project, branch, physical sandbox, execution,
+epoch, call namespace, route/model digests, protocol, and any inherited semantic
+marker. Its hash is SHA-256 of deterministic protobuf bytes with `session_hash`
+empty. A local Python acknowledgement does not authorize actions: the controller
+must commit that session acknowledgement and deliver it before the SDK's
+acknowledgement RPC returns. Every request/result is fenced by the current
+session and exact request hash.
+
+An agent commits state before entering its resume barrier. The gateway drains
+registered actions and appends a sealed-barrier event; this final cursor can be
+later than the step-commit cursor. The guest captures only after it receives that
+exact sealed marker, with no pending action and the latest observed action being
+the matching step commit. The immutable native manifest binds the marker's
+protocol, step, final cursor, state digest, source session, branch, execution and
+epoch. A previous-step marker cannot authorize capture after a later observation.
+
+Native Restore verifies the inherited marker against the ready manifest before
+loading the VM. The new private session disk carries the complete new sealed
+harness session. At rebind, the guest compares that configuration with its captured
+marker, renews native identity/credentials/clock/RNG, and wakes the captured Python
+AwaitResume call. The SDK closes inherited clients, reconnects, validates the
+configuration, renews Python's default module RNG and submits a local ACK. Native
+rebind waits for this local ACK without holding the guest operation lock, returns
+host readiness, and keeps the action gate closed until the controller durably
+acknowledges and delivers the new session. Independently cached Random instances,
+NumPy RNGs, unregistered clients and background workers are unsupported.
+
+The parent remains behind its harness barrier when native Capture reopens host
+control. The Phase 2B parent policy stops it after retaining the checkpoint. A
+restored process continues from memory; neither Task argv nor initial agent
+startup is replayed. Confirmed finalization closes the gateway and the controller
+queues durable VM cleanup after result delivery. Premature agent exit without
+committed finalization fails guest health and cannot produce a complete trace.
+
+For an offline cooperative image, build the architecture-specific SDK bundle with
+`scripts/build-harness-bundle.py`, then pass its immutable path and SHA-256 to
+`scripts/build-template --harness-bundle ... --harness-bundle-sha256 ...`.
+The installer preserves complete wheels and licenses, checks every locked digest,
+architecture, CPython 3.12 ABI and Requires-Python constraint, and uses no pip or
+network. The builder checks the actual image interpreter and imports the pinned
+grpcio/protobuf/fixture agent in the isolated image before publishing artifacts.
+The bundle manifest and SHA-256 remain in the image/build provenance.
+
+Local conformance tests validate the Unix-gRPC mailbox, durable acknowledgement
+ordering, exact delivery hashes, last-action/cursor barrier checks, native manifest
+binding, and offline packaging. Real snapshot continuity, refreshed-session routing
+and retained two-child trajectories require the separately recorded Phase 2B
+operator qualification; local RPC tests do not establish those VM properties.

@@ -5,6 +5,7 @@ option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/v1;hypercal
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
 import "hypercall/guest/v1/guest.proto";
+import "hypercall/harness/v1/harness.proto";
 
 // Tenant identity comes exclusively from authenticated credentials. Every request
 // additionally names a project authorized by that identity.
@@ -19,6 +20,10 @@ service ControlPlane {
   rpc Exec(ExecRequest) returns (stream hypercall.guest.v1.ExecEvent);
   rpc ReadFile(ReadFileRequest) returns (hypercall.guest.v1.ReadFileResponse);
   rpc WriteFile(WriteFileRequest) returns (hypercall.guest.v1.WriteFileResponse);
+  rpc Fork(ForkRequest) returns (ForkResult);
+  rpc Calls(CallsRequest) returns (CallsResponse);
+  rpc Steps(StepsRequest) returns (StepsResponse);
+  rpc Compare(CompareRequest) returns (Divergence);
 }
 message Metadata {
   string id = 1;
@@ -53,11 +58,11 @@ message WorkspaceSpec { repeated Repository repositories = 1; repeated InputFile
 message ModelConfigSpec { string provider = 1; string model = 2; string revision = 3; string artifact_digest = 4; map<string,string> parameters = 5; }
 message GatewaySpec { map<string,string> routes = 1; repeated string secret_refs = 2; repeated string allowed_hosts = 3; }
 message RunSpec { Resource task = 1; Resource workspace = 2; repeated Resource models = 3; Resource gateway = 4; }
-message BranchSpec { string run_id = 1; Resource model = 2; string parent_checkpoint_id = 3; }
+message BranchSpec { string run_id = 1; Resource model = 2; string parent_checkpoint_id = 3; string parent_branch_id = 4; string fork_operation_id = 5; }
 // Phase 2A exposes inspection only; runtime checkpoint creation requires Phase 1B.
-message CheckpointSpec { string manifest_digest = 1; string manifest_uri = 2; string protocol_version = 3; int64 event_position = 4; bool verified = 5; string branch_id = 6; map<string,string> compatibility = 7; string native_checkpoint_id = 8; bytes snapshot_manifest = 9; }
-message OperationSpec { string branch_id = 1; string action = 2; string checkpoint_id = 3; }
-message BranchStatus { string desired = 1; string observed = 2; string execution_id = 3; int64 epoch = 4; google.protobuf.Timestamp lease_until = 5; int64 last_event = 6; string error = 7; string checkpoint_id = 8; int64 budget_remaining_ms = 9; string sandbox_id = 10; }
+message CheckpointSpec { string manifest_digest = 1; string manifest_uri = 2; string protocol_version = 3; int64 event_position = 4; bool verified = 5; string branch_id = 6; map<string,string> compatibility = 7; string native_checkpoint_id = 8; bytes snapshot_manifest = 9; hypercall.harness.v1.AgentBarrier barrier = 10; string route_digest = 11; int64 budget_remaining_ms = 12; }
+message OperationSpec { string branch_id = 1; string action = 2; string checkpoint_id = 3; repeated string child_branch_ids = 4; string parent_operation_id = 5; }
+message BranchStatus { string desired = 1; string observed = 2; string execution_id = 3; int64 epoch = 4; google.protobuf.Timestamp lease_until = 5; int64 last_event = 6; string error = 7; string checkpoint_id = 8; int64 budget_remaining_ms = 9; string sandbox_id = 10; string agent_gate = 11; string route_digest = 12; int64 agent_step = 13; bool trace_complete = 14; }
 message OperationStatus { string state = 1; string error = 2; }
 message Resource {
   Metadata metadata = 1;
@@ -90,3 +95,13 @@ message EventsResponse { repeated Event events = 1; int64 next_sequence = 2; }
 message ExecRequest { string project_id = 1; string branch_id = 2; hypercall.guest.v1.ExecRequest command = 3; }
 message ReadFileRequest { string project_id = 1; string branch_id = 2; string path = 3; }
 message WriteFileRequest { string project_id = 1; string branch_id = 2; string path = 3; bytes data = 4; }
+message ForkRequest { string project_id = 1; string checkpoint_id = 2; repeated Ref models = 3; string idempotency_key = 4; }
+message ForkResult { Resource operation = 1; repeated Resource children = 2; }
+message CallsRequest { string project_id = 1; string branch_id = 2; int64 after_sequence = 3; int32 limit = 4; }
+message AgentCall { hypercall.harness.v1.AgentRequest request = 1; hypercall.harness.v1.AgentResult result = 2; string execution_id = 3; int64 epoch = 4; string model_digest = 5; string route_digest = 6; string adapter_version = 7; bool mutating = 8; google.protobuf.Timestamp created_at = 9; int64 registered_sequence = 10; }
+message CallsResponse { repeated AgentCall calls = 1; int64 next_sequence = 2; }
+message StepsRequest { string project_id = 1; string branch_id = 2; int64 after_step = 3; int32 limit = 4; }
+message AgentStep { string branch_id = 1; int64 step = 2; string state_digest = 3; int64 event_sequence = 4; string session_hash = 5; bool complete = 6; }
+message StepsResponse { repeated AgentStep steps = 1; int64 next_step = 2; }
+message CompareRequest { string project_id = 1; string left_branch = 2; string right_branch = 3; string comparator = 4; }
+message Divergence { string comparator = 1; string state = 2; int64 step = 3; int32 position = 4; string left_digest = 5; string right_digest = 6; string reason = 7; }

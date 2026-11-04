@@ -3,6 +3,7 @@ import datetime
 from google.protobuf import struct_pb2 as _struct_pb2
 from google.protobuf import timestamp_pb2 as _timestamp_pb2
 from hypercall_proto.hypercall.guest.v1 import guest_pb2 as _guest_pb2
+from hypercall_proto.hypercall.harness.v1 import harness_pb2 as _harness_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -163,17 +164,21 @@ class RunSpec(_message.Message):
     def __init__(self, task: _Optional[_Union[Resource, _Mapping]] = ..., workspace: _Optional[_Union[Resource, _Mapping]] = ..., models: _Optional[_Iterable[_Union[Resource, _Mapping]]] = ..., gateway: _Optional[_Union[Resource, _Mapping]] = ...) -> None: ...
 
 class BranchSpec(_message.Message):
-    __slots__ = ("run_id", "model", "parent_checkpoint_id")
+    __slots__ = ("run_id", "model", "parent_checkpoint_id", "parent_branch_id", "fork_operation_id")
     RUN_ID_FIELD_NUMBER: _ClassVar[int]
     MODEL_FIELD_NUMBER: _ClassVar[int]
     PARENT_CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
+    PARENT_BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
+    FORK_OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
     run_id: str
     model: Resource
     parent_checkpoint_id: str
-    def __init__(self, run_id: _Optional[str] = ..., model: _Optional[_Union[Resource, _Mapping]] = ..., parent_checkpoint_id: _Optional[str] = ...) -> None: ...
+    parent_branch_id: str
+    fork_operation_id: str
+    def __init__(self, run_id: _Optional[str] = ..., model: _Optional[_Union[Resource, _Mapping]] = ..., parent_checkpoint_id: _Optional[str] = ..., parent_branch_id: _Optional[str] = ..., fork_operation_id: _Optional[str] = ...) -> None: ...
 
 class CheckpointSpec(_message.Message):
-    __slots__ = ("manifest_digest", "manifest_uri", "protocol_version", "event_position", "verified", "branch_id", "compatibility", "native_checkpoint_id", "snapshot_manifest")
+    __slots__ = ("manifest_digest", "manifest_uri", "protocol_version", "event_position", "verified", "branch_id", "compatibility", "native_checkpoint_id", "snapshot_manifest", "barrier", "route_digest", "budget_remaining_ms")
     class CompatibilityEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -190,6 +195,9 @@ class CheckpointSpec(_message.Message):
     COMPATIBILITY_FIELD_NUMBER: _ClassVar[int]
     NATIVE_CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
     SNAPSHOT_MANIFEST_FIELD_NUMBER: _ClassVar[int]
+    BARRIER_FIELD_NUMBER: _ClassVar[int]
+    ROUTE_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    BUDGET_REMAINING_MS_FIELD_NUMBER: _ClassVar[int]
     manifest_digest: str
     manifest_uri: str
     protocol_version: str
@@ -199,20 +207,27 @@ class CheckpointSpec(_message.Message):
     compatibility: _containers.ScalarMap[str, str]
     native_checkpoint_id: str
     snapshot_manifest: bytes
-    def __init__(self, manifest_digest: _Optional[str] = ..., manifest_uri: _Optional[str] = ..., protocol_version: _Optional[str] = ..., event_position: _Optional[int] = ..., verified: bool = ..., branch_id: _Optional[str] = ..., compatibility: _Optional[_Mapping[str, str]] = ..., native_checkpoint_id: _Optional[str] = ..., snapshot_manifest: _Optional[bytes] = ...) -> None: ...
+    barrier: _harness_pb2.AgentBarrier
+    route_digest: str
+    budget_remaining_ms: int
+    def __init__(self, manifest_digest: _Optional[str] = ..., manifest_uri: _Optional[str] = ..., protocol_version: _Optional[str] = ..., event_position: _Optional[int] = ..., verified: bool = ..., branch_id: _Optional[str] = ..., compatibility: _Optional[_Mapping[str, str]] = ..., native_checkpoint_id: _Optional[str] = ..., snapshot_manifest: _Optional[bytes] = ..., barrier: _Optional[_Union[_harness_pb2.AgentBarrier, _Mapping]] = ..., route_digest: _Optional[str] = ..., budget_remaining_ms: _Optional[int] = ...) -> None: ...
 
 class OperationSpec(_message.Message):
-    __slots__ = ("branch_id", "action", "checkpoint_id")
+    __slots__ = ("branch_id", "action", "checkpoint_id", "child_branch_ids", "parent_operation_id")
     BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
     ACTION_FIELD_NUMBER: _ClassVar[int]
     CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
+    CHILD_BRANCH_IDS_FIELD_NUMBER: _ClassVar[int]
+    PARENT_OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
     branch_id: str
     action: str
     checkpoint_id: str
-    def __init__(self, branch_id: _Optional[str] = ..., action: _Optional[str] = ..., checkpoint_id: _Optional[str] = ...) -> None: ...
+    child_branch_ids: _containers.RepeatedScalarFieldContainer[str]
+    parent_operation_id: str
+    def __init__(self, branch_id: _Optional[str] = ..., action: _Optional[str] = ..., checkpoint_id: _Optional[str] = ..., child_branch_ids: _Optional[_Iterable[str]] = ..., parent_operation_id: _Optional[str] = ...) -> None: ...
 
 class BranchStatus(_message.Message):
-    __slots__ = ("desired", "observed", "execution_id", "epoch", "lease_until", "last_event", "error", "checkpoint_id", "budget_remaining_ms", "sandbox_id")
+    __slots__ = ("desired", "observed", "execution_id", "epoch", "lease_until", "last_event", "error", "checkpoint_id", "budget_remaining_ms", "sandbox_id", "agent_gate", "route_digest", "agent_step", "trace_complete")
     DESIRED_FIELD_NUMBER: _ClassVar[int]
     OBSERVED_FIELD_NUMBER: _ClassVar[int]
     EXECUTION_ID_FIELD_NUMBER: _ClassVar[int]
@@ -223,6 +238,10 @@ class BranchStatus(_message.Message):
     CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
     BUDGET_REMAINING_MS_FIELD_NUMBER: _ClassVar[int]
     SANDBOX_ID_FIELD_NUMBER: _ClassVar[int]
+    AGENT_GATE_FIELD_NUMBER: _ClassVar[int]
+    ROUTE_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    AGENT_STEP_FIELD_NUMBER: _ClassVar[int]
+    TRACE_COMPLETE_FIELD_NUMBER: _ClassVar[int]
     desired: str
     observed: str
     execution_id: str
@@ -233,7 +252,11 @@ class BranchStatus(_message.Message):
     checkpoint_id: str
     budget_remaining_ms: int
     sandbox_id: str
-    def __init__(self, desired: _Optional[str] = ..., observed: _Optional[str] = ..., execution_id: _Optional[str] = ..., epoch: _Optional[int] = ..., lease_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_event: _Optional[int] = ..., error: _Optional[str] = ..., checkpoint_id: _Optional[str] = ..., budget_remaining_ms: _Optional[int] = ..., sandbox_id: _Optional[str] = ...) -> None: ...
+    agent_gate: str
+    route_digest: str
+    agent_step: int
+    trace_complete: bool
+    def __init__(self, desired: _Optional[str] = ..., observed: _Optional[str] = ..., execution_id: _Optional[str] = ..., epoch: _Optional[int] = ..., lease_until: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., last_event: _Optional[int] = ..., error: _Optional[str] = ..., checkpoint_id: _Optional[str] = ..., budget_remaining_ms: _Optional[int] = ..., sandbox_id: _Optional[str] = ..., agent_gate: _Optional[str] = ..., route_digest: _Optional[str] = ..., agent_step: _Optional[int] = ..., trace_complete: bool = ...) -> None: ...
 
 class OperationStatus(_message.Message):
     __slots__ = ("state", "error")
@@ -422,3 +445,133 @@ class WriteFileRequest(_message.Message):
     path: str
     data: bytes
     def __init__(self, project_id: _Optional[str] = ..., branch_id: _Optional[str] = ..., path: _Optional[str] = ..., data: _Optional[bytes] = ...) -> None: ...
+
+class ForkRequest(_message.Message):
+    __slots__ = ("project_id", "checkpoint_id", "models", "idempotency_key")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
+    MODELS_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    checkpoint_id: str
+    models: _containers.RepeatedCompositeFieldContainer[Ref]
+    idempotency_key: str
+    def __init__(self, project_id: _Optional[str] = ..., checkpoint_id: _Optional[str] = ..., models: _Optional[_Iterable[_Union[Ref, _Mapping]]] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+
+class ForkResult(_message.Message):
+    __slots__ = ("operation", "children")
+    OPERATION_FIELD_NUMBER: _ClassVar[int]
+    CHILDREN_FIELD_NUMBER: _ClassVar[int]
+    operation: Resource
+    children: _containers.RepeatedCompositeFieldContainer[Resource]
+    def __init__(self, operation: _Optional[_Union[Resource, _Mapping]] = ..., children: _Optional[_Iterable[_Union[Resource, _Mapping]]] = ...) -> None: ...
+
+class CallsRequest(_message.Message):
+    __slots__ = ("project_id", "branch_id", "after_sequence", "limit")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
+    AFTER_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    branch_id: str
+    after_sequence: int
+    limit: int
+    def __init__(self, project_id: _Optional[str] = ..., branch_id: _Optional[str] = ..., after_sequence: _Optional[int] = ..., limit: _Optional[int] = ...) -> None: ...
+
+class AgentCall(_message.Message):
+    __slots__ = ("request", "result", "execution_id", "epoch", "model_digest", "route_digest", "adapter_version", "mutating", "created_at", "registered_sequence")
+    REQUEST_FIELD_NUMBER: _ClassVar[int]
+    RESULT_FIELD_NUMBER: _ClassVar[int]
+    EXECUTION_ID_FIELD_NUMBER: _ClassVar[int]
+    EPOCH_FIELD_NUMBER: _ClassVar[int]
+    MODEL_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    ROUTE_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    ADAPTER_VERSION_FIELD_NUMBER: _ClassVar[int]
+    MUTATING_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    REGISTERED_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    request: _harness_pb2.AgentRequest
+    result: _harness_pb2.AgentResult
+    execution_id: str
+    epoch: int
+    model_digest: str
+    route_digest: str
+    adapter_version: str
+    mutating: bool
+    created_at: _timestamp_pb2.Timestamp
+    registered_sequence: int
+    def __init__(self, request: _Optional[_Union[_harness_pb2.AgentRequest, _Mapping]] = ..., result: _Optional[_Union[_harness_pb2.AgentResult, _Mapping]] = ..., execution_id: _Optional[str] = ..., epoch: _Optional[int] = ..., model_digest: _Optional[str] = ..., route_digest: _Optional[str] = ..., adapter_version: _Optional[str] = ..., mutating: bool = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., registered_sequence: _Optional[int] = ...) -> None: ...
+
+class CallsResponse(_message.Message):
+    __slots__ = ("calls", "next_sequence")
+    CALLS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    calls: _containers.RepeatedCompositeFieldContainer[AgentCall]
+    next_sequence: int
+    def __init__(self, calls: _Optional[_Iterable[_Union[AgentCall, _Mapping]]] = ..., next_sequence: _Optional[int] = ...) -> None: ...
+
+class StepsRequest(_message.Message):
+    __slots__ = ("project_id", "branch_id", "after_step", "limit")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
+    AFTER_STEP_FIELD_NUMBER: _ClassVar[int]
+    LIMIT_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    branch_id: str
+    after_step: int
+    limit: int
+    def __init__(self, project_id: _Optional[str] = ..., branch_id: _Optional[str] = ..., after_step: _Optional[int] = ..., limit: _Optional[int] = ...) -> None: ...
+
+class AgentStep(_message.Message):
+    __slots__ = ("branch_id", "step", "state_digest", "event_sequence", "session_hash", "complete")
+    BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
+    STEP_FIELD_NUMBER: _ClassVar[int]
+    STATE_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    EVENT_SEQUENCE_FIELD_NUMBER: _ClassVar[int]
+    SESSION_HASH_FIELD_NUMBER: _ClassVar[int]
+    COMPLETE_FIELD_NUMBER: _ClassVar[int]
+    branch_id: str
+    step: int
+    state_digest: str
+    event_sequence: int
+    session_hash: str
+    complete: bool
+    def __init__(self, branch_id: _Optional[str] = ..., step: _Optional[int] = ..., state_digest: _Optional[str] = ..., event_sequence: _Optional[int] = ..., session_hash: _Optional[str] = ..., complete: bool = ...) -> None: ...
+
+class StepsResponse(_message.Message):
+    __slots__ = ("steps", "next_step")
+    STEPS_FIELD_NUMBER: _ClassVar[int]
+    NEXT_STEP_FIELD_NUMBER: _ClassVar[int]
+    steps: _containers.RepeatedCompositeFieldContainer[AgentStep]
+    next_step: int
+    def __init__(self, steps: _Optional[_Iterable[_Union[AgentStep, _Mapping]]] = ..., next_step: _Optional[int] = ...) -> None: ...
+
+class CompareRequest(_message.Message):
+    __slots__ = ("project_id", "left_branch", "right_branch", "comparator")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    LEFT_BRANCH_FIELD_NUMBER: _ClassVar[int]
+    RIGHT_BRANCH_FIELD_NUMBER: _ClassVar[int]
+    COMPARATOR_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    left_branch: str
+    right_branch: str
+    comparator: str
+    def __init__(self, project_id: _Optional[str] = ..., left_branch: _Optional[str] = ..., right_branch: _Optional[str] = ..., comparator: _Optional[str] = ...) -> None: ...
+
+class Divergence(_message.Message):
+    __slots__ = ("comparator", "state", "step", "position", "left_digest", "right_digest", "reason")
+    COMPARATOR_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    STEP_FIELD_NUMBER: _ClassVar[int]
+    POSITION_FIELD_NUMBER: _ClassVar[int]
+    LEFT_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    RIGHT_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
+    comparator: str
+    state: str
+    step: int
+    position: int
+    left_digest: str
+    right_digest: str
+    reason: str
+    def __init__(self, comparator: _Optional[str] = ..., state: _Optional[str] = ..., step: _Optional[int] = ..., position: _Optional[int] = ..., left_digest: _Optional[str] = ..., right_digest: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...

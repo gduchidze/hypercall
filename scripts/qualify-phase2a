@@ -52,7 +52,7 @@ def address(value, *, loopback=False):
     return parsed.hostname, parsed.port
 
 
-def configuration(path):
+def configuration(path, *, profile="controlled_python_v1_firecracker", execution_mode="controlled_python_v1"):
     config = json.loads(regular(path, private=True).read_text())
     fields = {"profile", "server_binary", "server_sha256", "cli_binary", "cli_sha256",
               "keys_file", "manifest_file", "tenant_id", "project_id", "grpc_address",
@@ -60,7 +60,7 @@ def configuration(path):
               "host_server_name", "architecture"}
     require(set(config) == fields and all(isinstance(v, str) and v for v in config.values()),
             "complete_known_configuration_required")
-    require(config["profile"] == "controlled_python_v1_firecracker", "real_profile_required")
+    require(config["profile"] == profile, "real_profile_required")
     require(config["architecture"] in {"aarch64", "x86_64"}, "real_architecture_required")
     require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", config["tenant_id"]), "invalid_tenant")
     require(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,127}", config["project_id"]), "invalid_project")
@@ -88,7 +88,7 @@ def configuration(path):
     tasks = [doc for doc in documents if doc.get("kind") == "Task"]
     require(len(tasks) == 1 and documents[-1] is tasks[0], "one_final_task_required")
     task = tasks[0].get("spec", {})
-    require(task.get("execution_mode") == "controlled_python_v1" and not task.get("command") and not task.get("env")
+    require(task.get("execution_mode") == execution_mode and not task.get("command") and not task.get("env")
             and isinstance(task.get("controlled_counter", 0), int) and task.get("controlled_counter", 0) >= 0
             and 300 <= task.get("limits", {}).get("timeout_seconds", 0) <= 600,
             "bounded_real_controlled_task_required")
@@ -113,6 +113,8 @@ def inspect_rest(endpoint, project, branch_id, key):
 
 
 class Workflow:
+    snapshot_flag = "--host-controlled-snapshots"
+    barrier_protocol = "controlled-python-v2-host-clock"
     def __init__(self, config, key, report):
         self.config, self.key, self.report = config, key, report
         self.process = None
@@ -129,7 +131,7 @@ class Workflow:
         unused(config["http_address"])
         args = [config["server_binary"], "--grpc-listen", config["grpc_address"],
                 "--http-listen", config["http_address"], "--keys-file", config["keys_file"],
-                "--insecure-loopback", "--host-controlled-snapshots", "--host-address", config["host_address"],
+                "--insecure-loopback", self.snapshot_flag, "--host-address", config["host_address"],
                 "--host-ca", config["host_ca"], "--host-cert", config["host_cert"],
                 "--host-key", config["host_key"], "--host-server-name", config["host_server_name"]]
         environment = dict(os.environ)
@@ -210,7 +212,7 @@ class Workflow:
         require(compatibility["architecture"] == self.config["architecture"]
                 and compatibility["firecracker_version"] == "Firecracker v1.14.0"
                 and compatibility["snapshot_format_version"] == "8.0.0"
-                and compatibility["barrier_protocol_version"] == "controlled-python-v2-host-clock"
+                and compatibility["barrier_protocol_version"] == self.barrier_protocol
                 and compatibility["memory_mib"] == task.limits.memory_mb
                 and compatibility["vcpus"] == task.limits.cpu
                 and "sha256:" + compatibility["template_sha256"] == task.template_digest

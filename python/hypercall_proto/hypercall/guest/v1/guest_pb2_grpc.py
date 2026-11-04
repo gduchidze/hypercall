@@ -4,6 +4,7 @@ import grpc
 import warnings
 
 from hypercall_proto.hypercall.guest.v1 import guest_pb2 as hypercall_dot_guest_dot_v1_dot_guest__pb2
+from hypercall_proto.hypercall.harness.v1 import harness_pb2 as hypercall_dot_harness_dot_v1_dot_harness__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
 GRPC_VERSION = grpc.__version__
@@ -38,6 +39,21 @@ class GuestStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.StartAgent = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/StartAgent',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.StartAgentRequest.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoResponse.FromString,
+                _registered_method=True)
+        self.PollAgent = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/PollAgent',
+                request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.PollAgentRequest.SerializeToString,
+                response_deserializer=hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentPoll.FromString,
+                _registered_method=True)
+        self.DeliverAgent = channel.unary_unary(
+                '/hypercall.guest.v1.Guest/DeliverAgent',
+                request_serializer=hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentDelivery.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.DeliverAgentResponse.FromString,
+                _registered_method=True)
         self.StartControlled = channel.unary_unary(
                 '/hypercall.guest.v1.Guest/StartControlled',
                 request_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.StartControlledRequest.SerializeToString,
@@ -96,6 +112,24 @@ class GuestServicer(object):
     value. The credential is provisioned out of band and binds the allocation;
     request fields never establish authority. Credentials must change on a fork.
     """
+
+    def StartAgent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PollAgent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeliverAgent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
 
     def StartControlled(self, request, context):
         """Guest-owned bounded qualification process; survives host transport reset.
@@ -162,6 +196,21 @@ class GuestServicer(object):
 
 def add_GuestServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'StartAgent': grpc.unary_unary_rpc_method_handler(
+                    servicer.StartAgent,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.StartAgentRequest.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoResponse.SerializeToString,
+            ),
+            'PollAgent': grpc.unary_unary_rpc_method_handler(
+                    servicer.PollAgent,
+                    request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.PollAgentRequest.FromString,
+                    response_serializer=hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentPoll.SerializeToString,
+            ),
+            'DeliverAgent': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeliverAgent,
+                    request_deserializer=hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentDelivery.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.DeliverAgentResponse.SerializeToString,
+            ),
             'StartControlled': grpc.unary_unary_rpc_method_handler(
                     servicer.StartControlled,
                     request_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.StartControlledRequest.FromString,
@@ -226,6 +275,87 @@ class Guest(object):
     value. The credential is provisioned out of band and binds the allocation;
     request fields never establish authority. Credentials must change on a fork.
     """
+
+    @staticmethod
+    def StartAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/StartAgent',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.StartAgentRequest.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.GetInfoResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PollAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/PollAgent',
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.PollAgentRequest.SerializeToString,
+            hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentPoll.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeliverAgent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.guest.v1.Guest/DeliverAgent',
+            hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentDelivery.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.DeliverAgentResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def StartControlled(request,

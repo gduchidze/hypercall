@@ -6,6 +6,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"github.com/gduchidze/hypercall/internal/snapshot"
 )
 
@@ -17,18 +18,22 @@ type CaptureRequest struct {
 	ParentCheckpointID string     `json:"parent_checkpoint_id,omitempty"`
 }
 type RestoreRequest struct {
-	OperationID       string     `json:"operation_id"`
-	CheckpointID      string     `json:"checkpoint_id"`
-	Allocation        Allocation `json:"allocation"`
-	Limits            Limits     `json:"limits"`
-	AbsoluteExpiresAt time.Time  `json:"absolute_expires_at,omitempty"`
+	HarnessSession    *harnessv1.HarnessSession `json:"harness_session,omitempty"`
+	OperationID       string                    `json:"operation_id"`
+	CheckpointID      string                    `json:"checkpoint_id"`
+	Allocation        Allocation                `json:"allocation"`
+	Limits            Limits                    `json:"limits"`
+	AbsoluteExpiresAt time.Time                 `json:"absolute_expires_at,omitempty"`
 }
 
 func (r RestoreRequest) Validate() error {
 	if !identifier.MatchString(r.OperationID) || !identifier.MatchString(r.CheckpointID) {
 		return fmt.Errorf("%w: fixed operation and checkpoint identifiers required", ErrInvalid)
 	}
-	return (CreateRequest{Allocation: r.Allocation, Limits: r.Limits, AbsoluteExpiresAt: r.AbsoluteExpiresAt}).Validate()
+	if r.HarnessSession != nil && (r.HarnessSession.InheritedBarrier == nil || r.HarnessSession.ParentCheckpointId != r.CheckpointID) {
+		return fmt.Errorf("%w: retained inherited barrier required", ErrInvalid)
+	}
+	return (CreateRequest{HarnessSession: r.HarnessSession, Allocation: r.Allocation, Limits: r.Limits, AbsoluteExpiresAt: r.AbsoluteExpiresAt}).Validate()
 }
 
 type ForkRequest struct {

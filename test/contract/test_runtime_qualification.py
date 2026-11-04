@@ -39,6 +39,16 @@ class ExitedProcess:
 
 
 class RuntimeQualificationRefusal(unittest.TestCase):
+    def test_phase2b_requires_its_own_explicit_opt_in(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            report=Path(temporary)/"phase2b.json"
+            environment=dict(os.environ,HYPERCALL_RUNTIME_2A_TEST="1")
+            environment.pop("HYPERCALL_RUNTIME_2B_TEST",None)
+            result=subprocess.run([sys.executable,str(ROOT/"scripts/qualify-phase2b"),"--config","/missing/config.json","--report",str(report)],env=environment,capture_output=True,text=True)
+            self.assertEqual(result.returncode,2)
+            self.assertIn("HYPERCALL_RUNTIME_2B_TEST=1_required",result.stderr)
+            self.assertFalse(report.exists())
+
     def test_published_native_metadata_accepts_verified_firecracker_version_format(self):
         command = runpy.run_path(str(SCRIPT))
         task = types.TaskSpec(template_digest="sha256:" + "a" * 64, agent_digest="sha256:" + "b" * 64,

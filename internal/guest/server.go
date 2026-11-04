@@ -20,6 +20,8 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
+	"github.com/gduchidze/hypercall/internal/harness"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
@@ -36,10 +38,13 @@ var identifier = regexp.MustCompile(`^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$`)
 var envName = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]{0,63}$`)
 
 type Config struct {
-	Workspace  string
-	Identity   *guestv1.AllocationIdentity
-	Credential string
-	ExpiresAt  time.Time
+	HarnessSession *harnessv1.HarnessSession
+	HarnessSocket  string
+	HarnessProgram string
+	Workspace      string
+	Identity       *guestv1.AllocationIdentity
+	Credential     string
+	ExpiresAt      time.Time
 	// TrustedLocal permits same-user execution ONLY in explicit local tests.
 	TrustedLocal bool
 	// ExecHelper is this guest executable (or a test executable whose
@@ -54,9 +59,13 @@ type Config struct {
 }
 
 type Server struct {
-	opMu        sync.RWMutex
-	captureGate bool
-	controlled  *controlledProcess
+	harnessv1.UnimplementedHarnessServer
+	harness                       *harnessState
+	agent                         *agentProcess
+	harnessSocket, harnessProgram string
+	opMu                          sync.RWMutex
+	captureGate                   bool
+	controlled                    *controlledProcess
 	guestv1.UnimplementedGuestServer
 	root           *os.Root
 	identity       *guestv1.AllocationIdentity
@@ -105,6 +114,15 @@ func New(cfg Config) (*Server, error) {
 		}
 		allowed[key] = true
 	}
+	if cfg.HarnessSession != nil {
+		if e := harness.ValidateSession(cfg.HarnessSession); e != nil {
+			return nil, e
+		}
+		h := cfg.HarnessSession
+		if h.TenantId != cfg.Identity.TenantId || h.ProjectId != cfg.Identity.ProjectId || h.SandboxId != cfg.Identity.SandboxId || h.ExecutionId != cfg.Identity.ExecutionId || h.Epoch != int64(cfg.Identity.Epoch) {
+			return nil, errors.New("harness session allocation mismatch")
+		}
+	}
 	root, err := os.OpenRoot(cfg.Workspace)
 	if err != nil {
 		return nil, errors.New("open workspace failed")
@@ -125,7 +143,7 @@ func New(cfg Config) (*Server, error) {
 	if logger == nil {
 		logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
-	return &Server{root: root, identity: proto.Clone(cfg.Identity).(*guestv1.AllocationIdentity), credentialHash: sha256.Sum256([]byte(cfg.Credential)), expiresAt: cfg.ExpiresAt, trustedLocal: cfg.TrustedLocal, execHelper: cfg.ExecHelper, uid: cfg.UID, gid: cfg.GID, allowedEnv: allowed, logger: logger, execSlots: make(chan struct{}, 16), workloadCgroup: cfg.WorkloadCgroup}, nil
+	return &Server{harnessSocket: cfg.HarnessSocket, harnessProgram: cfg.HarnessProgram, harness: newHarnessState(cfg.HarnessSession), root: root, identity: proto.Clone(cfg.Identity).(*guestv1.AllocationIdentity), credentialHash: sha256.Sum256([]byte(cfg.Credential)), expiresAt: cfg.ExpiresAt, trustedLocal: cfg.TrustedLocal, execHelper: cfg.ExecHelper, uid: cfg.UID, gid: cfg.GID, allowedEnv: allowed, logger: logger, execSlots: make(chan struct{}, 16), workloadCgroup: cfg.WorkloadCgroup}, nil
 }
 
 // Close is called after all RPCs are stopped.
@@ -134,6 +152,9 @@ func (s *Server) Close() error {
 	defer s.opMu.Unlock()
 	if s.controlled != nil {
 		_ = s.controlled.cleanup()
+	}
+	if s.agent != nil {
+		s.agent.stop()
 	}
 	return s.root.Close()
 }
@@ -161,5 +182,18 @@ func (s *Server) GetInfo(ctx context.Context, _ *guestv1.GetInfoRequest) (*guest
 	if s.captureGate {
 		return nil, status.Error(codes.Unauthenticated, "session renewal required at capture gate")
 	}
-	return &guestv1.GetInfoResponse{ProtocolVersion: "hypercall.guest.v1", Identity: proto.Clone(s.identity).(*guestv1.AllocationIdentity), MaxFileBytes: MaxFileBytes, MaxExecOutputBytes: MaxExecOutputBytes, ServerTimeUnixNano: time.Now().UnixNano()}, nil
+	if err := s.agentHealthyLocked(); err != nil {
+		return nil, err
+	}
+	return s.infoLocked(), nil
+}
+func (s *Server) infoLocked() *guestv1.GetInfoResponse {
+	info := &guestv1.GetInfoResponse{ProtocolVersion: "hypercall.guest.v1", Identity: proto.Clone(s.identity).(*guestv1.AllocationIdentity), MaxFileBytes: MaxFileBytes, MaxExecOutputBytes: MaxExecOutputBytes, ServerTimeUnixNano: time.Now().UnixNano()}
+	if s.harness != nil {
+		s.harness.mu.Lock()
+		info.HarnessSessionHash = s.harness.session.SessionHash
+		s.harness.mu.Unlock()
+		info.AgentStarted = s.agent != nil
+	}
+	return info
 }

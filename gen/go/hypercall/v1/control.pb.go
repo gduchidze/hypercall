@@ -7,7 +7,8 @@
 package hypercallv1
 
 import (
-	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	v11 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	structpb "google.golang.org/protobuf/types/known/structpb"
@@ -751,6 +752,8 @@ type BranchSpec struct {
 	RunId              string                 `protobuf:"bytes,1,opt,name=run_id,json=runId,proto3" json:"run_id,omitempty"`
 	Model              *Resource              `protobuf:"bytes,2,opt,name=model,proto3" json:"model,omitempty"`
 	ParentCheckpointId string                 `protobuf:"bytes,3,opt,name=parent_checkpoint_id,json=parentCheckpointId,proto3" json:"parent_checkpoint_id,omitempty"`
+	ParentBranchId     string                 `protobuf:"bytes,4,opt,name=parent_branch_id,json=parentBranchId,proto3" json:"parent_branch_id,omitempty"`
+	ForkOperationId    string                 `protobuf:"bytes,5,opt,name=fork_operation_id,json=forkOperationId,proto3" json:"fork_operation_id,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -806,6 +809,20 @@ func (x *BranchSpec) GetParentCheckpointId() string {
 	return ""
 }
 
+func (x *BranchSpec) GetParentBranchId() string {
+	if x != nil {
+		return x.ParentBranchId
+	}
+	return ""
+}
+
+func (x *BranchSpec) GetForkOperationId() string {
+	if x != nil {
+		return x.ForkOperationId
+	}
+	return ""
+}
+
 // Phase 2A exposes inspection only; runtime checkpoint creation requires Phase 1B.
 type CheckpointSpec struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
@@ -818,6 +835,9 @@ type CheckpointSpec struct {
 	Compatibility      map[string]string      `protobuf:"bytes,7,rep,name=compatibility,proto3" json:"compatibility,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	NativeCheckpointId string                 `protobuf:"bytes,8,opt,name=native_checkpoint_id,json=nativeCheckpointId,proto3" json:"native_checkpoint_id,omitempty"`
 	SnapshotManifest   []byte                 `protobuf:"bytes,9,opt,name=snapshot_manifest,json=snapshotManifest,proto3" json:"snapshot_manifest,omitempty"`
+	Barrier            *v1.AgentBarrier       `protobuf:"bytes,10,opt,name=barrier,proto3" json:"barrier,omitempty"`
+	RouteDigest        string                 `protobuf:"bytes,11,opt,name=route_digest,json=routeDigest,proto3" json:"route_digest,omitempty"`
+	BudgetRemainingMs  int64                  `protobuf:"varint,12,opt,name=budget_remaining_ms,json=budgetRemainingMs,proto3" json:"budget_remaining_ms,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -915,13 +935,36 @@ func (x *CheckpointSpec) GetSnapshotManifest() []byte {
 	return nil
 }
 
+func (x *CheckpointSpec) GetBarrier() *v1.AgentBarrier {
+	if x != nil {
+		return x.Barrier
+	}
+	return nil
+}
+
+func (x *CheckpointSpec) GetRouteDigest() string {
+	if x != nil {
+		return x.RouteDigest
+	}
+	return ""
+}
+
+func (x *CheckpointSpec) GetBudgetRemainingMs() int64 {
+	if x != nil {
+		return x.BudgetRemainingMs
+	}
+	return 0
+}
+
 type OperationSpec struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	BranchId      string                 `protobuf:"bytes,1,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
-	Action        string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
-	CheckpointId  string                 `protobuf:"bytes,3,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state             protoimpl.MessageState `protogen:"open.v1"`
+	BranchId          string                 `protobuf:"bytes,1,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	Action            string                 `protobuf:"bytes,2,opt,name=action,proto3" json:"action,omitempty"`
+	CheckpointId      string                 `protobuf:"bytes,3,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
+	ChildBranchIds    []string               `protobuf:"bytes,4,rep,name=child_branch_ids,json=childBranchIds,proto3" json:"child_branch_ids,omitempty"`
+	ParentOperationId string                 `protobuf:"bytes,5,opt,name=parent_operation_id,json=parentOperationId,proto3" json:"parent_operation_id,omitempty"`
+	unknownFields     protoimpl.UnknownFields
+	sizeCache         protoimpl.SizeCache
 }
 
 func (x *OperationSpec) Reset() {
@@ -975,6 +1018,20 @@ func (x *OperationSpec) GetCheckpointId() string {
 	return ""
 }
 
+func (x *OperationSpec) GetChildBranchIds() []string {
+	if x != nil {
+		return x.ChildBranchIds
+	}
+	return nil
+}
+
+func (x *OperationSpec) GetParentOperationId() string {
+	if x != nil {
+		return x.ParentOperationId
+	}
+	return ""
+}
+
 type BranchStatus struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Desired           string                 `protobuf:"bytes,1,opt,name=desired,proto3" json:"desired,omitempty"`
@@ -987,6 +1044,10 @@ type BranchStatus struct {
 	CheckpointId      string                 `protobuf:"bytes,8,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
 	BudgetRemainingMs int64                  `protobuf:"varint,9,opt,name=budget_remaining_ms,json=budgetRemainingMs,proto3" json:"budget_remaining_ms,omitempty"`
 	SandboxId         string                 `protobuf:"bytes,10,opt,name=sandbox_id,json=sandboxId,proto3" json:"sandbox_id,omitempty"`
+	AgentGate         string                 `protobuf:"bytes,11,opt,name=agent_gate,json=agentGate,proto3" json:"agent_gate,omitempty"`
+	RouteDigest       string                 `protobuf:"bytes,12,opt,name=route_digest,json=routeDigest,proto3" json:"route_digest,omitempty"`
+	AgentStep         int64                  `protobuf:"varint,13,opt,name=agent_step,json=agentStep,proto3" json:"agent_step,omitempty"`
+	TraceComplete     bool                   `protobuf:"varint,14,opt,name=trace_complete,json=traceComplete,proto3" json:"trace_complete,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1089,6 +1150,34 @@ func (x *BranchStatus) GetSandboxId() string {
 		return x.SandboxId
 	}
 	return ""
+}
+
+func (x *BranchStatus) GetAgentGate() string {
+	if x != nil {
+		return x.AgentGate
+	}
+	return ""
+}
+
+func (x *BranchStatus) GetRouteDigest() string {
+	if x != nil {
+		return x.RouteDigest
+	}
+	return ""
+}
+
+func (x *BranchStatus) GetAgentStep() int64 {
+	if x != nil {
+		return x.AgentStep
+	}
+	return 0
+}
+
+func (x *BranchStatus) GetTraceComplete() bool {
+	if x != nil {
+		return x.TraceComplete
+	}
+	return false
 }
 
 type OperationStatus struct {
@@ -2089,7 +2178,7 @@ type ExecRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
 	BranchId      string                 `protobuf:"bytes,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
-	Command       *v1.ExecRequest        `protobuf:"bytes,3,opt,name=command,proto3" json:"command,omitempty"`
+	Command       *v11.ExecRequest       `protobuf:"bytes,3,opt,name=command,proto3" json:"command,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2138,7 +2227,7 @@ func (x *ExecRequest) GetBranchId() string {
 	return ""
 }
 
-func (x *ExecRequest) GetCommand() *v1.ExecRequest {
+func (x *ExecRequest) GetCommand() *v11.ExecRequest {
 	if x != nil {
 		return x.Command
 	}
@@ -2273,11 +2362,731 @@ func (x *WriteFileRequest) GetData() []byte {
 	return nil
 }
 
+type ForkRequest struct {
+	state          protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId      string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	CheckpointId   string                 `protobuf:"bytes,2,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
+	Models         []*Ref                 `protobuf:"bytes,3,rep,name=models,proto3" json:"models,omitempty"`
+	IdempotencyKey string                 `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *ForkRequest) Reset() {
+	*x = ForkRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForkRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForkRequest) ProtoMessage() {}
+
+func (x *ForkRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForkRequest.ProtoReflect.Descriptor instead.
+func (*ForkRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{30}
+}
+
+func (x *ForkRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *ForkRequest) GetCheckpointId() string {
+	if x != nil {
+		return x.CheckpointId
+	}
+	return ""
+}
+
+func (x *ForkRequest) GetModels() []*Ref {
+	if x != nil {
+		return x.Models
+	}
+	return nil
+}
+
+func (x *ForkRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type ForkResult struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Operation     *Resource              `protobuf:"bytes,1,opt,name=operation,proto3" json:"operation,omitempty"`
+	Children      []*Resource            `protobuf:"bytes,2,rep,name=children,proto3" json:"children,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ForkResult) Reset() {
+	*x = ForkResult{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ForkResult) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ForkResult) ProtoMessage() {}
+
+func (x *ForkResult) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ForkResult.ProtoReflect.Descriptor instead.
+func (*ForkResult) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ForkResult) GetOperation() *Resource {
+	if x != nil {
+		return x.Operation
+	}
+	return nil
+}
+
+func (x *ForkResult) GetChildren() []*Resource {
+	if x != nil {
+		return x.Children
+	}
+	return nil
+}
+
+type CallsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BranchId      string                 `protobuf:"bytes,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	AfterSequence int64                  `protobuf:"varint,3,opt,name=after_sequence,json=afterSequence,proto3" json:"after_sequence,omitempty"`
+	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CallsRequest) Reset() {
+	*x = CallsRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallsRequest) ProtoMessage() {}
+
+func (x *CallsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallsRequest.ProtoReflect.Descriptor instead.
+func (*CallsRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *CallsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CallsRequest) GetBranchId() string {
+	if x != nil {
+		return x.BranchId
+	}
+	return ""
+}
+
+func (x *CallsRequest) GetAfterSequence() int64 {
+	if x != nil {
+		return x.AfterSequence
+	}
+	return 0
+}
+
+func (x *CallsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type AgentCall struct {
+	state              protoimpl.MessageState `protogen:"open.v1"`
+	Request            *v1.AgentRequest       `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
+	Result             *v1.AgentResult        `protobuf:"bytes,2,opt,name=result,proto3" json:"result,omitempty"`
+	ExecutionId        string                 `protobuf:"bytes,3,opt,name=execution_id,json=executionId,proto3" json:"execution_id,omitempty"`
+	Epoch              int64                  `protobuf:"varint,4,opt,name=epoch,proto3" json:"epoch,omitempty"`
+	ModelDigest        string                 `protobuf:"bytes,5,opt,name=model_digest,json=modelDigest,proto3" json:"model_digest,omitempty"`
+	RouteDigest        string                 `protobuf:"bytes,6,opt,name=route_digest,json=routeDigest,proto3" json:"route_digest,omitempty"`
+	AdapterVersion     string                 `protobuf:"bytes,7,opt,name=adapter_version,json=adapterVersion,proto3" json:"adapter_version,omitempty"`
+	Mutating           bool                   `protobuf:"varint,8,opt,name=mutating,proto3" json:"mutating,omitempty"`
+	CreatedAt          *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	RegisteredSequence int64                  `protobuf:"varint,10,opt,name=registered_sequence,json=registeredSequence,proto3" json:"registered_sequence,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
+}
+
+func (x *AgentCall) Reset() {
+	*x = AgentCall{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentCall) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentCall) ProtoMessage() {}
+
+func (x *AgentCall) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentCall.ProtoReflect.Descriptor instead.
+func (*AgentCall) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *AgentCall) GetRequest() *v1.AgentRequest {
+	if x != nil {
+		return x.Request
+	}
+	return nil
+}
+
+func (x *AgentCall) GetResult() *v1.AgentResult {
+	if x != nil {
+		return x.Result
+	}
+	return nil
+}
+
+func (x *AgentCall) GetExecutionId() string {
+	if x != nil {
+		return x.ExecutionId
+	}
+	return ""
+}
+
+func (x *AgentCall) GetEpoch() int64 {
+	if x != nil {
+		return x.Epoch
+	}
+	return 0
+}
+
+func (x *AgentCall) GetModelDigest() string {
+	if x != nil {
+		return x.ModelDigest
+	}
+	return ""
+}
+
+func (x *AgentCall) GetRouteDigest() string {
+	if x != nil {
+		return x.RouteDigest
+	}
+	return ""
+}
+
+func (x *AgentCall) GetAdapterVersion() string {
+	if x != nil {
+		return x.AdapterVersion
+	}
+	return ""
+}
+
+func (x *AgentCall) GetMutating() bool {
+	if x != nil {
+		return x.Mutating
+	}
+	return false
+}
+
+func (x *AgentCall) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *AgentCall) GetRegisteredSequence() int64 {
+	if x != nil {
+		return x.RegisteredSequence
+	}
+	return 0
+}
+
+type CallsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Calls         []*AgentCall           `protobuf:"bytes,1,rep,name=calls,proto3" json:"calls,omitempty"`
+	NextSequence  int64                  `protobuf:"varint,2,opt,name=next_sequence,json=nextSequence,proto3" json:"next_sequence,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CallsResponse) Reset() {
+	*x = CallsResponse{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CallsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CallsResponse) ProtoMessage() {}
+
+func (x *CallsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CallsResponse.ProtoReflect.Descriptor instead.
+func (*CallsResponse) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *CallsResponse) GetCalls() []*AgentCall {
+	if x != nil {
+		return x.Calls
+	}
+	return nil
+}
+
+func (x *CallsResponse) GetNextSequence() int64 {
+	if x != nil {
+		return x.NextSequence
+	}
+	return 0
+}
+
+type StepsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	BranchId      string                 `protobuf:"bytes,2,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	AfterStep     int64                  `protobuf:"varint,3,opt,name=after_step,json=afterStep,proto3" json:"after_step,omitempty"`
+	Limit         int32                  `protobuf:"varint,4,opt,name=limit,proto3" json:"limit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StepsRequest) Reset() {
+	*x = StepsRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StepsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StepsRequest) ProtoMessage() {}
+
+func (x *StepsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StepsRequest.ProtoReflect.Descriptor instead.
+func (*StepsRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *StepsRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *StepsRequest) GetBranchId() string {
+	if x != nil {
+		return x.BranchId
+	}
+	return ""
+}
+
+func (x *StepsRequest) GetAfterStep() int64 {
+	if x != nil {
+		return x.AfterStep
+	}
+	return 0
+}
+
+func (x *StepsRequest) GetLimit() int32 {
+	if x != nil {
+		return x.Limit
+	}
+	return 0
+}
+
+type AgentStep struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	BranchId      string                 `protobuf:"bytes,1,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	Step          int64                  `protobuf:"varint,2,opt,name=step,proto3" json:"step,omitempty"`
+	StateDigest   string                 `protobuf:"bytes,3,opt,name=state_digest,json=stateDigest,proto3" json:"state_digest,omitempty"`
+	EventSequence int64                  `protobuf:"varint,4,opt,name=event_sequence,json=eventSequence,proto3" json:"event_sequence,omitempty"`
+	SessionHash   string                 `protobuf:"bytes,5,opt,name=session_hash,json=sessionHash,proto3" json:"session_hash,omitempty"`
+	Complete      bool                   `protobuf:"varint,6,opt,name=complete,proto3" json:"complete,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AgentStep) Reset() {
+	*x = AgentStep{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[36]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AgentStep) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AgentStep) ProtoMessage() {}
+
+func (x *AgentStep) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[36]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AgentStep.ProtoReflect.Descriptor instead.
+func (*AgentStep) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{36}
+}
+
+func (x *AgentStep) GetBranchId() string {
+	if x != nil {
+		return x.BranchId
+	}
+	return ""
+}
+
+func (x *AgentStep) GetStep() int64 {
+	if x != nil {
+		return x.Step
+	}
+	return 0
+}
+
+func (x *AgentStep) GetStateDigest() string {
+	if x != nil {
+		return x.StateDigest
+	}
+	return ""
+}
+
+func (x *AgentStep) GetEventSequence() int64 {
+	if x != nil {
+		return x.EventSequence
+	}
+	return 0
+}
+
+func (x *AgentStep) GetSessionHash() string {
+	if x != nil {
+		return x.SessionHash
+	}
+	return ""
+}
+
+func (x *AgentStep) GetComplete() bool {
+	if x != nil {
+		return x.Complete
+	}
+	return false
+}
+
+type StepsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Steps         []*AgentStep           `protobuf:"bytes,1,rep,name=steps,proto3" json:"steps,omitempty"`
+	NextStep      int64                  `protobuf:"varint,2,opt,name=next_step,json=nextStep,proto3" json:"next_step,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *StepsResponse) Reset() {
+	*x = StepsResponse{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *StepsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*StepsResponse) ProtoMessage() {}
+
+func (x *StepsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use StepsResponse.ProtoReflect.Descriptor instead.
+func (*StepsResponse) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *StepsResponse) GetSteps() []*AgentStep {
+	if x != nil {
+		return x.Steps
+	}
+	return nil
+}
+
+func (x *StepsResponse) GetNextStep() int64 {
+	if x != nil {
+		return x.NextStep
+	}
+	return 0
+}
+
+type CompareRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	LeftBranch    string                 `protobuf:"bytes,2,opt,name=left_branch,json=leftBranch,proto3" json:"left_branch,omitempty"`
+	RightBranch   string                 `protobuf:"bytes,3,opt,name=right_branch,json=rightBranch,proto3" json:"right_branch,omitempty"`
+	Comparator    string                 `protobuf:"bytes,4,opt,name=comparator,proto3" json:"comparator,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompareRequest) Reset() {
+	*x = CompareRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompareRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompareRequest) ProtoMessage() {}
+
+func (x *CompareRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompareRequest.ProtoReflect.Descriptor instead.
+func (*CompareRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *CompareRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CompareRequest) GetLeftBranch() string {
+	if x != nil {
+		return x.LeftBranch
+	}
+	return ""
+}
+
+func (x *CompareRequest) GetRightBranch() string {
+	if x != nil {
+		return x.RightBranch
+	}
+	return ""
+}
+
+func (x *CompareRequest) GetComparator() string {
+	if x != nil {
+		return x.Comparator
+	}
+	return ""
+}
+
+type Divergence struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Comparator    string                 `protobuf:"bytes,1,opt,name=comparator,proto3" json:"comparator,omitempty"`
+	State         string                 `protobuf:"bytes,2,opt,name=state,proto3" json:"state,omitempty"`
+	Step          int64                  `protobuf:"varint,3,opt,name=step,proto3" json:"step,omitempty"`
+	Position      int32                  `protobuf:"varint,4,opt,name=position,proto3" json:"position,omitempty"`
+	LeftDigest    string                 `protobuf:"bytes,5,opt,name=left_digest,json=leftDigest,proto3" json:"left_digest,omitempty"`
+	RightDigest   string                 `protobuf:"bytes,6,opt,name=right_digest,json=rightDigest,proto3" json:"right_digest,omitempty"`
+	Reason        string                 `protobuf:"bytes,7,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Divergence) Reset() {
+	*x = Divergence{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Divergence) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Divergence) ProtoMessage() {}
+
+func (x *Divergence) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Divergence.ProtoReflect.Descriptor instead.
+func (*Divergence) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *Divergence) GetComparator() string {
+	if x != nil {
+		return x.Comparator
+	}
+	return ""
+}
+
+func (x *Divergence) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Divergence) GetStep() int64 {
+	if x != nil {
+		return x.Step
+	}
+	return 0
+}
+
+func (x *Divergence) GetPosition() int32 {
+	if x != nil {
+		return x.Position
+	}
+	return 0
+}
+
+func (x *Divergence) GetLeftDigest() string {
+	if x != nil {
+		return x.LeftDigest
+	}
+	return ""
+}
+
+func (x *Divergence) GetRightDigest() string {
+	if x != nil {
+		return x.RightDigest
+	}
+	return ""
+}
+
+func (x *Divergence) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_hypercall_v1_control_proto protoreflect.FileDescriptor
 
 const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\n" +
-	"\x1ahypercall/v1/control.proto\x12\fhypercall.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1ehypercall/guest/v1/guest.proto\"\x80\x02\n" +
+	"\x1ahypercall/v1/control.proto\x12\fhypercall.v1\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\x1a\x1ehypercall/guest/v1/guest.proto\x1a\"hypercall/harness/v1/harness.proto\"\x80\x02\n" +
 	"\bMetadata\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1b\n" +
 	"\ttenant_id\x18\x02 \x01(\tR\btenantId\x12\x1d\n" +
@@ -2348,12 +3157,14 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\x04task\x18\x01 \x01(\v2\x16.hypercall.v1.ResourceR\x04task\x124\n" +
 	"\tworkspace\x18\x02 \x01(\v2\x16.hypercall.v1.ResourceR\tworkspace\x12.\n" +
 	"\x06models\x18\x03 \x03(\v2\x16.hypercall.v1.ResourceR\x06models\x120\n" +
-	"\agateway\x18\x04 \x01(\v2\x16.hypercall.v1.ResourceR\agateway\"\x83\x01\n" +
+	"\agateway\x18\x04 \x01(\v2\x16.hypercall.v1.ResourceR\agateway\"\xd9\x01\n" +
 	"\n" +
 	"BranchSpec\x12\x15\n" +
 	"\x06run_id\x18\x01 \x01(\tR\x05runId\x12,\n" +
 	"\x05model\x18\x02 \x01(\v2\x16.hypercall.v1.ResourceR\x05model\x120\n" +
-	"\x14parent_checkpoint_id\x18\x03 \x01(\tR\x12parentCheckpointId\"\xdf\x03\n" +
+	"\x14parent_checkpoint_id\x18\x03 \x01(\tR\x12parentCheckpointId\x12(\n" +
+	"\x10parent_branch_id\x18\x04 \x01(\tR\x0eparentBranchId\x12*\n" +
+	"\x11fork_operation_id\x18\x05 \x01(\tR\x0fforkOperationId\"\xf0\x04\n" +
 	"\x0eCheckpointSpec\x12'\n" +
 	"\x0fmanifest_digest\x18\x01 \x01(\tR\x0emanifestDigest\x12!\n" +
 	"\fmanifest_uri\x18\x02 \x01(\tR\vmanifestUri\x12)\n" +
@@ -2363,14 +3174,20 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\tbranch_id\x18\x06 \x01(\tR\bbranchId\x12U\n" +
 	"\rcompatibility\x18\a \x03(\v2/.hypercall.v1.CheckpointSpec.CompatibilityEntryR\rcompatibility\x120\n" +
 	"\x14native_checkpoint_id\x18\b \x01(\tR\x12nativeCheckpointId\x12+\n" +
-	"\x11snapshot_manifest\x18\t \x01(\fR\x10snapshotManifest\x1a@\n" +
+	"\x11snapshot_manifest\x18\t \x01(\fR\x10snapshotManifest\x12<\n" +
+	"\abarrier\x18\n" +
+	" \x01(\v2\".hypercall.harness.v1.AgentBarrierR\abarrier\x12!\n" +
+	"\froute_digest\x18\v \x01(\tR\vrouteDigest\x12.\n" +
+	"\x13budget_remaining_ms\x18\f \x01(\x03R\x11budgetRemainingMs\x1a@\n" +
 	"\x12CompatibilityEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"i\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc3\x01\n" +
 	"\rOperationSpec\x12\x1b\n" +
 	"\tbranch_id\x18\x01 \x01(\tR\bbranchId\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12#\n" +
-	"\rcheckpoint_id\x18\x03 \x01(\tR\fcheckpointId\"\xe3\x02\n" +
+	"\rcheckpoint_id\x18\x03 \x01(\tR\fcheckpointId\x12(\n" +
+	"\x10child_branch_ids\x18\x04 \x03(\tR\x0echildBranchIds\x12.\n" +
+	"\x13parent_operation_id\x18\x05 \x01(\tR\x11parentOperationId\"\xeb\x03\n" +
 	"\fBranchStatus\x12\x18\n" +
 	"\adesired\x18\x01 \x01(\tR\adesired\x12\x1a\n" +
 	"\bobserved\x18\x02 \x01(\tR\bobserved\x12!\n" +
@@ -2385,7 +3202,13 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\x13budget_remaining_ms\x18\t \x01(\x03R\x11budgetRemainingMs\x12\x1d\n" +
 	"\n" +
 	"sandbox_id\x18\n" +
-	" \x01(\tR\tsandboxId\"=\n" +
+	" \x01(\tR\tsandboxId\x12\x1d\n" +
+	"\n" +
+	"agent_gate\x18\v \x01(\tR\tagentGate\x12!\n" +
+	"\froute_digest\x18\f \x01(\tR\vrouteDigest\x12\x1d\n" +
+	"\n" +
+	"agent_step\x18\r \x01(\x03R\tagentStep\x12%\n" +
+	"\x0etrace_complete\x18\x0e \x01(\bR\rtraceComplete\"=\n" +
 	"\x0fOperationStatus\x12\x14\n" +
 	"\x05state\x18\x01 \x01(\tR\x05state\x12\x14\n" +
 	"\x05error\x18\x02 \x01(\tR\x05error\"\xfc\x05\n" +
@@ -2480,7 +3303,77 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1b\n" +
 	"\tbranch_id\x18\x02 \x01(\tR\bbranchId\x12\x12\n" +
 	"\x04path\x18\x03 \x01(\tR\x04path\x12\x12\n" +
-	"\x04data\x18\x04 \x01(\fR\x04data2\xf9\x05\n" +
+	"\x04data\x18\x04 \x01(\fR\x04data\"\xa5\x01\n" +
+	"\vForkRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12#\n" +
+	"\rcheckpoint_id\x18\x02 \x01(\tR\fcheckpointId\x12)\n" +
+	"\x06models\x18\x03 \x03(\v2\x11.hypercall.v1.RefR\x06models\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"v\n" +
+	"\n" +
+	"ForkResult\x124\n" +
+	"\toperation\x18\x01 \x01(\v2\x16.hypercall.v1.ResourceR\toperation\x122\n" +
+	"\bchildren\x18\x02 \x03(\v2\x16.hypercall.v1.ResourceR\bchildren\"\x87\x01\n" +
+	"\fCallsRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1b\n" +
+	"\tbranch_id\x18\x02 \x01(\tR\bbranchId\x12%\n" +
+	"\x0eafter_sequence\x18\x03 \x01(\x03R\rafterSequence\x12\x14\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limit\"\xb4\x03\n" +
+	"\tAgentCall\x12<\n" +
+	"\arequest\x18\x01 \x01(\v2\".hypercall.harness.v1.AgentRequestR\arequest\x129\n" +
+	"\x06result\x18\x02 \x01(\v2!.hypercall.harness.v1.AgentResultR\x06result\x12!\n" +
+	"\fexecution_id\x18\x03 \x01(\tR\vexecutionId\x12\x14\n" +
+	"\x05epoch\x18\x04 \x01(\x03R\x05epoch\x12!\n" +
+	"\fmodel_digest\x18\x05 \x01(\tR\vmodelDigest\x12!\n" +
+	"\froute_digest\x18\x06 \x01(\tR\vrouteDigest\x12'\n" +
+	"\x0fadapter_version\x18\a \x01(\tR\x0eadapterVersion\x12\x1a\n" +
+	"\bmutating\x18\b \x01(\bR\bmutating\x129\n" +
+	"\n" +
+	"created_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12/\n" +
+	"\x13registered_sequence\x18\n" +
+	" \x01(\x03R\x12registeredSequence\"c\n" +
+	"\rCallsResponse\x12-\n" +
+	"\x05calls\x18\x01 \x03(\v2\x17.hypercall.v1.AgentCallR\x05calls\x12#\n" +
+	"\rnext_sequence\x18\x02 \x01(\x03R\fnextSequence\"\x7f\n" +
+	"\fStepsRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1b\n" +
+	"\tbranch_id\x18\x02 \x01(\tR\bbranchId\x12\x1d\n" +
+	"\n" +
+	"after_step\x18\x03 \x01(\x03R\tafterStep\x12\x14\n" +
+	"\x05limit\x18\x04 \x01(\x05R\x05limit\"\xc5\x01\n" +
+	"\tAgentStep\x12\x1b\n" +
+	"\tbranch_id\x18\x01 \x01(\tR\bbranchId\x12\x12\n" +
+	"\x04step\x18\x02 \x01(\x03R\x04step\x12!\n" +
+	"\fstate_digest\x18\x03 \x01(\tR\vstateDigest\x12%\n" +
+	"\x0eevent_sequence\x18\x04 \x01(\x03R\reventSequence\x12!\n" +
+	"\fsession_hash\x18\x05 \x01(\tR\vsessionHash\x12\x1a\n" +
+	"\bcomplete\x18\x06 \x01(\bR\bcomplete\"[\n" +
+	"\rStepsResponse\x12-\n" +
+	"\x05steps\x18\x01 \x03(\v2\x17.hypercall.v1.AgentStepR\x05steps\x12\x1b\n" +
+	"\tnext_step\x18\x02 \x01(\x03R\bnextStep\"\x93\x01\n" +
+	"\x0eCompareRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vleft_branch\x18\x02 \x01(\tR\n" +
+	"leftBranch\x12!\n" +
+	"\fright_branch\x18\x03 \x01(\tR\vrightBranch\x12\x1e\n" +
+	"\n" +
+	"comparator\x18\x04 \x01(\tR\n" +
+	"comparator\"\xce\x01\n" +
+	"\n" +
+	"Divergence\x12\x1e\n" +
+	"\n" +
+	"comparator\x18\x01 \x01(\tR\n" +
+	"comparator\x12\x14\n" +
+	"\x05state\x18\x02 \x01(\tR\x05state\x12\x12\n" +
+	"\x04step\x18\x03 \x01(\x03R\x04step\x12\x1a\n" +
+	"\bposition\x18\x04 \x01(\x05R\bposition\x12\x1f\n" +
+	"\vleft_digest\x18\x05 \x01(\tR\n" +
+	"leftDigest\x12!\n" +
+	"\fright_digest\x18\x06 \x01(\tR\vrightDigest\x12\x16\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason2\xfd\a\n" +
 	"\fControlPlane\x12G\n" +
 	"\vPutResource\x12 .hypercall.v1.PutResourceRequest\x1a\x16.hypercall.v1.Resource\x12G\n" +
 	"\vGetResource\x12 .hypercall.v1.GetResourceRequest\x1a\x16.hypercall.v1.Resource\x12X\n" +
@@ -2491,7 +3384,11 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\x06Events\x12\x1b.hypercall.v1.EventsRequest\x1a\x1c.hypercall.v1.EventsResponse\x12B\n" +
 	"\x04Exec\x12\x19.hypercall.v1.ExecRequest\x1a\x1d.hypercall.guest.v1.ExecEvent0\x01\x12O\n" +
 	"\bReadFile\x12\x1d.hypercall.v1.ReadFileRequest\x1a$.hypercall.guest.v1.ReadFileResponse\x12R\n" +
-	"\tWriteFile\x12\x1e.hypercall.v1.WriteFileRequest\x1a%.hypercall.guest.v1.WriteFileResponseB@Z>github.com/gduchidze/hypercall/gen/go/hypercall/v1;hypercallv1b\x06proto3"
+	"\tWriteFile\x12\x1e.hypercall.v1.WriteFileRequest\x1a%.hypercall.guest.v1.WriteFileResponse\x12;\n" +
+	"\x04Fork\x12\x19.hypercall.v1.ForkRequest\x1a\x18.hypercall.v1.ForkResult\x12@\n" +
+	"\x05Calls\x12\x1a.hypercall.v1.CallsRequest\x1a\x1b.hypercall.v1.CallsResponse\x12@\n" +
+	"\x05Steps\x12\x1a.hypercall.v1.StepsRequest\x1a\x1b.hypercall.v1.StepsResponse\x12A\n" +
+	"\aCompare\x12\x1c.hypercall.v1.CompareRequest\x1a\x18.hypercall.v1.DivergenceB@Z>github.com/gduchidze/hypercall/gen/go/hypercall/v1;hypercallv1b\x06proto3"
 
 var (
 	file_hypercall_v1_control_proto_rawDescOnce sync.Once
@@ -2505,7 +3402,7 @@ func file_hypercall_v1_control_proto_rawDescGZIP() []byte {
 	return file_hypercall_v1_control_proto_rawDescData
 }
 
-var file_hypercall_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 34)
+var file_hypercall_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
 var file_hypercall_v1_control_proto_goTypes = []any{
 	(*Metadata)(nil),              // 0: hypercall.v1.Metadata
 	(*Ref)(nil),                   // 1: hypercall.v1.Ref
@@ -2537,80 +3434,110 @@ var file_hypercall_v1_control_proto_goTypes = []any{
 	(*ExecRequest)(nil),           // 27: hypercall.v1.ExecRequest
 	(*ReadFileRequest)(nil),       // 28: hypercall.v1.ReadFileRequest
 	(*WriteFileRequest)(nil),      // 29: hypercall.v1.WriteFileRequest
-	nil,                           // 30: hypercall.v1.TaskSpec.EnvEntry
-	nil,                           // 31: hypercall.v1.ModelConfigSpec.ParametersEntry
-	nil,                           // 32: hypercall.v1.GatewaySpec.RoutesEntry
-	nil,                           // 33: hypercall.v1.CheckpointSpec.CompatibilityEntry
-	(*timestamppb.Timestamp)(nil), // 34: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),       // 35: google.protobuf.Struct
-	(*v1.ExecRequest)(nil),        // 36: hypercall.guest.v1.ExecRequest
-	(*v1.ExecEvent)(nil),          // 37: hypercall.guest.v1.ExecEvent
-	(*v1.ReadFileResponse)(nil),   // 38: hypercall.guest.v1.ReadFileResponse
-	(*v1.WriteFileResponse)(nil),  // 39: hypercall.guest.v1.WriteFileResponse
+	(*ForkRequest)(nil),           // 30: hypercall.v1.ForkRequest
+	(*ForkResult)(nil),            // 31: hypercall.v1.ForkResult
+	(*CallsRequest)(nil),          // 32: hypercall.v1.CallsRequest
+	(*AgentCall)(nil),             // 33: hypercall.v1.AgentCall
+	(*CallsResponse)(nil),         // 34: hypercall.v1.CallsResponse
+	(*StepsRequest)(nil),          // 35: hypercall.v1.StepsRequest
+	(*AgentStep)(nil),             // 36: hypercall.v1.AgentStep
+	(*StepsResponse)(nil),         // 37: hypercall.v1.StepsResponse
+	(*CompareRequest)(nil),        // 38: hypercall.v1.CompareRequest
+	(*Divergence)(nil),            // 39: hypercall.v1.Divergence
+	nil,                           // 40: hypercall.v1.TaskSpec.EnvEntry
+	nil,                           // 41: hypercall.v1.ModelConfigSpec.ParametersEntry
+	nil,                           // 42: hypercall.v1.GatewaySpec.RoutesEntry
+	nil,                           // 43: hypercall.v1.CheckpointSpec.CompatibilityEntry
+	(*timestamppb.Timestamp)(nil), // 44: google.protobuf.Timestamp
+	(*v1.AgentBarrier)(nil),       // 45: hypercall.harness.v1.AgentBarrier
+	(*structpb.Struct)(nil),       // 46: google.protobuf.Struct
+	(*v11.ExecRequest)(nil),       // 47: hypercall.guest.v1.ExecRequest
+	(*v1.AgentRequest)(nil),       // 48: hypercall.harness.v1.AgentRequest
+	(*v1.AgentResult)(nil),        // 49: hypercall.harness.v1.AgentResult
+	(*v11.ExecEvent)(nil),         // 50: hypercall.guest.v1.ExecEvent
+	(*v11.ReadFileResponse)(nil),  // 51: hypercall.guest.v1.ReadFileResponse
+	(*v11.WriteFileResponse)(nil), // 52: hypercall.guest.v1.WriteFileResponse
 }
 var file_hypercall_v1_control_proto_depIdxs = []int32{
-	34, // 0: hypercall.v1.Metadata.created_at:type_name -> google.protobuf.Timestamp
+	44, // 0: hypercall.v1.Metadata.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 1: hypercall.v1.TaskSpec.workspace:type_name -> hypercall.v1.Ref
 	1,  // 2: hypercall.v1.TaskSpec.models:type_name -> hypercall.v1.Ref
 	1,  // 3: hypercall.v1.TaskSpec.gateway:type_name -> hypercall.v1.Ref
-	30, // 4: hypercall.v1.TaskSpec.env:type_name -> hypercall.v1.TaskSpec.EnvEntry
+	40, // 4: hypercall.v1.TaskSpec.env:type_name -> hypercall.v1.TaskSpec.EnvEntry
 	2,  // 5: hypercall.v1.TaskSpec.limits:type_name -> hypercall.v1.Limits
 	4,  // 6: hypercall.v1.WorkspaceSpec.repositories:type_name -> hypercall.v1.Repository
 	5,  // 7: hypercall.v1.WorkspaceSpec.files:type_name -> hypercall.v1.InputFile
-	31, // 8: hypercall.v1.ModelConfigSpec.parameters:type_name -> hypercall.v1.ModelConfigSpec.ParametersEntry
-	32, // 9: hypercall.v1.GatewaySpec.routes:type_name -> hypercall.v1.GatewaySpec.RoutesEntry
+	41, // 8: hypercall.v1.ModelConfigSpec.parameters:type_name -> hypercall.v1.ModelConfigSpec.ParametersEntry
+	42, // 9: hypercall.v1.GatewaySpec.routes:type_name -> hypercall.v1.GatewaySpec.RoutesEntry
 	15, // 10: hypercall.v1.RunSpec.task:type_name -> hypercall.v1.Resource
 	15, // 11: hypercall.v1.RunSpec.workspace:type_name -> hypercall.v1.Resource
 	15, // 12: hypercall.v1.RunSpec.models:type_name -> hypercall.v1.Resource
 	15, // 13: hypercall.v1.RunSpec.gateway:type_name -> hypercall.v1.Resource
 	15, // 14: hypercall.v1.BranchSpec.model:type_name -> hypercall.v1.Resource
-	33, // 15: hypercall.v1.CheckpointSpec.compatibility:type_name -> hypercall.v1.CheckpointSpec.CompatibilityEntry
-	34, // 16: hypercall.v1.BranchStatus.lease_until:type_name -> google.protobuf.Timestamp
-	0,  // 17: hypercall.v1.Resource.metadata:type_name -> hypercall.v1.Metadata
-	3,  // 18: hypercall.v1.Resource.task_spec:type_name -> hypercall.v1.TaskSpec
-	6,  // 19: hypercall.v1.Resource.workspace_spec:type_name -> hypercall.v1.WorkspaceSpec
-	7,  // 20: hypercall.v1.Resource.model_config_spec:type_name -> hypercall.v1.ModelConfigSpec
-	8,  // 21: hypercall.v1.Resource.gateway_spec:type_name -> hypercall.v1.GatewaySpec
-	9,  // 22: hypercall.v1.Resource.run_spec:type_name -> hypercall.v1.RunSpec
-	10, // 23: hypercall.v1.Resource.branch_spec:type_name -> hypercall.v1.BranchSpec
-	11, // 24: hypercall.v1.Resource.checkpoint_spec:type_name -> hypercall.v1.CheckpointSpec
-	12, // 25: hypercall.v1.Resource.operation_spec:type_name -> hypercall.v1.OperationSpec
-	13, // 26: hypercall.v1.Resource.branch_status:type_name -> hypercall.v1.BranchStatus
-	14, // 27: hypercall.v1.Resource.operation_status:type_name -> hypercall.v1.OperationStatus
-	15, // 28: hypercall.v1.PutResourceRequest.resource:type_name -> hypercall.v1.Resource
-	15, // 29: hypercall.v1.ListResourcesResponse.resources:type_name -> hypercall.v1.Resource
-	15, // 30: hypercall.v1.Submission.run:type_name -> hypercall.v1.Resource
-	15, // 31: hypercall.v1.Submission.branch:type_name -> hypercall.v1.Resource
-	15, // 32: hypercall.v1.Submission.operation:type_name -> hypercall.v1.Resource
-	35, // 33: hypercall.v1.Event.data:type_name -> google.protobuf.Struct
-	34, // 34: hypercall.v1.Event.created_at:type_name -> google.protobuf.Timestamp
-	24, // 35: hypercall.v1.EventsResponse.events:type_name -> hypercall.v1.Event
-	36, // 36: hypercall.v1.ExecRequest.command:type_name -> hypercall.guest.v1.ExecRequest
-	16, // 37: hypercall.v1.ControlPlane.PutResource:input_type -> hypercall.v1.PutResourceRequest
-	17, // 38: hypercall.v1.ControlPlane.GetResource:input_type -> hypercall.v1.GetResourceRequest
-	18, // 39: hypercall.v1.ControlPlane.ListResources:input_type -> hypercall.v1.ListResourcesRequest
-	20, // 40: hypercall.v1.ControlPlane.Submit:input_type -> hypercall.v1.SubmitRequest
-	21, // 41: hypercall.v1.ControlPlane.SubmitManifest:input_type -> hypercall.v1.SubmitManifestRequest
-	23, // 42: hypercall.v1.ControlPlane.Action:input_type -> hypercall.v1.ActionRequest
-	25, // 43: hypercall.v1.ControlPlane.Events:input_type -> hypercall.v1.EventsRequest
-	27, // 44: hypercall.v1.ControlPlane.Exec:input_type -> hypercall.v1.ExecRequest
-	28, // 45: hypercall.v1.ControlPlane.ReadFile:input_type -> hypercall.v1.ReadFileRequest
-	29, // 46: hypercall.v1.ControlPlane.WriteFile:input_type -> hypercall.v1.WriteFileRequest
-	15, // 47: hypercall.v1.ControlPlane.PutResource:output_type -> hypercall.v1.Resource
-	15, // 48: hypercall.v1.ControlPlane.GetResource:output_type -> hypercall.v1.Resource
-	19, // 49: hypercall.v1.ControlPlane.ListResources:output_type -> hypercall.v1.ListResourcesResponse
-	22, // 50: hypercall.v1.ControlPlane.Submit:output_type -> hypercall.v1.Submission
-	22, // 51: hypercall.v1.ControlPlane.SubmitManifest:output_type -> hypercall.v1.Submission
-	15, // 52: hypercall.v1.ControlPlane.Action:output_type -> hypercall.v1.Resource
-	26, // 53: hypercall.v1.ControlPlane.Events:output_type -> hypercall.v1.EventsResponse
-	37, // 54: hypercall.v1.ControlPlane.Exec:output_type -> hypercall.guest.v1.ExecEvent
-	38, // 55: hypercall.v1.ControlPlane.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
-	39, // 56: hypercall.v1.ControlPlane.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
-	47, // [47:57] is the sub-list for method output_type
-	37, // [37:47] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	43, // 15: hypercall.v1.CheckpointSpec.compatibility:type_name -> hypercall.v1.CheckpointSpec.CompatibilityEntry
+	45, // 16: hypercall.v1.CheckpointSpec.barrier:type_name -> hypercall.harness.v1.AgentBarrier
+	44, // 17: hypercall.v1.BranchStatus.lease_until:type_name -> google.protobuf.Timestamp
+	0,  // 18: hypercall.v1.Resource.metadata:type_name -> hypercall.v1.Metadata
+	3,  // 19: hypercall.v1.Resource.task_spec:type_name -> hypercall.v1.TaskSpec
+	6,  // 20: hypercall.v1.Resource.workspace_spec:type_name -> hypercall.v1.WorkspaceSpec
+	7,  // 21: hypercall.v1.Resource.model_config_spec:type_name -> hypercall.v1.ModelConfigSpec
+	8,  // 22: hypercall.v1.Resource.gateway_spec:type_name -> hypercall.v1.GatewaySpec
+	9,  // 23: hypercall.v1.Resource.run_spec:type_name -> hypercall.v1.RunSpec
+	10, // 24: hypercall.v1.Resource.branch_spec:type_name -> hypercall.v1.BranchSpec
+	11, // 25: hypercall.v1.Resource.checkpoint_spec:type_name -> hypercall.v1.CheckpointSpec
+	12, // 26: hypercall.v1.Resource.operation_spec:type_name -> hypercall.v1.OperationSpec
+	13, // 27: hypercall.v1.Resource.branch_status:type_name -> hypercall.v1.BranchStatus
+	14, // 28: hypercall.v1.Resource.operation_status:type_name -> hypercall.v1.OperationStatus
+	15, // 29: hypercall.v1.PutResourceRequest.resource:type_name -> hypercall.v1.Resource
+	15, // 30: hypercall.v1.ListResourcesResponse.resources:type_name -> hypercall.v1.Resource
+	15, // 31: hypercall.v1.Submission.run:type_name -> hypercall.v1.Resource
+	15, // 32: hypercall.v1.Submission.branch:type_name -> hypercall.v1.Resource
+	15, // 33: hypercall.v1.Submission.operation:type_name -> hypercall.v1.Resource
+	46, // 34: hypercall.v1.Event.data:type_name -> google.protobuf.Struct
+	44, // 35: hypercall.v1.Event.created_at:type_name -> google.protobuf.Timestamp
+	24, // 36: hypercall.v1.EventsResponse.events:type_name -> hypercall.v1.Event
+	47, // 37: hypercall.v1.ExecRequest.command:type_name -> hypercall.guest.v1.ExecRequest
+	1,  // 38: hypercall.v1.ForkRequest.models:type_name -> hypercall.v1.Ref
+	15, // 39: hypercall.v1.ForkResult.operation:type_name -> hypercall.v1.Resource
+	15, // 40: hypercall.v1.ForkResult.children:type_name -> hypercall.v1.Resource
+	48, // 41: hypercall.v1.AgentCall.request:type_name -> hypercall.harness.v1.AgentRequest
+	49, // 42: hypercall.v1.AgentCall.result:type_name -> hypercall.harness.v1.AgentResult
+	44, // 43: hypercall.v1.AgentCall.created_at:type_name -> google.protobuf.Timestamp
+	33, // 44: hypercall.v1.CallsResponse.calls:type_name -> hypercall.v1.AgentCall
+	36, // 45: hypercall.v1.StepsResponse.steps:type_name -> hypercall.v1.AgentStep
+	16, // 46: hypercall.v1.ControlPlane.PutResource:input_type -> hypercall.v1.PutResourceRequest
+	17, // 47: hypercall.v1.ControlPlane.GetResource:input_type -> hypercall.v1.GetResourceRequest
+	18, // 48: hypercall.v1.ControlPlane.ListResources:input_type -> hypercall.v1.ListResourcesRequest
+	20, // 49: hypercall.v1.ControlPlane.Submit:input_type -> hypercall.v1.SubmitRequest
+	21, // 50: hypercall.v1.ControlPlane.SubmitManifest:input_type -> hypercall.v1.SubmitManifestRequest
+	23, // 51: hypercall.v1.ControlPlane.Action:input_type -> hypercall.v1.ActionRequest
+	25, // 52: hypercall.v1.ControlPlane.Events:input_type -> hypercall.v1.EventsRequest
+	27, // 53: hypercall.v1.ControlPlane.Exec:input_type -> hypercall.v1.ExecRequest
+	28, // 54: hypercall.v1.ControlPlane.ReadFile:input_type -> hypercall.v1.ReadFileRequest
+	29, // 55: hypercall.v1.ControlPlane.WriteFile:input_type -> hypercall.v1.WriteFileRequest
+	30, // 56: hypercall.v1.ControlPlane.Fork:input_type -> hypercall.v1.ForkRequest
+	32, // 57: hypercall.v1.ControlPlane.Calls:input_type -> hypercall.v1.CallsRequest
+	35, // 58: hypercall.v1.ControlPlane.Steps:input_type -> hypercall.v1.StepsRequest
+	38, // 59: hypercall.v1.ControlPlane.Compare:input_type -> hypercall.v1.CompareRequest
+	15, // 60: hypercall.v1.ControlPlane.PutResource:output_type -> hypercall.v1.Resource
+	15, // 61: hypercall.v1.ControlPlane.GetResource:output_type -> hypercall.v1.Resource
+	19, // 62: hypercall.v1.ControlPlane.ListResources:output_type -> hypercall.v1.ListResourcesResponse
+	22, // 63: hypercall.v1.ControlPlane.Submit:output_type -> hypercall.v1.Submission
+	22, // 64: hypercall.v1.ControlPlane.SubmitManifest:output_type -> hypercall.v1.Submission
+	15, // 65: hypercall.v1.ControlPlane.Action:output_type -> hypercall.v1.Resource
+	26, // 66: hypercall.v1.ControlPlane.Events:output_type -> hypercall.v1.EventsResponse
+	50, // 67: hypercall.v1.ControlPlane.Exec:output_type -> hypercall.guest.v1.ExecEvent
+	51, // 68: hypercall.v1.ControlPlane.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
+	52, // 69: hypercall.v1.ControlPlane.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
+	31, // 70: hypercall.v1.ControlPlane.Fork:output_type -> hypercall.v1.ForkResult
+	34, // 71: hypercall.v1.ControlPlane.Calls:output_type -> hypercall.v1.CallsResponse
+	37, // 72: hypercall.v1.ControlPlane.Steps:output_type -> hypercall.v1.StepsResponse
+	39, // 73: hypercall.v1.ControlPlane.Compare:output_type -> hypercall.v1.Divergence
+	60, // [60:74] is the sub-list for method output_type
+	46, // [46:60] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_hypercall_v1_control_proto_init() }
@@ -2636,7 +3563,7 @@ func file_hypercall_v1_control_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hypercall_v1_control_proto_rawDesc), len(file_hypercall_v1_control_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   34,
+			NumMessages:   44,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -4,6 +4,7 @@ import grpc
 import warnings
 
 from hypercall_proto.hypercall.guest.v1 import guest_pb2 as hypercall_dot_guest_dot_v1_dot_guest__pb2
+from hypercall_proto.hypercall.harness.v1 import harness_pb2 as hypercall_dot_harness_dot_v1_dot_harness__pb2
 from hypercall_proto.hypercall.host.v1 import host_pb2 as hypercall_dot_host_dot_v1_dot_host__pb2
 
 GRPC_GENERATED_VERSION = '1.76.0'
@@ -62,6 +63,16 @@ class HostStub(object):
                 request_serializer=hypercall_dot_host_dot_v1_dot_host__pb2.ResumeRequest.SerializeToString,
                 response_deserializer=hypercall_dot_host_dot_v1_dot_host__pb2.Observation.FromString,
                 _registered_method=True)
+        self.AgentPoll = channel.unary_unary(
+                '/hypercall.host.v1.Host/AgentPoll',
+                request_serializer=hypercall_dot_host_dot_v1_dot_host__pb2.Assignment.SerializeToString,
+                response_deserializer=hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentPoll.FromString,
+                _registered_method=True)
+        self.AgentDeliver = channel.unary_unary(
+                '/hypercall.host.v1.Host/AgentDeliver',
+                request_serializer=hypercall_dot_host_dot_v1_dot_host__pb2.HostAgentDelivery.SerializeToString,
+                response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.DeliverAgentResponse.FromString,
+                _registered_method=True)
         self.Exec = channel.unary_stream(
                 '/hypercall.host.v1.Host/Exec',
                 request_serializer=hypercall_dot_host_dot_v1_dot_host__pb2.ExecRequest.SerializeToString,
@@ -114,6 +125,18 @@ class HostServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def AgentPoll(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def AgentDeliver(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def Exec(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -159,6 +182,16 @@ def add_HostServicer_to_server(servicer, server):
                     servicer.Resume,
                     request_deserializer=hypercall_dot_host_dot_v1_dot_host__pb2.ResumeRequest.FromString,
                     response_serializer=hypercall_dot_host_dot_v1_dot_host__pb2.Observation.SerializeToString,
+            ),
+            'AgentPoll': grpc.unary_unary_rpc_method_handler(
+                    servicer.AgentPoll,
+                    request_deserializer=hypercall_dot_host_dot_v1_dot_host__pb2.Assignment.FromString,
+                    response_serializer=hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentPoll.SerializeToString,
+            ),
+            'AgentDeliver': grpc.unary_unary_rpc_method_handler(
+                    servicer.AgentDeliver,
+                    request_deserializer=hypercall_dot_host_dot_v1_dot_host__pb2.HostAgentDelivery.FromString,
+                    response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.DeliverAgentResponse.SerializeToString,
             ),
             'Exec': grpc.unary_stream_rpc_method_handler(
                     servicer.Exec,
@@ -313,6 +346,60 @@ class Host(object):
             '/hypercall.host.v1.Host/Resume',
             hypercall_dot_host_dot_v1_dot_host__pb2.ResumeRequest.SerializeToString,
             hypercall_dot_host_dot_v1_dot_host__pb2.Observation.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AgentPoll(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.host.v1.Host/AgentPoll',
+            hypercall_dot_host_dot_v1_dot_host__pb2.Assignment.SerializeToString,
+            hypercall_dot_harness_dot_v1_dot_harness__pb2.AgentPoll.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def AgentDeliver(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.host.v1.Host/AgentDeliver',
+            hypercall_dot_host_dot_v1_dot_host__pb2.HostAgentDelivery.SerializeToString,
+            hypercall_dot_guest_dot_v1_dot_guest__pb2.DeliverAgentResponse.FromString,
             options,
             channel_credentials,
             insecure,

@@ -17,7 +17,21 @@ pg_restore --dbname="$HYPERCALL_RESTORE_DATABASE_URL" --clean --if-exists --exit
 source_rows=$(mktemp)
 restored_rows=$(mktemp)
 trap 'rm -f "$source_rows" "$restored_rows"' EXIT HUP INT TERM
-for table in projects resources idempotency branches jobs events outbox schema_migrations; do
+schema_version=$(psql "$HYPERCALL_DATABASE_URL" -X -At -v ON_ERROR_STOP=1 -c 'SELECT COALESCE(max(version),0) FROM public.schema_migrations')
+for table in projects resources idempotency branches jobs events outbox schema_migrations agent_calls agent_steps; do
+ case "$table" in
+  agent_calls|agent_steps)
+   source_exists=$(psql "$HYPERCALL_DATABASE_URL" -X -At -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.$table') IS NOT NULL")
+   restored_exists=$(psql "$HYPERCALL_RESTORE_DATABASE_URL" -X -At -v ON_ERROR_STOP=1 -c "SELECT to_regclass('public.$table') IS NOT NULL")
+   test "$source_exists" = "$restored_exists" || { echo "restored $table presence differs" >&2; exit 1; }
+   if test "$source_exists" = f; then
+    test "$schema_version" -lt 4 || { echo "schema 4 requires $table; refusing incomplete verification" >&2; exit 1; }
+    printf '%s|absent-before-schema-4\n' "$table" >> "$source_rows"
+    printf '%s|absent-before-schema-4\n' "$table" >> "$restored_rows"
+    continue
+   fi
+   ;;
+ esac
  query="SELECT '$table',count(*),md5(COALESCE(string_agg(to_jsonb(t)::text,E'\\n' ORDER BY to_jsonb(t)::text),'')) FROM public.$table t"
  psql "$HYPERCALL_DATABASE_URL" -X -At -v ON_ERROR_STOP=1 -c "$query" >> "$source_rows"
  psql "$HYPERCALL_RESTORE_DATABASE_URL" -X -At -v ON_ERROR_STOP=1 -c "$query" >> "$restored_rows"

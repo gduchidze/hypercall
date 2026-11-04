@@ -24,6 +24,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -49,11 +50,12 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 		return err
 	}
 	session := struct {
-		Identity   *guestv1.AllocationIdentity `json:"identity"`
-		Credential string                      `json:"credential"`
-		ExpiresAt  time.Time                   `json:"expires_at"`
-		Entropy    string                      `json:"entropy"`
-	}{o.Allocation.identity(), h.credential, o.ExpiresAt, ""}
+		HarnessSession *harnessv1.HarnessSession   `json:"harness_session,omitempty"`
+		Identity       *guestv1.AllocationIdentity `json:"identity"`
+		Credential     string                      `json:"credential"`
+		ExpiresAt      time.Time                   `json:"expires_at"`
+		Entropy        string                      `json:"entropy"`
+	}{HarnessSession: h.record.HarnessSession, Identity: o.Allocation.identity(), Credential: h.credential, ExpiresAt: o.ExpiresAt}
 	entropy := make([]byte, 32)
 	if _, err := rand.Read(entropy); err != nil {
 		return err
@@ -242,6 +244,9 @@ func (b *Backend) boot(ctx context.Context, h *instance) error {
 		}
 		if h.restore != nil && (info.ServerTimeUnixNano <= 0 || time.Since(time.Unix(0, info.ServerTimeUnixNano)) > 2*time.Second || time.Until(time.Unix(0, info.ServerTimeUnixNano)) > 2*time.Second) {
 			return errors.New("guest UTC renewal acknowledgement outside supported bound")
+		}
+		if h.record.HarnessSession != nil && info.HarnessSessionHash != h.record.HarnessSession.SessionHash {
+			return errors.New("guest harness session hash acknowledgement mismatch")
 		}
 		if info.ProtocolVersion != "hypercall.guest.v1" || !proto.Equal(info.Identity, o.Allocation.identity()) || info.MaxFileBytes != 1<<20 || info.MaxExecOutputBytes != 1<<20 {
 			return errors.New("guest protocol or allocation identity mismatch")
