@@ -92,8 +92,7 @@ private files. It is a diagnostic for trusted operator-controlled artifacts, not
 an enforcement mechanism against their owner. No original artifact pathname is
 reopened for version execution or verified manifest parsing.
 The cold-boot adapter explicitly selects official Firecracker/jailer 1.14.0.
-The unavailable E2B custom fork and its snapshot extensions are not qualified by
-this selection. Snapshot, restore and fork are separate work.
+Snapshot, restore and fork require their separate qualification gates.
 
 ```sh
 bin/hypercall-host doctor --json --config /srv/hypercall/artifacts/runtime.json \
@@ -172,7 +171,7 @@ On a Mac, fetch and cross-build locally, then use `limactl copy` to transfer the
 checkout's build scripts, locked inputs, guest binary and notices into the Linux builder.
 The builder uses private mount, PID and network namespaces and offline inputs.
 It emits an immutable rootfs, kernel, guest binary, manifests, provenance and
-upstream license material. Keep that generated license material with distributed
+dependency license material. Keep that generated license material with distributed
 artifacts. Rootfs metadata is normalized for reproducible bytes.
 
 The private Go backend takes a trusted tenant/project scope, explicit artifact

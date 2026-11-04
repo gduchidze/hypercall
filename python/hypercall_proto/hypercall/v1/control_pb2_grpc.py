@@ -107,6 +107,31 @@ class ControlPlaneStub(object):
                 request_serializer=hypercall_dot_v1_dot_control__pb2.CompareRequest.SerializeToString,
                 response_deserializer=hypercall_dot_v1_dot_control__pb2.Divergence.FromString,
                 _registered_method=True)
+        self.CompileEvaluation = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/CompileEvaluation',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.CompileEvaluationRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.EvaluationPlan.FromString,
+                _registered_method=True)
+        self.SubmitEvaluation = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/SubmitEvaluation',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.SubmitEvaluationRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.Evaluation.FromString,
+                _registered_method=True)
+        self.GetEvaluation = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/GetEvaluation',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.GetEvaluationRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.Evaluation.FromString,
+                _registered_method=True)
+        self.GetReport = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/GetReport',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.GetReportRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.EvaluationReport.FromString,
+                _registered_method=True)
+        self.ProjectionStatus = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/ProjectionStatus',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.ProjectionStatusRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.ProjectionStatusResponse.FromString,
+                _registered_method=True)
 
 
 class ControlPlaneServicer(object):
@@ -198,6 +223,36 @@ class ControlPlaneServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def CompileEvaluation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SubmitEvaluation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetEvaluation(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetReport(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ProjectionStatus(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ControlPlaneServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -270,6 +325,31 @@ def add_ControlPlaneServicer_to_server(servicer, server):
                     servicer.Compare,
                     request_deserializer=hypercall_dot_v1_dot_control__pb2.CompareRequest.FromString,
                     response_serializer=hypercall_dot_v1_dot_control__pb2.Divergence.SerializeToString,
+            ),
+            'CompileEvaluation': grpc.unary_unary_rpc_method_handler(
+                    servicer.CompileEvaluation,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.CompileEvaluationRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.EvaluationPlan.SerializeToString,
+            ),
+            'SubmitEvaluation': grpc.unary_unary_rpc_method_handler(
+                    servicer.SubmitEvaluation,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.SubmitEvaluationRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.Evaluation.SerializeToString,
+            ),
+            'GetEvaluation': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetEvaluation,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.GetEvaluationRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.Evaluation.SerializeToString,
+            ),
+            'GetReport': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetReport,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.GetReportRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.EvaluationReport.SerializeToString,
+            ),
+            'ProjectionStatus': grpc.unary_unary_rpc_method_handler(
+                    servicer.ProjectionStatus,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.ProjectionStatusRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.ProjectionStatusResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -652,6 +732,141 @@ class ControlPlane(object):
             '/hypercall.v1.ControlPlane/Compare',
             hypercall_dot_v1_dot_control__pb2.CompareRequest.SerializeToString,
             hypercall_dot_v1_dot_control__pb2.Divergence.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CompileEvaluation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/CompileEvaluation',
+            hypercall_dot_v1_dot_control__pb2.CompileEvaluationRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.EvaluationPlan.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SubmitEvaluation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/SubmitEvaluation',
+            hypercall_dot_v1_dot_control__pb2.SubmitEvaluationRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.Evaluation.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetEvaluation(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/GetEvaluation',
+            hypercall_dot_v1_dot_control__pb2.GetEvaluationRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.Evaluation.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetReport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/GetReport',
+            hypercall_dot_v1_dot_control__pb2.GetReportRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.EvaluationReport.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ProjectionStatus(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/ProjectionStatus',
+            hypercall_dot_v1_dot_control__pb2.ProjectionStatusRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.ProjectionStatusResponse.FromString,
             options,
             channel_credentials,
             insecure,

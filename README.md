@@ -62,6 +62,9 @@ Native macOS cannot provide Linux KVM; use the [Lima development setup](docs/dev
 - [Control-plane setup and limits](docs/development/control-plane.md)
 - [CLI and Python SDK](docs/development/clients.md)
 - [Cooperative agent checkpoints](docs/development/agent-checkpoints.md)
+- [Evaluation workers, CLI/SDK reports and CI](docs/development/evaluations.md)
+- [Evaluation compatibility](docs/development/evaluation-compatibility.md)
+- [Phase 3 acceptance evidence](docs/development/phase3-validation.md)
 
 ## Status
 

@@ -167,7 +167,7 @@ The SDK/harness supports Python 3.12–3.13. Development remains pinned to 3.13.
 native hook tests also run under 3.12.14. The existing Ubuntu guest uses 3.12.3.
 `deploy/runtime/harness-wheels.lock.json` pins exact CPython-3.12 Linux ARM64 and
 AMD64 wheels, URLs, sizes and SHA-256 values for grpcio 1.76.0, protobuf 6.33.0 and
-typing-extensions 4.16.0. The upstream distribution metadata declares support for
+typing-extensions 4.16.0. The package metadata declares support for
 Python 3.12 ([grpcio](https://pypi.org/project/grpcio/1.76.0/),
 [protobuf](https://pypi.org/project/protobuf/6.33.0/)).
 

@@ -1,0 +1,4 @@
+# cp312 Linux arm64/amd64 wheels pinned by deploy/runtime/harness-wheels.lock.json.
+grpcio==1.76.0 --hash=sha256:d388087771c837cdb6515539f43b9d4bf0b0f23593a24054ac16f7a960be16f4 --hash=sha256:980a846182ce88c4f2f7e2c22c56aefd515daeb36149d1c897f83cf57999e0b6
+protobuf==6.33.0 --hash=sha256:e0697ece353e6239b90ee43a9231318302ad8353c70e6e45499fa52396debf90 --hash=sha256:35be49fd3f4fefa4e6e2aacc35e8b837d6703c37a2168a55ac21e9b1bc7559ef
+typing-extensions==4.16.0 --hash=sha256:481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8

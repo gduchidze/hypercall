@@ -55,7 +55,7 @@ def main() -> None:
             f"--go-grpc_out={go_out}", "--go-grpc_opt=paths=source_relative",
             f"--python_out={py_out}", f"--pyi_out={py_out}", f"--grpc_python_out={py_out}",
             "hypercall/guest/v1/guest.proto", "hypercall/v1/control.proto", "hypercall/host/v1/host.proto",
-            "hypercall/harness/v1/harness.proto")
+            "hypercall/harness/v1/harness.proto", "hypercall/scorer/v1/scorer.proto")
         run(sys.executable, "-m", "grpc_tools.protoc", "-Iproto",
             f"--plugin=protoc-gen-grpc-gateway={plugins / 'protoc-gen-grpc-gateway'}",
             f"--plugin=protoc-gen-openapiv2={plugins / 'protoc-gen-openapiv2'}",
@@ -68,7 +68,7 @@ def main() -> None:
         # explicit hypercall_proto namespace to avoid collisions with a later SDK.
         for generated in py_out.rglob("*.py*"):
             generated.write_text(generated.read_text().replace("from hypercall.", "from hypercall_proto.hypercall."))
-        for directory in (py_out / "hypercall", py_out / "hypercall/guest", py_out / "hypercall/guest/v1", py_out / "hypercall/v1", py_out / "hypercall/host", py_out / "hypercall/host/v1", py_out / "hypercall/harness", py_out / "hypercall/harness/v1"):
+        for directory in (py_out / "hypercall", py_out / "hypercall/guest", py_out / "hypercall/guest/v1", py_out / "hypercall/v1", py_out / "hypercall/host", py_out / "hypercall/host/v1", py_out / "hypercall/harness", py_out / "hypercall/harness/v1", py_out / "hypercall/scorer", py_out / "hypercall/scorer/v1"):
             (directory / "__init__.py").write_text('"""Generated protocol namespace."""\n')
         expected = {p.relative_to(output) for p in output.rglob("*") if p.is_file()}
         actual = {p.relative_to(ROOT) for base in (ROOT / "gen/go", ROOT / "gen/openapi", ROOT / "python/hypercall_proto/hypercall")

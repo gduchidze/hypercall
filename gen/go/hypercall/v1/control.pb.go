@@ -963,6 +963,7 @@ type OperationSpec struct {
 	CheckpointId      string                 `protobuf:"bytes,3,opt,name=checkpoint_id,json=checkpointId,proto3" json:"checkpoint_id,omitempty"`
 	ChildBranchIds    []string               `protobuf:"bytes,4,rep,name=child_branch_ids,json=childBranchIds,proto3" json:"child_branch_ids,omitempty"`
 	ParentOperationId string                 `protobuf:"bytes,5,opt,name=parent_operation_id,json=parentOperationId,proto3" json:"parent_operation_id,omitempty"`
+	EvaluationId      string                 `protobuf:"bytes,6,opt,name=evaluation_id,json=evaluationId,proto3" json:"evaluation_id,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1028,6 +1029,13 @@ func (x *OperationSpec) GetChildBranchIds() []string {
 func (x *OperationSpec) GetParentOperationId() string {
 	if x != nil {
 		return x.ParentOperationId
+	}
+	return ""
+}
+
+func (x *OperationSpec) GetEvaluationId() string {
+	if x != nil {
+		return x.EvaluationId
 	}
 	return ""
 }
@@ -3082,6 +3090,792 @@ func (x *Divergence) GetReason() string {
 	return ""
 }
 
+type CompileEvaluationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ConfigYaml    string                 `protobuf:"bytes,2,opt,name=config_yaml,json=configYaml,proto3" json:"config_yaml,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CompileEvaluationRequest) Reset() {
+	*x = CompileEvaluationRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[40]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CompileEvaluationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CompileEvaluationRequest) ProtoMessage() {}
+
+func (x *CompileEvaluationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[40]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CompileEvaluationRequest.ProtoReflect.Descriptor instead.
+func (*CompileEvaluationRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{40}
+}
+
+func (x *CompileEvaluationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *CompileEvaluationRequest) GetConfigYaml() string {
+	if x != nil {
+		return x.ConfigYaml
+	}
+	return ""
+}
+
+// Canonical UTF-8 JSON preserves exact integer microUSD amounts. The versioned
+// configuration/report schema is hypercall.io/eval/v1, documented with the API.
+type EvaluationPlan struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Digest        string                 `protobuf:"bytes,1,opt,name=digest,proto3" json:"digest,omitempty"`
+	PlanJson      []byte                 `protobuf:"bytes,2,opt,name=plan_json,json=planJson,proto3" json:"plan_json,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluationPlan) Reset() {
+	*x = EvaluationPlan{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[41]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluationPlan) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluationPlan) ProtoMessage() {}
+
+func (x *EvaluationPlan) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[41]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluationPlan.ProtoReflect.Descriptor instead.
+func (*EvaluationPlan) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{41}
+}
+
+func (x *EvaluationPlan) GetDigest() string {
+	if x != nil {
+		return x.Digest
+	}
+	return ""
+}
+
+func (x *EvaluationPlan) GetPlanJson() []byte {
+	if x != nil {
+		return x.PlanJson
+	}
+	return nil
+}
+
+type EvaluationCost struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	MicroUsd      int64                  `protobuf:"varint,1,opt,name=micro_usd,json=microUsd,proto3" json:"micro_usd,omitempty"`
+	Kind          string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
+	PriceDigest   string                 `protobuf:"bytes,3,opt,name=price_digest,json=priceDigest,proto3" json:"price_digest,omitempty"`
+	RecordedAt    string                 `protobuf:"bytes,4,opt,name=recorded_at,json=recordedAt,proto3" json:"recorded_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluationCost) Reset() {
+	*x = EvaluationCost{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[42]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluationCost) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluationCost) ProtoMessage() {}
+
+func (x *EvaluationCost) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[42]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluationCost.ProtoReflect.Descriptor instead.
+func (*EvaluationCost) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{42}
+}
+
+func (x *EvaluationCost) GetMicroUsd() int64 {
+	if x != nil {
+		return x.MicroUsd
+	}
+	return 0
+}
+
+func (x *EvaluationCost) GetKind() string {
+	if x != nil {
+		return x.Kind
+	}
+	return ""
+}
+
+func (x *EvaluationCost) GetPriceDigest() string {
+	if x != nil {
+		return x.PriceDigest
+	}
+	return ""
+}
+
+func (x *EvaluationCost) GetRecordedAt() string {
+	if x != nil {
+		return x.RecordedAt
+	}
+	return ""
+}
+
+type EvaluationMeasurements struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	LatencyMs     *int64                 `protobuf:"varint,1,opt,name=latency_ms,json=latencyMs,proto3,oneof" json:"latency_ms,omitempty"`
+	Cost          *EvaluationCost        `protobuf:"bytes,2,opt,name=cost,proto3" json:"cost,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluationMeasurements) Reset() {
+	*x = EvaluationMeasurements{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[43]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluationMeasurements) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluationMeasurements) ProtoMessage() {}
+
+func (x *EvaluationMeasurements) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[43]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluationMeasurements.ProtoReflect.Descriptor instead.
+func (*EvaluationMeasurements) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{43}
+}
+
+func (x *EvaluationMeasurements) GetLatencyMs() int64 {
+	if x != nil && x.LatencyMs != nil {
+		return *x.LatencyMs
+	}
+	return 0
+}
+
+func (x *EvaluationMeasurements) GetCost() *EvaluationCost {
+	if x != nil {
+		return x.Cost
+	}
+	return nil
+}
+
+type EvaluationObservation struct {
+	state         protoimpl.MessageState  `protogen:"open.v1"`
+	CellId        string                  `protobuf:"bytes,1,opt,name=cell_id,json=cellId,proto3" json:"cell_id,omitempty"`
+	Source        string                  `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
+	Output        *string                 `protobuf:"bytes,3,opt,name=output,proto3,oneof" json:"output,omitempty"`
+	State         string                  `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	TraceComplete bool                    `protobuf:"varint,5,opt,name=trace_complete,json=traceComplete,proto3" json:"trace_complete,omitempty"`
+	BranchId      string                  `protobuf:"bytes,6,opt,name=branch_id,json=branchId,proto3" json:"branch_id,omitempty"`
+	CallId        string                  `protobuf:"bytes,7,opt,name=call_id,json=callId,proto3" json:"call_id,omitempty"`
+	Measurements  *EvaluationMeasurements `protobuf:"bytes,8,opt,name=measurements,proto3" json:"measurements,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluationObservation) Reset() {
+	*x = EvaluationObservation{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[44]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluationObservation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluationObservation) ProtoMessage() {}
+
+func (x *EvaluationObservation) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[44]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluationObservation.ProtoReflect.Descriptor instead.
+func (*EvaluationObservation) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{44}
+}
+
+func (x *EvaluationObservation) GetCellId() string {
+	if x != nil {
+		return x.CellId
+	}
+	return ""
+}
+
+func (x *EvaluationObservation) GetSource() string {
+	if x != nil {
+		return x.Source
+	}
+	return ""
+}
+
+func (x *EvaluationObservation) GetOutput() string {
+	if x != nil && x.Output != nil {
+		return *x.Output
+	}
+	return ""
+}
+
+func (x *EvaluationObservation) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *EvaluationObservation) GetTraceComplete() bool {
+	if x != nil {
+		return x.TraceComplete
+	}
+	return false
+}
+
+func (x *EvaluationObservation) GetBranchId() string {
+	if x != nil {
+		return x.BranchId
+	}
+	return ""
+}
+
+func (x *EvaluationObservation) GetCallId() string {
+	if x != nil {
+		return x.CallId
+	}
+	return ""
+}
+
+func (x *EvaluationObservation) GetMeasurements() *EvaluationMeasurements {
+	if x != nil {
+		return x.Measurements
+	}
+	return nil
+}
+
+type SubmitEvaluationRequest struct {
+	state          protoimpl.MessageState   `protogen:"open.v1"`
+	ProjectId      string                   `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	ConfigYaml     string                   `protobuf:"bytes,2,opt,name=config_yaml,json=configYaml,proto3" json:"config_yaml,omitempty"`
+	Observations   []*EvaluationObservation `protobuf:"bytes,3,rep,name=observations,proto3" json:"observations,omitempty"`
+	IdempotencyKey string                   `protobuf:"bytes,4,opt,name=idempotency_key,json=idempotencyKey,proto3" json:"idempotency_key,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *SubmitEvaluationRequest) Reset() {
+	*x = SubmitEvaluationRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[45]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SubmitEvaluationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SubmitEvaluationRequest) ProtoMessage() {}
+
+func (x *SubmitEvaluationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[45]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SubmitEvaluationRequest.ProtoReflect.Descriptor instead.
+func (*SubmitEvaluationRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{45}
+}
+
+func (x *SubmitEvaluationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *SubmitEvaluationRequest) GetConfigYaml() string {
+	if x != nil {
+		return x.ConfigYaml
+	}
+	return ""
+}
+
+func (x *SubmitEvaluationRequest) GetObservations() []*EvaluationObservation {
+	if x != nil {
+		return x.Observations
+	}
+	return nil
+}
+
+func (x *SubmitEvaluationRequest) GetIdempotencyKey() string {
+	if x != nil {
+		return x.IdempotencyKey
+	}
+	return ""
+}
+
+type GetEvaluationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetEvaluationRequest) Reset() {
+	*x = GetEvaluationRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[46]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetEvaluationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetEvaluationRequest) ProtoMessage() {}
+
+func (x *GetEvaluationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[46]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetEvaluationRequest.ProtoReflect.Descriptor instead.
+func (*GetEvaluationRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{46}
+}
+
+func (x *GetEvaluationRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GetEvaluationRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type Evaluation struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	OperationId   string                 `protobuf:"bytes,2,opt,name=operation_id,json=operationId,proto3" json:"operation_id,omitempty"`
+	InputDigest   string                 `protobuf:"bytes,3,opt,name=input_digest,json=inputDigest,proto3" json:"input_digest,omitempty"`
+	State         string                 `protobuf:"bytes,4,opt,name=state,proto3" json:"state,omitempty"`
+	Attempts      int32                  `protobuf:"varint,5,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	PlanJson      []byte                 `protobuf:"bytes,6,opt,name=plan_json,json=planJson,proto3" json:"plan_json,omitempty"`
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	CompletedAt   *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=completed_at,json=completedAt,proto3" json:"completed_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Evaluation) Reset() {
+	*x = Evaluation{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[47]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Evaluation) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Evaluation) ProtoMessage() {}
+
+func (x *Evaluation) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[47]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Evaluation.ProtoReflect.Descriptor instead.
+func (*Evaluation) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{47}
+}
+
+func (x *Evaluation) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Evaluation) GetOperationId() string {
+	if x != nil {
+		return x.OperationId
+	}
+	return ""
+}
+
+func (x *Evaluation) GetInputDigest() string {
+	if x != nil {
+		return x.InputDigest
+	}
+	return ""
+}
+
+func (x *Evaluation) GetState() string {
+	if x != nil {
+		return x.State
+	}
+	return ""
+}
+
+func (x *Evaluation) GetAttempts() int32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *Evaluation) GetPlanJson() []byte {
+	if x != nil {
+		return x.PlanJson
+	}
+	return nil
+}
+
+func (x *Evaluation) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
+func (x *Evaluation) GetCompletedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CompletedAt
+	}
+	return nil
+}
+
+type GetReportRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetReportRequest) Reset() {
+	*x = GetReportRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[48]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetReportRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetReportRequest) ProtoMessage() {}
+
+func (x *GetReportRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[48]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetReportRequest.ProtoReflect.Descriptor instead.
+func (*GetReportRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{48}
+}
+
+func (x *GetReportRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+func (x *GetReportRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+type EvaluationReport struct {
+	state         protoimpl.MessageState    `protogen:"open.v1"`
+	EvaluationId  string                    `protobuf:"bytes,1,opt,name=evaluation_id,json=evaluationId,proto3" json:"evaluation_id,omitempty"`
+	ReportJson    []byte                    `protobuf:"bytes,2,opt,name=report_json,json=reportJson,proto3" json:"report_json,omitempty"`
+	Markdown      string                    `protobuf:"bytes,3,opt,name=markdown,proto3" json:"markdown,omitempty"`
+	CiPass        bool                      `protobuf:"varint,4,opt,name=ci_pass,json=ciPass,proto3" json:"ci_pass,omitempty"`
+	Reasons       []string                  `protobuf:"bytes,5,rep,name=reasons,proto3" json:"reasons,omitempty"`
+	Projection    *ProjectionStatusResponse `protobuf:"bytes,6,opt,name=projection,proto3" json:"projection,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EvaluationReport) Reset() {
+	*x = EvaluationReport{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[49]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EvaluationReport) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EvaluationReport) ProtoMessage() {}
+
+func (x *EvaluationReport) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[49]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EvaluationReport.ProtoReflect.Descriptor instead.
+func (*EvaluationReport) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{49}
+}
+
+func (x *EvaluationReport) GetEvaluationId() string {
+	if x != nil {
+		return x.EvaluationId
+	}
+	return ""
+}
+
+func (x *EvaluationReport) GetReportJson() []byte {
+	if x != nil {
+		return x.ReportJson
+	}
+	return nil
+}
+
+func (x *EvaluationReport) GetMarkdown() string {
+	if x != nil {
+		return x.Markdown
+	}
+	return ""
+}
+
+func (x *EvaluationReport) GetCiPass() bool {
+	if x != nil {
+		return x.CiPass
+	}
+	return false
+}
+
+func (x *EvaluationReport) GetReasons() []string {
+	if x != nil {
+		return x.Reasons
+	}
+	return nil
+}
+
+func (x *EvaluationReport) GetProjection() *ProjectionStatusResponse {
+	if x != nil {
+		return x.Projection
+	}
+	return nil
+}
+
+type ProjectionStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ProjectId     string                 `protobuf:"bytes,1,opt,name=project_id,json=projectId,proto3" json:"project_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ProjectionStatusRequest) Reset() {
+	*x = ProjectionStatusRequest{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[50]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectionStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectionStatusRequest) ProtoMessage() {}
+
+func (x *ProjectionStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[50]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectionStatusRequest.ProtoReflect.Descriptor instead.
+func (*ProjectionStatusRequest) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{50}
+}
+
+func (x *ProjectionStatusRequest) GetProjectId() string {
+	if x != nil {
+		return x.ProjectId
+	}
+	return ""
+}
+
+type ProjectionStatusResponse struct {
+	state                protoimpl.MessageState `protogen:"open.v1"`
+	Pending              int64                  `protobuf:"varint,1,opt,name=pending,proto3" json:"pending,omitempty"`
+	OldestPendingSeconds float64                `protobuf:"fixed64,2,opt,name=oldest_pending_seconds,json=oldestPendingSeconds,proto3" json:"oldest_pending_seconds,omitempty"`
+	LastDeliveredAt      *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=last_delivered_at,json=lastDeliveredAt,proto3" json:"last_delivered_at,omitempty"`
+	unknownFields        protoimpl.UnknownFields
+	sizeCache            protoimpl.SizeCache
+}
+
+func (x *ProjectionStatusResponse) Reset() {
+	*x = ProjectionStatusResponse{}
+	mi := &file_hypercall_v1_control_proto_msgTypes[51]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ProjectionStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ProjectionStatusResponse) ProtoMessage() {}
+
+func (x *ProjectionStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_hypercall_v1_control_proto_msgTypes[51]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ProjectionStatusResponse.ProtoReflect.Descriptor instead.
+func (*ProjectionStatusResponse) Descriptor() ([]byte, []int) {
+	return file_hypercall_v1_control_proto_rawDescGZIP(), []int{51}
+}
+
+func (x *ProjectionStatusResponse) GetPending() int64 {
+	if x != nil {
+		return x.Pending
+	}
+	return 0
+}
+
+func (x *ProjectionStatusResponse) GetOldestPendingSeconds() float64 {
+	if x != nil {
+		return x.OldestPendingSeconds
+	}
+	return 0
+}
+
+func (x *ProjectionStatusResponse) GetLastDeliveredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastDeliveredAt
+	}
+	return nil
+}
+
 var File_hypercall_v1_control_proto protoreflect.FileDescriptor
 
 const file_hypercall_v1_control_proto_rawDesc = "" +
@@ -3181,13 +3975,14 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\x13budget_remaining_ms\x18\f \x01(\x03R\x11budgetRemainingMs\x1a@\n" +
 	"\x12CompatibilityEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xc3\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe8\x01\n" +
 	"\rOperationSpec\x12\x1b\n" +
 	"\tbranch_id\x18\x01 \x01(\tR\bbranchId\x12\x16\n" +
 	"\x06action\x18\x02 \x01(\tR\x06action\x12#\n" +
 	"\rcheckpoint_id\x18\x03 \x01(\tR\fcheckpointId\x12(\n" +
 	"\x10child_branch_ids\x18\x04 \x03(\tR\x0echildBranchIds\x12.\n" +
-	"\x13parent_operation_id\x18\x05 \x01(\tR\x11parentOperationId\"\xeb\x03\n" +
+	"\x13parent_operation_id\x18\x05 \x01(\tR\x11parentOperationId\x12#\n" +
+	"\revaluation_id\x18\x06 \x01(\tR\fevaluationId\"\xeb\x03\n" +
 	"\fBranchStatus\x12\x18\n" +
 	"\adesired\x18\x01 \x01(\tR\adesired\x12\x1a\n" +
 	"\bobserved\x18\x02 \x01(\tR\bobserved\x12!\n" +
@@ -3373,7 +4168,79 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\vleft_digest\x18\x05 \x01(\tR\n" +
 	"leftDigest\x12!\n" +
 	"\fright_digest\x18\x06 \x01(\tR\vrightDigest\x12\x16\n" +
-	"\x06reason\x18\a \x01(\tR\x06reason2\xfd\a\n" +
+	"\x06reason\x18\a \x01(\tR\x06reason\"Z\n" +
+	"\x18CompileEvaluationRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vconfig_yaml\x18\x02 \x01(\tR\n" +
+	"configYaml\"E\n" +
+	"\x0eEvaluationPlan\x12\x16\n" +
+	"\x06digest\x18\x01 \x01(\tR\x06digest\x12\x1b\n" +
+	"\tplan_json\x18\x02 \x01(\fR\bplanJson\"\x85\x01\n" +
+	"\x0eEvaluationCost\x12\x1b\n" +
+	"\tmicro_usd\x18\x01 \x01(\x03R\bmicroUsd\x12\x12\n" +
+	"\x04kind\x18\x02 \x01(\tR\x04kind\x12!\n" +
+	"\fprice_digest\x18\x03 \x01(\tR\vpriceDigest\x12\x1f\n" +
+	"\vrecorded_at\x18\x04 \x01(\tR\n" +
+	"recordedAt\"}\n" +
+	"\x16EvaluationMeasurements\x12\"\n" +
+	"\n" +
+	"latency_ms\x18\x01 \x01(\x03H\x00R\tlatencyMs\x88\x01\x01\x120\n" +
+	"\x04cost\x18\x02 \x01(\v2\x1c.hypercall.v1.EvaluationCostR\x04costB\r\n" +
+	"\v_latency_ms\"\xad\x02\n" +
+	"\x15EvaluationObservation\x12\x17\n" +
+	"\acell_id\x18\x01 \x01(\tR\x06cellId\x12\x16\n" +
+	"\x06source\x18\x02 \x01(\tR\x06source\x12\x1b\n" +
+	"\x06output\x18\x03 \x01(\tH\x00R\x06output\x88\x01\x01\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\x12%\n" +
+	"\x0etrace_complete\x18\x05 \x01(\bR\rtraceComplete\x12\x1b\n" +
+	"\tbranch_id\x18\x06 \x01(\tR\bbranchId\x12\x17\n" +
+	"\acall_id\x18\a \x01(\tR\x06callId\x12H\n" +
+	"\fmeasurements\x18\b \x01(\v2$.hypercall.v1.EvaluationMeasurementsR\fmeasurementsB\t\n" +
+	"\a_output\"\xcb\x01\n" +
+	"\x17SubmitEvaluationRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x1f\n" +
+	"\vconfig_yaml\x18\x02 \x01(\tR\n" +
+	"configYaml\x12G\n" +
+	"\fobservations\x18\x03 \x03(\v2#.hypercall.v1.EvaluationObservationR\fobservations\x12'\n" +
+	"\x0fidempotency_key\x18\x04 \x01(\tR\x0eidempotencyKey\"E\n" +
+	"\x14GetEvaluationRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\xab\x02\n" +
+	"\n" +
+	"Evaluation\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\foperation_id\x18\x02 \x01(\tR\voperationId\x12!\n" +
+	"\finput_digest\x18\x03 \x01(\tR\vinputDigest\x12\x14\n" +
+	"\x05state\x18\x04 \x01(\tR\x05state\x12\x1a\n" +
+	"\battempts\x18\x05 \x01(\x05R\battempts\x12\x1b\n" +
+	"\tplan_json\x18\x06 \x01(\fR\bplanJson\x129\n" +
+	"\n" +
+	"created_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12=\n" +
+	"\fcompleted_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\vcompletedAt\"A\n" +
+	"\x10GetReportRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\x12\x0e\n" +
+	"\x02id\x18\x02 \x01(\tR\x02id\"\xef\x01\n" +
+	"\x10EvaluationReport\x12#\n" +
+	"\revaluation_id\x18\x01 \x01(\tR\fevaluationId\x12\x1f\n" +
+	"\vreport_json\x18\x02 \x01(\fR\n" +
+	"reportJson\x12\x1a\n" +
+	"\bmarkdown\x18\x03 \x01(\tR\bmarkdown\x12\x17\n" +
+	"\aci_pass\x18\x04 \x01(\bR\x06ciPass\x12\x18\n" +
+	"\areasons\x18\x05 \x03(\tR\areasons\x12F\n" +
+	"\n" +
+	"projection\x18\x06 \x01(\v2&.hypercall.v1.ProjectionStatusResponseR\n" +
+	"projection\"8\n" +
+	"\x17ProjectionStatusRequest\x12\x1d\n" +
+	"\n" +
+	"project_id\x18\x01 \x01(\tR\tprojectId\"\xb2\x01\n" +
+	"\x18ProjectionStatusResponse\x12\x18\n" +
+	"\apending\x18\x01 \x01(\x03R\apending\x124\n" +
+	"\x16oldest_pending_seconds\x18\x02 \x01(\x01R\x14oldestPendingSeconds\x12F\n" +
+	"\x11last_delivered_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\x0flastDeliveredAt2\xac\v\n" +
 	"\fControlPlane\x12G\n" +
 	"\vPutResource\x12 .hypercall.v1.PutResourceRequest\x1a\x16.hypercall.v1.Resource\x12G\n" +
 	"\vGetResource\x12 .hypercall.v1.GetResourceRequest\x1a\x16.hypercall.v1.Resource\x12X\n" +
@@ -3388,7 +4255,12 @@ const file_hypercall_v1_control_proto_rawDesc = "" +
 	"\x04Fork\x12\x19.hypercall.v1.ForkRequest\x1a\x18.hypercall.v1.ForkResult\x12@\n" +
 	"\x05Calls\x12\x1a.hypercall.v1.CallsRequest\x1a\x1b.hypercall.v1.CallsResponse\x12@\n" +
 	"\x05Steps\x12\x1a.hypercall.v1.StepsRequest\x1a\x1b.hypercall.v1.StepsResponse\x12A\n" +
-	"\aCompare\x12\x1c.hypercall.v1.CompareRequest\x1a\x18.hypercall.v1.DivergenceB@Z>github.com/gduchidze/hypercall/gen/go/hypercall/v1;hypercallv1b\x06proto3"
+	"\aCompare\x12\x1c.hypercall.v1.CompareRequest\x1a\x18.hypercall.v1.Divergence\x12Y\n" +
+	"\x11CompileEvaluation\x12&.hypercall.v1.CompileEvaluationRequest\x1a\x1c.hypercall.v1.EvaluationPlan\x12S\n" +
+	"\x10SubmitEvaluation\x12%.hypercall.v1.SubmitEvaluationRequest\x1a\x18.hypercall.v1.Evaluation\x12M\n" +
+	"\rGetEvaluation\x12\".hypercall.v1.GetEvaluationRequest\x1a\x18.hypercall.v1.Evaluation\x12K\n" +
+	"\tGetReport\x12\x1e.hypercall.v1.GetReportRequest\x1a\x1e.hypercall.v1.EvaluationReport\x12a\n" +
+	"\x10ProjectionStatus\x12%.hypercall.v1.ProjectionStatusRequest\x1a&.hypercall.v1.ProjectionStatusResponseB@Z>github.com/gduchidze/hypercall/gen/go/hypercall/v1;hypercallv1b\x06proto3"
 
 var (
 	file_hypercall_v1_control_proto_rawDescOnce sync.Once
@@ -3402,81 +4274,93 @@ func file_hypercall_v1_control_proto_rawDescGZIP() []byte {
 	return file_hypercall_v1_control_proto_rawDescData
 }
 
-var file_hypercall_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 44)
+var file_hypercall_v1_control_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_hypercall_v1_control_proto_goTypes = []any{
-	(*Metadata)(nil),              // 0: hypercall.v1.Metadata
-	(*Ref)(nil),                   // 1: hypercall.v1.Ref
-	(*Limits)(nil),                // 2: hypercall.v1.Limits
-	(*TaskSpec)(nil),              // 3: hypercall.v1.TaskSpec
-	(*Repository)(nil),            // 4: hypercall.v1.Repository
-	(*InputFile)(nil),             // 5: hypercall.v1.InputFile
-	(*WorkspaceSpec)(nil),         // 6: hypercall.v1.WorkspaceSpec
-	(*ModelConfigSpec)(nil),       // 7: hypercall.v1.ModelConfigSpec
-	(*GatewaySpec)(nil),           // 8: hypercall.v1.GatewaySpec
-	(*RunSpec)(nil),               // 9: hypercall.v1.RunSpec
-	(*BranchSpec)(nil),            // 10: hypercall.v1.BranchSpec
-	(*CheckpointSpec)(nil),        // 11: hypercall.v1.CheckpointSpec
-	(*OperationSpec)(nil),         // 12: hypercall.v1.OperationSpec
-	(*BranchStatus)(nil),          // 13: hypercall.v1.BranchStatus
-	(*OperationStatus)(nil),       // 14: hypercall.v1.OperationStatus
-	(*Resource)(nil),              // 15: hypercall.v1.Resource
-	(*PutResourceRequest)(nil),    // 16: hypercall.v1.PutResourceRequest
-	(*GetResourceRequest)(nil),    // 17: hypercall.v1.GetResourceRequest
-	(*ListResourcesRequest)(nil),  // 18: hypercall.v1.ListResourcesRequest
-	(*ListResourcesResponse)(nil), // 19: hypercall.v1.ListResourcesResponse
-	(*SubmitRequest)(nil),         // 20: hypercall.v1.SubmitRequest
-	(*SubmitManifestRequest)(nil), // 21: hypercall.v1.SubmitManifestRequest
-	(*Submission)(nil),            // 22: hypercall.v1.Submission
-	(*ActionRequest)(nil),         // 23: hypercall.v1.ActionRequest
-	(*Event)(nil),                 // 24: hypercall.v1.Event
-	(*EventsRequest)(nil),         // 25: hypercall.v1.EventsRequest
-	(*EventsResponse)(nil),        // 26: hypercall.v1.EventsResponse
-	(*ExecRequest)(nil),           // 27: hypercall.v1.ExecRequest
-	(*ReadFileRequest)(nil),       // 28: hypercall.v1.ReadFileRequest
-	(*WriteFileRequest)(nil),      // 29: hypercall.v1.WriteFileRequest
-	(*ForkRequest)(nil),           // 30: hypercall.v1.ForkRequest
-	(*ForkResult)(nil),            // 31: hypercall.v1.ForkResult
-	(*CallsRequest)(nil),          // 32: hypercall.v1.CallsRequest
-	(*AgentCall)(nil),             // 33: hypercall.v1.AgentCall
-	(*CallsResponse)(nil),         // 34: hypercall.v1.CallsResponse
-	(*StepsRequest)(nil),          // 35: hypercall.v1.StepsRequest
-	(*AgentStep)(nil),             // 36: hypercall.v1.AgentStep
-	(*StepsResponse)(nil),         // 37: hypercall.v1.StepsResponse
-	(*CompareRequest)(nil),        // 38: hypercall.v1.CompareRequest
-	(*Divergence)(nil),            // 39: hypercall.v1.Divergence
-	nil,                           // 40: hypercall.v1.TaskSpec.EnvEntry
-	nil,                           // 41: hypercall.v1.ModelConfigSpec.ParametersEntry
-	nil,                           // 42: hypercall.v1.GatewaySpec.RoutesEntry
-	nil,                           // 43: hypercall.v1.CheckpointSpec.CompatibilityEntry
-	(*timestamppb.Timestamp)(nil), // 44: google.protobuf.Timestamp
-	(*v1.AgentBarrier)(nil),       // 45: hypercall.harness.v1.AgentBarrier
-	(*structpb.Struct)(nil),       // 46: google.protobuf.Struct
-	(*v11.ExecRequest)(nil),       // 47: hypercall.guest.v1.ExecRequest
-	(*v1.AgentRequest)(nil),       // 48: hypercall.harness.v1.AgentRequest
-	(*v1.AgentResult)(nil),        // 49: hypercall.harness.v1.AgentResult
-	(*v11.ExecEvent)(nil),         // 50: hypercall.guest.v1.ExecEvent
-	(*v11.ReadFileResponse)(nil),  // 51: hypercall.guest.v1.ReadFileResponse
-	(*v11.WriteFileResponse)(nil), // 52: hypercall.guest.v1.WriteFileResponse
+	(*Metadata)(nil),                 // 0: hypercall.v1.Metadata
+	(*Ref)(nil),                      // 1: hypercall.v1.Ref
+	(*Limits)(nil),                   // 2: hypercall.v1.Limits
+	(*TaskSpec)(nil),                 // 3: hypercall.v1.TaskSpec
+	(*Repository)(nil),               // 4: hypercall.v1.Repository
+	(*InputFile)(nil),                // 5: hypercall.v1.InputFile
+	(*WorkspaceSpec)(nil),            // 6: hypercall.v1.WorkspaceSpec
+	(*ModelConfigSpec)(nil),          // 7: hypercall.v1.ModelConfigSpec
+	(*GatewaySpec)(nil),              // 8: hypercall.v1.GatewaySpec
+	(*RunSpec)(nil),                  // 9: hypercall.v1.RunSpec
+	(*BranchSpec)(nil),               // 10: hypercall.v1.BranchSpec
+	(*CheckpointSpec)(nil),           // 11: hypercall.v1.CheckpointSpec
+	(*OperationSpec)(nil),            // 12: hypercall.v1.OperationSpec
+	(*BranchStatus)(nil),             // 13: hypercall.v1.BranchStatus
+	(*OperationStatus)(nil),          // 14: hypercall.v1.OperationStatus
+	(*Resource)(nil),                 // 15: hypercall.v1.Resource
+	(*PutResourceRequest)(nil),       // 16: hypercall.v1.PutResourceRequest
+	(*GetResourceRequest)(nil),       // 17: hypercall.v1.GetResourceRequest
+	(*ListResourcesRequest)(nil),     // 18: hypercall.v1.ListResourcesRequest
+	(*ListResourcesResponse)(nil),    // 19: hypercall.v1.ListResourcesResponse
+	(*SubmitRequest)(nil),            // 20: hypercall.v1.SubmitRequest
+	(*SubmitManifestRequest)(nil),    // 21: hypercall.v1.SubmitManifestRequest
+	(*Submission)(nil),               // 22: hypercall.v1.Submission
+	(*ActionRequest)(nil),            // 23: hypercall.v1.ActionRequest
+	(*Event)(nil),                    // 24: hypercall.v1.Event
+	(*EventsRequest)(nil),            // 25: hypercall.v1.EventsRequest
+	(*EventsResponse)(nil),           // 26: hypercall.v1.EventsResponse
+	(*ExecRequest)(nil),              // 27: hypercall.v1.ExecRequest
+	(*ReadFileRequest)(nil),          // 28: hypercall.v1.ReadFileRequest
+	(*WriteFileRequest)(nil),         // 29: hypercall.v1.WriteFileRequest
+	(*ForkRequest)(nil),              // 30: hypercall.v1.ForkRequest
+	(*ForkResult)(nil),               // 31: hypercall.v1.ForkResult
+	(*CallsRequest)(nil),             // 32: hypercall.v1.CallsRequest
+	(*AgentCall)(nil),                // 33: hypercall.v1.AgentCall
+	(*CallsResponse)(nil),            // 34: hypercall.v1.CallsResponse
+	(*StepsRequest)(nil),             // 35: hypercall.v1.StepsRequest
+	(*AgentStep)(nil),                // 36: hypercall.v1.AgentStep
+	(*StepsResponse)(nil),            // 37: hypercall.v1.StepsResponse
+	(*CompareRequest)(nil),           // 38: hypercall.v1.CompareRequest
+	(*Divergence)(nil),               // 39: hypercall.v1.Divergence
+	(*CompileEvaluationRequest)(nil), // 40: hypercall.v1.CompileEvaluationRequest
+	(*EvaluationPlan)(nil),           // 41: hypercall.v1.EvaluationPlan
+	(*EvaluationCost)(nil),           // 42: hypercall.v1.EvaluationCost
+	(*EvaluationMeasurements)(nil),   // 43: hypercall.v1.EvaluationMeasurements
+	(*EvaluationObservation)(nil),    // 44: hypercall.v1.EvaluationObservation
+	(*SubmitEvaluationRequest)(nil),  // 45: hypercall.v1.SubmitEvaluationRequest
+	(*GetEvaluationRequest)(nil),     // 46: hypercall.v1.GetEvaluationRequest
+	(*Evaluation)(nil),               // 47: hypercall.v1.Evaluation
+	(*GetReportRequest)(nil),         // 48: hypercall.v1.GetReportRequest
+	(*EvaluationReport)(nil),         // 49: hypercall.v1.EvaluationReport
+	(*ProjectionStatusRequest)(nil),  // 50: hypercall.v1.ProjectionStatusRequest
+	(*ProjectionStatusResponse)(nil), // 51: hypercall.v1.ProjectionStatusResponse
+	nil,                              // 52: hypercall.v1.TaskSpec.EnvEntry
+	nil,                              // 53: hypercall.v1.ModelConfigSpec.ParametersEntry
+	nil,                              // 54: hypercall.v1.GatewaySpec.RoutesEntry
+	nil,                              // 55: hypercall.v1.CheckpointSpec.CompatibilityEntry
+	(*timestamppb.Timestamp)(nil),    // 56: google.protobuf.Timestamp
+	(*v1.AgentBarrier)(nil),          // 57: hypercall.harness.v1.AgentBarrier
+	(*structpb.Struct)(nil),          // 58: google.protobuf.Struct
+	(*v11.ExecRequest)(nil),          // 59: hypercall.guest.v1.ExecRequest
+	(*v1.AgentRequest)(nil),          // 60: hypercall.harness.v1.AgentRequest
+	(*v1.AgentResult)(nil),           // 61: hypercall.harness.v1.AgentResult
+	(*v11.ExecEvent)(nil),            // 62: hypercall.guest.v1.ExecEvent
+	(*v11.ReadFileResponse)(nil),     // 63: hypercall.guest.v1.ReadFileResponse
+	(*v11.WriteFileResponse)(nil),    // 64: hypercall.guest.v1.WriteFileResponse
 }
 var file_hypercall_v1_control_proto_depIdxs = []int32{
-	44, // 0: hypercall.v1.Metadata.created_at:type_name -> google.protobuf.Timestamp
+	56, // 0: hypercall.v1.Metadata.created_at:type_name -> google.protobuf.Timestamp
 	1,  // 1: hypercall.v1.TaskSpec.workspace:type_name -> hypercall.v1.Ref
 	1,  // 2: hypercall.v1.TaskSpec.models:type_name -> hypercall.v1.Ref
 	1,  // 3: hypercall.v1.TaskSpec.gateway:type_name -> hypercall.v1.Ref
-	40, // 4: hypercall.v1.TaskSpec.env:type_name -> hypercall.v1.TaskSpec.EnvEntry
+	52, // 4: hypercall.v1.TaskSpec.env:type_name -> hypercall.v1.TaskSpec.EnvEntry
 	2,  // 5: hypercall.v1.TaskSpec.limits:type_name -> hypercall.v1.Limits
 	4,  // 6: hypercall.v1.WorkspaceSpec.repositories:type_name -> hypercall.v1.Repository
 	5,  // 7: hypercall.v1.WorkspaceSpec.files:type_name -> hypercall.v1.InputFile
-	41, // 8: hypercall.v1.ModelConfigSpec.parameters:type_name -> hypercall.v1.ModelConfigSpec.ParametersEntry
-	42, // 9: hypercall.v1.GatewaySpec.routes:type_name -> hypercall.v1.GatewaySpec.RoutesEntry
+	53, // 8: hypercall.v1.ModelConfigSpec.parameters:type_name -> hypercall.v1.ModelConfigSpec.ParametersEntry
+	54, // 9: hypercall.v1.GatewaySpec.routes:type_name -> hypercall.v1.GatewaySpec.RoutesEntry
 	15, // 10: hypercall.v1.RunSpec.task:type_name -> hypercall.v1.Resource
 	15, // 11: hypercall.v1.RunSpec.workspace:type_name -> hypercall.v1.Resource
 	15, // 12: hypercall.v1.RunSpec.models:type_name -> hypercall.v1.Resource
 	15, // 13: hypercall.v1.RunSpec.gateway:type_name -> hypercall.v1.Resource
 	15, // 14: hypercall.v1.BranchSpec.model:type_name -> hypercall.v1.Resource
-	43, // 15: hypercall.v1.CheckpointSpec.compatibility:type_name -> hypercall.v1.CheckpointSpec.CompatibilityEntry
-	45, // 16: hypercall.v1.CheckpointSpec.barrier:type_name -> hypercall.harness.v1.AgentBarrier
-	44, // 17: hypercall.v1.BranchStatus.lease_until:type_name -> google.protobuf.Timestamp
+	55, // 15: hypercall.v1.CheckpointSpec.compatibility:type_name -> hypercall.v1.CheckpointSpec.CompatibilityEntry
+	57, // 16: hypercall.v1.CheckpointSpec.barrier:type_name -> hypercall.harness.v1.AgentBarrier
+	56, // 17: hypercall.v1.BranchStatus.lease_until:type_name -> google.protobuf.Timestamp
 	0,  // 18: hypercall.v1.Resource.metadata:type_name -> hypercall.v1.Metadata
 	3,  // 19: hypercall.v1.Resource.task_spec:type_name -> hypercall.v1.TaskSpec
 	6,  // 20: hypercall.v1.Resource.workspace_spec:type_name -> hypercall.v1.WorkspaceSpec
@@ -3493,51 +4377,68 @@ var file_hypercall_v1_control_proto_depIdxs = []int32{
 	15, // 31: hypercall.v1.Submission.run:type_name -> hypercall.v1.Resource
 	15, // 32: hypercall.v1.Submission.branch:type_name -> hypercall.v1.Resource
 	15, // 33: hypercall.v1.Submission.operation:type_name -> hypercall.v1.Resource
-	46, // 34: hypercall.v1.Event.data:type_name -> google.protobuf.Struct
-	44, // 35: hypercall.v1.Event.created_at:type_name -> google.protobuf.Timestamp
+	58, // 34: hypercall.v1.Event.data:type_name -> google.protobuf.Struct
+	56, // 35: hypercall.v1.Event.created_at:type_name -> google.protobuf.Timestamp
 	24, // 36: hypercall.v1.EventsResponse.events:type_name -> hypercall.v1.Event
-	47, // 37: hypercall.v1.ExecRequest.command:type_name -> hypercall.guest.v1.ExecRequest
+	59, // 37: hypercall.v1.ExecRequest.command:type_name -> hypercall.guest.v1.ExecRequest
 	1,  // 38: hypercall.v1.ForkRequest.models:type_name -> hypercall.v1.Ref
 	15, // 39: hypercall.v1.ForkResult.operation:type_name -> hypercall.v1.Resource
 	15, // 40: hypercall.v1.ForkResult.children:type_name -> hypercall.v1.Resource
-	48, // 41: hypercall.v1.AgentCall.request:type_name -> hypercall.harness.v1.AgentRequest
-	49, // 42: hypercall.v1.AgentCall.result:type_name -> hypercall.harness.v1.AgentResult
-	44, // 43: hypercall.v1.AgentCall.created_at:type_name -> google.protobuf.Timestamp
+	60, // 41: hypercall.v1.AgentCall.request:type_name -> hypercall.harness.v1.AgentRequest
+	61, // 42: hypercall.v1.AgentCall.result:type_name -> hypercall.harness.v1.AgentResult
+	56, // 43: hypercall.v1.AgentCall.created_at:type_name -> google.protobuf.Timestamp
 	33, // 44: hypercall.v1.CallsResponse.calls:type_name -> hypercall.v1.AgentCall
 	36, // 45: hypercall.v1.StepsResponse.steps:type_name -> hypercall.v1.AgentStep
-	16, // 46: hypercall.v1.ControlPlane.PutResource:input_type -> hypercall.v1.PutResourceRequest
-	17, // 47: hypercall.v1.ControlPlane.GetResource:input_type -> hypercall.v1.GetResourceRequest
-	18, // 48: hypercall.v1.ControlPlane.ListResources:input_type -> hypercall.v1.ListResourcesRequest
-	20, // 49: hypercall.v1.ControlPlane.Submit:input_type -> hypercall.v1.SubmitRequest
-	21, // 50: hypercall.v1.ControlPlane.SubmitManifest:input_type -> hypercall.v1.SubmitManifestRequest
-	23, // 51: hypercall.v1.ControlPlane.Action:input_type -> hypercall.v1.ActionRequest
-	25, // 52: hypercall.v1.ControlPlane.Events:input_type -> hypercall.v1.EventsRequest
-	27, // 53: hypercall.v1.ControlPlane.Exec:input_type -> hypercall.v1.ExecRequest
-	28, // 54: hypercall.v1.ControlPlane.ReadFile:input_type -> hypercall.v1.ReadFileRequest
-	29, // 55: hypercall.v1.ControlPlane.WriteFile:input_type -> hypercall.v1.WriteFileRequest
-	30, // 56: hypercall.v1.ControlPlane.Fork:input_type -> hypercall.v1.ForkRequest
-	32, // 57: hypercall.v1.ControlPlane.Calls:input_type -> hypercall.v1.CallsRequest
-	35, // 58: hypercall.v1.ControlPlane.Steps:input_type -> hypercall.v1.StepsRequest
-	38, // 59: hypercall.v1.ControlPlane.Compare:input_type -> hypercall.v1.CompareRequest
-	15, // 60: hypercall.v1.ControlPlane.PutResource:output_type -> hypercall.v1.Resource
-	15, // 61: hypercall.v1.ControlPlane.GetResource:output_type -> hypercall.v1.Resource
-	19, // 62: hypercall.v1.ControlPlane.ListResources:output_type -> hypercall.v1.ListResourcesResponse
-	22, // 63: hypercall.v1.ControlPlane.Submit:output_type -> hypercall.v1.Submission
-	22, // 64: hypercall.v1.ControlPlane.SubmitManifest:output_type -> hypercall.v1.Submission
-	15, // 65: hypercall.v1.ControlPlane.Action:output_type -> hypercall.v1.Resource
-	26, // 66: hypercall.v1.ControlPlane.Events:output_type -> hypercall.v1.EventsResponse
-	50, // 67: hypercall.v1.ControlPlane.Exec:output_type -> hypercall.guest.v1.ExecEvent
-	51, // 68: hypercall.v1.ControlPlane.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
-	52, // 69: hypercall.v1.ControlPlane.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
-	31, // 70: hypercall.v1.ControlPlane.Fork:output_type -> hypercall.v1.ForkResult
-	34, // 71: hypercall.v1.ControlPlane.Calls:output_type -> hypercall.v1.CallsResponse
-	37, // 72: hypercall.v1.ControlPlane.Steps:output_type -> hypercall.v1.StepsResponse
-	39, // 73: hypercall.v1.ControlPlane.Compare:output_type -> hypercall.v1.Divergence
-	60, // [60:74] is the sub-list for method output_type
-	46, // [46:60] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	42, // 46: hypercall.v1.EvaluationMeasurements.cost:type_name -> hypercall.v1.EvaluationCost
+	43, // 47: hypercall.v1.EvaluationObservation.measurements:type_name -> hypercall.v1.EvaluationMeasurements
+	44, // 48: hypercall.v1.SubmitEvaluationRequest.observations:type_name -> hypercall.v1.EvaluationObservation
+	56, // 49: hypercall.v1.Evaluation.created_at:type_name -> google.protobuf.Timestamp
+	56, // 50: hypercall.v1.Evaluation.completed_at:type_name -> google.protobuf.Timestamp
+	51, // 51: hypercall.v1.EvaluationReport.projection:type_name -> hypercall.v1.ProjectionStatusResponse
+	56, // 52: hypercall.v1.ProjectionStatusResponse.last_delivered_at:type_name -> google.protobuf.Timestamp
+	16, // 53: hypercall.v1.ControlPlane.PutResource:input_type -> hypercall.v1.PutResourceRequest
+	17, // 54: hypercall.v1.ControlPlane.GetResource:input_type -> hypercall.v1.GetResourceRequest
+	18, // 55: hypercall.v1.ControlPlane.ListResources:input_type -> hypercall.v1.ListResourcesRequest
+	20, // 56: hypercall.v1.ControlPlane.Submit:input_type -> hypercall.v1.SubmitRequest
+	21, // 57: hypercall.v1.ControlPlane.SubmitManifest:input_type -> hypercall.v1.SubmitManifestRequest
+	23, // 58: hypercall.v1.ControlPlane.Action:input_type -> hypercall.v1.ActionRequest
+	25, // 59: hypercall.v1.ControlPlane.Events:input_type -> hypercall.v1.EventsRequest
+	27, // 60: hypercall.v1.ControlPlane.Exec:input_type -> hypercall.v1.ExecRequest
+	28, // 61: hypercall.v1.ControlPlane.ReadFile:input_type -> hypercall.v1.ReadFileRequest
+	29, // 62: hypercall.v1.ControlPlane.WriteFile:input_type -> hypercall.v1.WriteFileRequest
+	30, // 63: hypercall.v1.ControlPlane.Fork:input_type -> hypercall.v1.ForkRequest
+	32, // 64: hypercall.v1.ControlPlane.Calls:input_type -> hypercall.v1.CallsRequest
+	35, // 65: hypercall.v1.ControlPlane.Steps:input_type -> hypercall.v1.StepsRequest
+	38, // 66: hypercall.v1.ControlPlane.Compare:input_type -> hypercall.v1.CompareRequest
+	40, // 67: hypercall.v1.ControlPlane.CompileEvaluation:input_type -> hypercall.v1.CompileEvaluationRequest
+	45, // 68: hypercall.v1.ControlPlane.SubmitEvaluation:input_type -> hypercall.v1.SubmitEvaluationRequest
+	46, // 69: hypercall.v1.ControlPlane.GetEvaluation:input_type -> hypercall.v1.GetEvaluationRequest
+	48, // 70: hypercall.v1.ControlPlane.GetReport:input_type -> hypercall.v1.GetReportRequest
+	50, // 71: hypercall.v1.ControlPlane.ProjectionStatus:input_type -> hypercall.v1.ProjectionStatusRequest
+	15, // 72: hypercall.v1.ControlPlane.PutResource:output_type -> hypercall.v1.Resource
+	15, // 73: hypercall.v1.ControlPlane.GetResource:output_type -> hypercall.v1.Resource
+	19, // 74: hypercall.v1.ControlPlane.ListResources:output_type -> hypercall.v1.ListResourcesResponse
+	22, // 75: hypercall.v1.ControlPlane.Submit:output_type -> hypercall.v1.Submission
+	22, // 76: hypercall.v1.ControlPlane.SubmitManifest:output_type -> hypercall.v1.Submission
+	15, // 77: hypercall.v1.ControlPlane.Action:output_type -> hypercall.v1.Resource
+	26, // 78: hypercall.v1.ControlPlane.Events:output_type -> hypercall.v1.EventsResponse
+	62, // 79: hypercall.v1.ControlPlane.Exec:output_type -> hypercall.guest.v1.ExecEvent
+	63, // 80: hypercall.v1.ControlPlane.ReadFile:output_type -> hypercall.guest.v1.ReadFileResponse
+	64, // 81: hypercall.v1.ControlPlane.WriteFile:output_type -> hypercall.guest.v1.WriteFileResponse
+	31, // 82: hypercall.v1.ControlPlane.Fork:output_type -> hypercall.v1.ForkResult
+	34, // 83: hypercall.v1.ControlPlane.Calls:output_type -> hypercall.v1.CallsResponse
+	37, // 84: hypercall.v1.ControlPlane.Steps:output_type -> hypercall.v1.StepsResponse
+	39, // 85: hypercall.v1.ControlPlane.Compare:output_type -> hypercall.v1.Divergence
+	41, // 86: hypercall.v1.ControlPlane.CompileEvaluation:output_type -> hypercall.v1.EvaluationPlan
+	47, // 87: hypercall.v1.ControlPlane.SubmitEvaluation:output_type -> hypercall.v1.Evaluation
+	47, // 88: hypercall.v1.ControlPlane.GetEvaluation:output_type -> hypercall.v1.Evaluation
+	49, // 89: hypercall.v1.ControlPlane.GetReport:output_type -> hypercall.v1.EvaluationReport
+	51, // 90: hypercall.v1.ControlPlane.ProjectionStatus:output_type -> hypercall.v1.ProjectionStatusResponse
+	72, // [72:91] is the sub-list for method output_type
+	53, // [53:72] is the sub-list for method input_type
+	53, // [53:53] is the sub-list for extension type_name
+	53, // [53:53] is the sub-list for extension extendee
+	0,  // [0:53] is the sub-list for field type_name
 }
 
 func init() { file_hypercall_v1_control_proto_init() }
@@ -3557,13 +4458,15 @@ func file_hypercall_v1_control_proto_init() {
 		(*Resource_BranchStatus)(nil),
 		(*Resource_OperationStatus)(nil),
 	}
+	file_hypercall_v1_control_proto_msgTypes[43].OneofWrappers = []any{}
+	file_hypercall_v1_control_proto_msgTypes[44].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_hypercall_v1_control_proto_rawDesc), len(file_hypercall_v1_control_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   44,
+			NumMessages:   56,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

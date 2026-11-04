@@ -20,20 +20,25 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ControlPlane_PutResource_FullMethodName    = "/hypercall.v1.ControlPlane/PutResource"
-	ControlPlane_GetResource_FullMethodName    = "/hypercall.v1.ControlPlane/GetResource"
-	ControlPlane_ListResources_FullMethodName  = "/hypercall.v1.ControlPlane/ListResources"
-	ControlPlane_Submit_FullMethodName         = "/hypercall.v1.ControlPlane/Submit"
-	ControlPlane_SubmitManifest_FullMethodName = "/hypercall.v1.ControlPlane/SubmitManifest"
-	ControlPlane_Action_FullMethodName         = "/hypercall.v1.ControlPlane/Action"
-	ControlPlane_Events_FullMethodName         = "/hypercall.v1.ControlPlane/Events"
-	ControlPlane_Exec_FullMethodName           = "/hypercall.v1.ControlPlane/Exec"
-	ControlPlane_ReadFile_FullMethodName       = "/hypercall.v1.ControlPlane/ReadFile"
-	ControlPlane_WriteFile_FullMethodName      = "/hypercall.v1.ControlPlane/WriteFile"
-	ControlPlane_Fork_FullMethodName           = "/hypercall.v1.ControlPlane/Fork"
-	ControlPlane_Calls_FullMethodName          = "/hypercall.v1.ControlPlane/Calls"
-	ControlPlane_Steps_FullMethodName          = "/hypercall.v1.ControlPlane/Steps"
-	ControlPlane_Compare_FullMethodName        = "/hypercall.v1.ControlPlane/Compare"
+	ControlPlane_PutResource_FullMethodName       = "/hypercall.v1.ControlPlane/PutResource"
+	ControlPlane_GetResource_FullMethodName       = "/hypercall.v1.ControlPlane/GetResource"
+	ControlPlane_ListResources_FullMethodName     = "/hypercall.v1.ControlPlane/ListResources"
+	ControlPlane_Submit_FullMethodName            = "/hypercall.v1.ControlPlane/Submit"
+	ControlPlane_SubmitManifest_FullMethodName    = "/hypercall.v1.ControlPlane/SubmitManifest"
+	ControlPlane_Action_FullMethodName            = "/hypercall.v1.ControlPlane/Action"
+	ControlPlane_Events_FullMethodName            = "/hypercall.v1.ControlPlane/Events"
+	ControlPlane_Exec_FullMethodName              = "/hypercall.v1.ControlPlane/Exec"
+	ControlPlane_ReadFile_FullMethodName          = "/hypercall.v1.ControlPlane/ReadFile"
+	ControlPlane_WriteFile_FullMethodName         = "/hypercall.v1.ControlPlane/WriteFile"
+	ControlPlane_Fork_FullMethodName              = "/hypercall.v1.ControlPlane/Fork"
+	ControlPlane_Calls_FullMethodName             = "/hypercall.v1.ControlPlane/Calls"
+	ControlPlane_Steps_FullMethodName             = "/hypercall.v1.ControlPlane/Steps"
+	ControlPlane_Compare_FullMethodName           = "/hypercall.v1.ControlPlane/Compare"
+	ControlPlane_CompileEvaluation_FullMethodName = "/hypercall.v1.ControlPlane/CompileEvaluation"
+	ControlPlane_SubmitEvaluation_FullMethodName  = "/hypercall.v1.ControlPlane/SubmitEvaluation"
+	ControlPlane_GetEvaluation_FullMethodName     = "/hypercall.v1.ControlPlane/GetEvaluation"
+	ControlPlane_GetReport_FullMethodName         = "/hypercall.v1.ControlPlane/GetReport"
+	ControlPlane_ProjectionStatus_FullMethodName  = "/hypercall.v1.ControlPlane/ProjectionStatus"
 )
 
 // ControlPlaneClient is the client API for ControlPlane service.
@@ -57,6 +62,11 @@ type ControlPlaneClient interface {
 	Calls(ctx context.Context, in *CallsRequest, opts ...grpc.CallOption) (*CallsResponse, error)
 	Steps(ctx context.Context, in *StepsRequest, opts ...grpc.CallOption) (*StepsResponse, error)
 	Compare(ctx context.Context, in *CompareRequest, opts ...grpc.CallOption) (*Divergence, error)
+	CompileEvaluation(ctx context.Context, in *CompileEvaluationRequest, opts ...grpc.CallOption) (*EvaluationPlan, error)
+	SubmitEvaluation(ctx context.Context, in *SubmitEvaluationRequest, opts ...grpc.CallOption) (*Evaluation, error)
+	GetEvaluation(ctx context.Context, in *GetEvaluationRequest, opts ...grpc.CallOption) (*Evaluation, error)
+	GetReport(ctx context.Context, in *GetReportRequest, opts ...grpc.CallOption) (*EvaluationReport, error)
+	ProjectionStatus(ctx context.Context, in *ProjectionStatusRequest, opts ...grpc.CallOption) (*ProjectionStatusResponse, error)
 }
 
 type controlPlaneClient struct {
@@ -216,6 +226,56 @@ func (c *controlPlaneClient) Compare(ctx context.Context, in *CompareRequest, op
 	return out, nil
 }
 
+func (c *controlPlaneClient) CompileEvaluation(ctx context.Context, in *CompileEvaluationRequest, opts ...grpc.CallOption) (*EvaluationPlan, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EvaluationPlan)
+	err := c.cc.Invoke(ctx, ControlPlane_CompileEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) SubmitEvaluation(ctx context.Context, in *SubmitEvaluationRequest, opts ...grpc.CallOption) (*Evaluation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Evaluation)
+	err := c.cc.Invoke(ctx, ControlPlane_SubmitEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) GetEvaluation(ctx context.Context, in *GetEvaluationRequest, opts ...grpc.CallOption) (*Evaluation, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(Evaluation)
+	err := c.cc.Invoke(ctx, ControlPlane_GetEvaluation_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) GetReport(ctx context.Context, in *GetReportRequest, opts ...grpc.CallOption) (*EvaluationReport, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(EvaluationReport)
+	err := c.cc.Invoke(ctx, ControlPlane_GetReport_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *controlPlaneClient) ProjectionStatus(ctx context.Context, in *ProjectionStatusRequest, opts ...grpc.CallOption) (*ProjectionStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ProjectionStatusResponse)
+	err := c.cc.Invoke(ctx, ControlPlane_ProjectionStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ControlPlaneServer is the server API for ControlPlane service.
 // All implementations must embed UnimplementedControlPlaneServer
 // for forward compatibility.
@@ -237,6 +297,11 @@ type ControlPlaneServer interface {
 	Calls(context.Context, *CallsRequest) (*CallsResponse, error)
 	Steps(context.Context, *StepsRequest) (*StepsResponse, error)
 	Compare(context.Context, *CompareRequest) (*Divergence, error)
+	CompileEvaluation(context.Context, *CompileEvaluationRequest) (*EvaluationPlan, error)
+	SubmitEvaluation(context.Context, *SubmitEvaluationRequest) (*Evaluation, error)
+	GetEvaluation(context.Context, *GetEvaluationRequest) (*Evaluation, error)
+	GetReport(context.Context, *GetReportRequest) (*EvaluationReport, error)
+	ProjectionStatus(context.Context, *ProjectionStatusRequest) (*ProjectionStatusResponse, error)
 	mustEmbedUnimplementedControlPlaneServer()
 }
 
@@ -288,6 +353,21 @@ func (UnimplementedControlPlaneServer) Steps(context.Context, *StepsRequest) (*S
 }
 func (UnimplementedControlPlaneServer) Compare(context.Context, *CompareRequest) (*Divergence, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Compare not implemented")
+}
+func (UnimplementedControlPlaneServer) CompileEvaluation(context.Context, *CompileEvaluationRequest) (*EvaluationPlan, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CompileEvaluation not implemented")
+}
+func (UnimplementedControlPlaneServer) SubmitEvaluation(context.Context, *SubmitEvaluationRequest) (*Evaluation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method SubmitEvaluation not implemented")
+}
+func (UnimplementedControlPlaneServer) GetEvaluation(context.Context, *GetEvaluationRequest) (*Evaluation, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetEvaluation not implemented")
+}
+func (UnimplementedControlPlaneServer) GetReport(context.Context, *GetReportRequest) (*EvaluationReport, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetReport not implemented")
+}
+func (UnimplementedControlPlaneServer) ProjectionStatus(context.Context, *ProjectionStatusRequest) (*ProjectionStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ProjectionStatus not implemented")
 }
 func (UnimplementedControlPlaneServer) mustEmbedUnimplementedControlPlaneServer() {}
 func (UnimplementedControlPlaneServer) testEmbeddedByValue()                      {}
@@ -555,6 +635,96 @@ func _ControlPlane_Compare_Handler(srv interface{}, ctx context.Context, dec fun
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ControlPlane_CompileEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CompileEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).CompileEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_CompileEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).CompileEvaluation(ctx, req.(*CompileEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_SubmitEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SubmitEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).SubmitEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_SubmitEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).SubmitEvaluation(ctx, req.(*SubmitEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_GetEvaluation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetEvaluationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).GetEvaluation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_GetEvaluation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).GetEvaluation(ctx, req.(*GetEvaluationRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_GetReport_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetReportRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).GetReport(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_GetReport_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).GetReport(ctx, req.(*GetReportRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _ControlPlane_ProjectionStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ProjectionStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ControlPlaneServer).ProjectionStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ControlPlane_ProjectionStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ControlPlaneServer).ProjectionStatus(ctx, req.(*ProjectionStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ControlPlane_ServiceDesc is the grpc.ServiceDesc for ControlPlane service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -613,6 +783,26 @@ var ControlPlane_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Compare",
 			Handler:    _ControlPlane_Compare_Handler,
+		},
+		{
+			MethodName: "CompileEvaluation",
+			Handler:    _ControlPlane_CompileEvaluation_Handler,
+		},
+		{
+			MethodName: "SubmitEvaluation",
+			Handler:    _ControlPlane_SubmitEvaluation_Handler,
+		},
+		{
+			MethodName: "GetEvaluation",
+			Handler:    _ControlPlane_GetEvaluation_Handler,
+		},
+		{
+			MethodName: "GetReport",
+			Handler:    _ControlPlane_GetReport_Handler,
+		},
+		{
+			MethodName: "ProjectionStatus",
+			Handler:    _ControlPlane_ProjectionStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

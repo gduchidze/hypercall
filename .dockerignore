@@ -1,0 +1,13 @@
+# Local development state is not an image input.
+.git/
+.venv/
+.omc/
+.env
+.env.*
+**/__pycache__/
+**/*.pyc
+bin/
+build/
+dist/
+coverage/
+docs/validation/

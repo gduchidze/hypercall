@@ -149,6 +149,21 @@ func TestPythonCooperativeHookCommitsThroughGuestMailboxAndPostgres(t *testing.T
 }
 
 func TestPublicTracePaginationAndForkPreserveSemanticLineage(t *testing.T) {
+	// Cold CLI compilation is test preparation, separate from the live assignment
+	// and public-client deadline. Keep both phases bounded independently.
+	root, err := filepath.Abs("../..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "hypercall")
+	buildCtx, cancelBuild := context.WithTimeout(t.Context(), 2*time.Minute)
+	defer cancelBuild()
+	build := exec.CommandContext(buildCtx, filepath.Join(runtime.GOROOT(), "bin/go"), "build", "-o", binary, "./cmd/hypercall")
+	build.Dir = root
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+	cancelBuild()
 	store, service, scope, assignment := agentAssignment(t)
 	ctx, cancel := context.WithTimeout(t.Context(), 20*time.Second)
 	defer cancel()
@@ -245,16 +260,6 @@ func TestPublicTracePaginationAndForkPreserveSemanticLineage(t *testing.T) {
 		t.Fatal(err)
 	}
 	go server.GRPC().Serve(tcp)
-	root, err := filepath.Abs("../..")
-	if err != nil {
-		t.Fatal(err)
-	}
-	binary := filepath.Join(t.TempDir(), "hypercall")
-	build := exec.CommandContext(ctx, filepath.Join(runtime.GOROOT(), "bin/go"), "build", "-o", binary, "./cmd/hypercall")
-	build.Dir = root
-	if output, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build CLI: %v\n%s", err, output)
-	}
 	process := exec.CommandContext(ctx, filepath.Join(root, ".venv/bin/python"), "test/contract/public_agent_scenario.py", tcp.Addr().String(), scope.ProjectID, assignment.BranchID, checkpoint.Metadata.Id, model.Id, model.Digest, fork.Operation.Metadata.Id)
 	process.Dir = root
 	process.Env = append(os.Environ(), "HYPERCALL_API_KEY="+key, "HYPERCALL_TEST_CLI="+binary)

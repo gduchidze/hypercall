@@ -24,6 +24,11 @@ service ControlPlane {
   rpc Calls(CallsRequest) returns (CallsResponse);
   rpc Steps(StepsRequest) returns (StepsResponse);
   rpc Compare(CompareRequest) returns (Divergence);
+  rpc CompileEvaluation(CompileEvaluationRequest) returns (EvaluationPlan);
+  rpc SubmitEvaluation(SubmitEvaluationRequest) returns (Evaluation);
+  rpc GetEvaluation(GetEvaluationRequest) returns (Evaluation);
+  rpc GetReport(GetReportRequest) returns (EvaluationReport);
+  rpc ProjectionStatus(ProjectionStatusRequest) returns (ProjectionStatusResponse);
 }
 message Metadata {
   string id = 1;
@@ -61,7 +66,7 @@ message RunSpec { Resource task = 1; Resource workspace = 2; repeated Resource m
 message BranchSpec { string run_id = 1; Resource model = 2; string parent_checkpoint_id = 3; string parent_branch_id = 4; string fork_operation_id = 5; }
 // Phase 2A exposes inspection only; runtime checkpoint creation requires Phase 1B.
 message CheckpointSpec { string manifest_digest = 1; string manifest_uri = 2; string protocol_version = 3; int64 event_position = 4; bool verified = 5; string branch_id = 6; map<string,string> compatibility = 7; string native_checkpoint_id = 8; bytes snapshot_manifest = 9; hypercall.harness.v1.AgentBarrier barrier = 10; string route_digest = 11; int64 budget_remaining_ms = 12; }
-message OperationSpec { string branch_id = 1; string action = 2; string checkpoint_id = 3; repeated string child_branch_ids = 4; string parent_operation_id = 5; }
+message OperationSpec { string branch_id = 1; string action = 2; string checkpoint_id = 3; repeated string child_branch_ids = 4; string parent_operation_id = 5; string evaluation_id = 6; }
 message BranchStatus { string desired = 1; string observed = 2; string execution_id = 3; int64 epoch = 4; google.protobuf.Timestamp lease_until = 5; int64 last_event = 6; string error = 7; string checkpoint_id = 8; int64 budget_remaining_ms = 9; string sandbox_id = 10; string agent_gate = 11; string route_digest = 12; int64 agent_step = 13; bool trace_complete = 14; }
 message OperationStatus { string state = 1; string error = 2; }
 message Resource {
@@ -105,3 +110,22 @@ message AgentStep { string branch_id = 1; int64 step = 2; string state_digest = 
 message StepsResponse { repeated AgentStep steps = 1; int64 next_step = 2; }
 message CompareRequest { string project_id = 1; string left_branch = 2; string right_branch = 3; string comparator = 4; }
 message Divergence { string comparator = 1; string state = 2; int64 step = 3; int32 position = 4; string left_digest = 5; string right_digest = 6; string reason = 7; }
+
+message CompileEvaluationRequest { string project_id = 1; string config_yaml = 2; }
+// Canonical UTF-8 JSON preserves exact integer microUSD amounts. The versioned
+// configuration/report schema is hypercall.io/eval/v1, documented with the API.
+message EvaluationPlan { string digest = 1; bytes plan_json = 2; }
+message EvaluationCost { int64 micro_usd = 1; string kind = 2; string price_digest = 3; string recorded_at = 4; }
+message EvaluationMeasurements { optional int64 latency_ms = 1; EvaluationCost cost = 2; }
+message EvaluationObservation {
+ string cell_id = 1; string source = 2; optional string output = 3; string state = 4;
+ bool trace_complete = 5; string branch_id = 6; string call_id = 7;
+ EvaluationMeasurements measurements = 8;
+}
+message SubmitEvaluationRequest { string project_id = 1; string config_yaml = 2; repeated EvaluationObservation observations = 3; string idempotency_key = 4; }
+message GetEvaluationRequest { string project_id = 1; string id = 2; }
+message Evaluation { string id = 1; string operation_id = 2; string input_digest = 3; string state = 4; int32 attempts = 5; bytes plan_json = 6; google.protobuf.Timestamp created_at = 7; google.protobuf.Timestamp completed_at = 8; }
+message GetReportRequest { string project_id = 1; string id = 2; }
+message EvaluationReport { string evaluation_id = 1; bytes report_json = 2; string markdown = 3; bool ci_pass = 4; repeated string reasons = 5; ProjectionStatusResponse projection = 6; }
+message ProjectionStatusRequest { string project_id = 1; }
+message ProjectionStatusResponse { int64 pending = 1; double oldest_pending_seconds = 2; google.protobuf.Timestamp last_delivered_at = 3; }

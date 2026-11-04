@@ -1,0 +1,1675 @@
+{
+  "schema_version": "evaluation-fixtures.v1",
+  "assertions": [
+    {
+      "id": "equals-text",
+      "output": "Hello world",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello world"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "equals-text-fails",
+      "output": "Hello world",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello"
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-equals-text",
+      "output": "Hello",
+      "assertions": [
+        {
+          "type": "not-equals",
+          "value": "World"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "equals-number",
+      "output": "42",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": 42
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "equals-bool",
+      "output": "true",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": true
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "equals-object",
+      "output": "{\"foo\":\"bar\"}",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": {
+            "foo": "bar"
+          }
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "equals-array",
+      "output": "[1,2]",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": [
+            1,
+            2
+          ]
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "object-invalid-json-negated",
+      "output": "not JSON",
+      "assertions": [
+        {
+          "type": "not-equals",
+          "value": {
+            "foo": "bar"
+          }
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "unicode-exact",
+      "output": "ქართული λ café",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "ქართული λ café"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "unicode-no-normalization",
+      "output": "café",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "café"
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "equals-json-null",
+      "output": "null",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": null
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "contains-unicode",
+      "output": "გამარჯობა λ world",
+      "assertions": [
+        {
+          "type": "contains",
+          "value": "λ"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "contains-numeric",
+      "output": "answer 42",
+      "assertions": [
+        {
+          "type": "contains",
+          "value": 42
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "contains-fails",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "contains",
+          "value": "goodbye"
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-contains",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-contains",
+          "value": "goodbye"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-valid-object",
+      "output": "{\"name\":\"Test\"}",
+      "assertions": [
+        {
+          "type": "is-json"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-valid-scalar",
+      "output": "null",
+      "assertions": [
+        {
+          "type": "is-json"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-malformed",
+      "output": "{\"name\":",
+      "assertions": [
+        {
+          "type": "is-json"
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-negated-malformed",
+      "output": "not JSON",
+      "assertions": [
+        {
+          "type": "not-is-json"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "json-negated-valid",
+      "output": "[]",
+      "assertions": [
+        {
+          "type": "not-is-json"
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-object-valid",
+      "output": "{\"name\":\"Test\",\"age\":42}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-required-missing",
+      "output": "{\"age\":42}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-additional-property",
+      "output": "{\"name\":\"Test\",\"extra\":1}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-type-fails",
+      "output": "{\"name\":42}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-maximum-fails",
+      "output": "{\"name\":\"Test\",\"age\":121}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-array-enum",
+      "output": "[\"a\",\"b\"]",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "a",
+                "b"
+              ]
+            }
+          }
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "schema-negated",
+      "output": "{\"age\":42}",
+      "assertions": [
+        {
+          "type": "not-is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "weighted-no-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "weight": 3,
+          "value": "hello"
+        },
+        {
+          "type": "contains",
+          "weight": 1,
+          "value": "bye"
+        }
+      ],
+      "expected": {
+        "pass": false,
+        "score": 0.75,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          },
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "weighted-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "weight": 3,
+          "value": "hello"
+        },
+        {
+          "type": "contains",
+          "weight": 1,
+          "value": "bye"
+        }
+      ],
+      "threshold": 0.7,
+      "expected": {
+        "pass": true,
+        "score": 0.75,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          },
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "zero-threshold",
+      "output": "wrong",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ],
+      "threshold": 0,
+      "expected": {
+        "pass": true,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "zero-weight",
+      "output": "wrong",
+      "assertions": [
+        {
+          "type": "equals",
+          "weight": 0,
+          "value": "hello"
+        }
+      ],
+      "expected": {
+        "pass": true,
+        "score": 0,
+        "components": [
+          {
+            "pass": true,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "no-assertions",
+      "output": "hello",
+      "assertions": [],
+      "reject": true,
+      "rejection_reason": "Hypercall requires 1..64 explicit assertions; empty assertion lists are unsupported.",
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": []
+      }
+    },
+    {
+      "id": "case-variable",
+      "output": "Hello World",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello {{ name }}"
+        }
+      ],
+      "vars": {
+        "name": "World"
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing-equals-value",
+      "output": "null",
+      "assertions": [
+        {
+          "type": "equals"
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing-contains-value",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "contains"
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "error": "Error: Invariant failed: \"contains\" assertion type must have a string or number value"
+      }
+    },
+    {
+      "id": "invalid-schema",
+      "output": "{}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "bogus"
+          }
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "error": "Error: schema is invalid: data/type must be equal to one of the allowed values, data/type must be array, data/type must match a schema in anyOf"
+      }
+    },
+    {
+      "id": "unsupported-pattern",
+      "output": "\"hello\"",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "string",
+            "pattern": "h.*"
+          }
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "unicode-normalization-optin",
+      "output": "café",
+      "assertions": [
+        {
+          "type": "equals",
+          "normalizeUnicode": true,
+          "value": "café"
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing-case-variable",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "{{ missing }}"
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "latency-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 40
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "latency-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 50
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "latency-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 60
+      },
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-latency-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 40
+      },
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-latency-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 50
+      },
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-latency-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 60
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "cost-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 40,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "cost-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 50,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "cost-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 60,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      },
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-cost-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 40,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      },
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-cost-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 50,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      },
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": false,
+            "score": 0
+          }
+        ]
+      }
+    },
+    {
+      "id": "not-cost-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 60,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      },
+      "expected": {
+        "pass": true,
+        "score": 1,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    },
+    {
+      "id": "latency-missing-measurement",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 1
+        }
+      ],
+      "threshold": 0,
+      "expected": {
+        "error": "Error: Latency assertion does not support cached results. Rerun the eval with --no-cache"
+      }
+    },
+    {
+      "id": "latency-missing-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency"
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "error": "Error: Latency assertion must have a threshold in milliseconds"
+      }
+    },
+    {
+      "id": "cost-missing-measurement",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 1
+        }
+      ],
+      "threshold": 0,
+      "expected": {
+        "error": "Error: Cost assertion does not support providers that do not return cost"
+      }
+    },
+    {
+      "id": "cost-missing-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost"
+        }
+      ],
+      "reject": true,
+      "expected": {
+        "error": "Error: Cost assertion must have a threshold"
+      }
+    },
+    {
+      "id": "weight-overflow",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello",
+          "weight": 1e+308
+        },
+        {
+          "type": "equals",
+          "value": "hello",
+          "weight": 1e+308
+        }
+      ],
+      "threshold": 0,
+      "expected": {
+        "pass": false,
+        "score": 0,
+        "components": [
+          {
+            "pass": true,
+            "score": 1
+          },
+          {
+            "pass": true,
+            "score": 1
+          }
+        ]
+      }
+    }
+  ],
+  "matrices": [
+    {
+      "id": "string-cartesian-repeated",
+      "vars": {
+        "language": [
+          "English",
+          "French"
+        ],
+        "greeting": [
+          "Hello",
+          "Bonjour"
+        ]
+      },
+      "candidates": [
+        "fixture-a",
+        "fixture-b"
+      ],
+      "repetitions": 2,
+      "prompt": "{{ greeting }} {{ language }}",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello English"
+        }
+      ],
+      "expected": {
+        "combinations": [
+          {
+            "language": "English",
+            "greeting": "Hello"
+          },
+          {
+            "language": "English",
+            "greeting": "Bonjour"
+          },
+          {
+            "language": "French",
+            "greeting": "Hello"
+          },
+          {
+            "language": "French",
+            "greeting": "Bonjour"
+          }
+        ],
+        "cells": [
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "English",
+              "greeting": "Bonjour"
+            },
+            "repetition": 0,
+            "output": "Bonjour English",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "English",
+              "greeting": "Bonjour"
+            },
+            "repetition": 1,
+            "output": "Bonjour English",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "English",
+              "greeting": "Hello"
+            },
+            "repetition": 0,
+            "output": "Hello English",
+            "pass": true,
+            "score": 1,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "English",
+              "greeting": "Hello"
+            },
+            "repetition": 1,
+            "output": "Hello English",
+            "pass": true,
+            "score": 1,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "French",
+              "greeting": "Bonjour"
+            },
+            "repetition": 0,
+            "output": "Bonjour French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "French",
+              "greeting": "Bonjour"
+            },
+            "repetition": 1,
+            "output": "Bonjour French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "French",
+              "greeting": "Hello"
+            },
+            "repetition": 0,
+            "output": "Hello French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-a",
+            "vars": {
+              "language": "French",
+              "greeting": "Hello"
+            },
+            "repetition": 1,
+            "output": "Hello French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "English",
+              "greeting": "Bonjour"
+            },
+            "repetition": 0,
+            "output": "Bonjour English",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "English",
+              "greeting": "Bonjour"
+            },
+            "repetition": 1,
+            "output": "Bonjour English",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "English",
+              "greeting": "Hello"
+            },
+            "repetition": 0,
+            "output": "Hello English",
+            "pass": true,
+            "score": 1,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "English",
+              "greeting": "Hello"
+            },
+            "repetition": 1,
+            "output": "Hello English",
+            "pass": true,
+            "score": 1,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "French",
+              "greeting": "Bonjour"
+            },
+            "repetition": 0,
+            "output": "Bonjour French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "French",
+              "greeting": "Bonjour"
+            },
+            "repetition": 1,
+            "output": "Bonjour French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "French",
+              "greeting": "Hello"
+            },
+            "repetition": 0,
+            "output": "Hello French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          },
+          {
+            "candidate": "fixture-b",
+            "vars": {
+              "language": "French",
+              "greeting": "Hello"
+            },
+            "repetition": 1,
+            "output": "Hello French",
+            "pass": false,
+            "score": 0,
+            "error": false
+          }
+        ],
+        "passed": 4,
+        "mean_score": 0.25
+      }
+    },
+    {
+      "id": "atomic-numeric-array",
+      "vars": {
+        "numbers": [
+          1,
+          2,
+          3
+        ]
+      },
+      "candidates": [
+        "fixture"
+      ],
+      "repetitions": 2,
+      "prompt": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ],
+      "reject": true,
+      "rejection_reason": "Only nonempty string arrays form supported variable dimensions; numeric arrays are rejected.",
+      "expected": {
+        "combinations": [
+          {
+            "numbers": [
+              1,
+              2,
+              3
+            ]
+          }
+        ],
+        "cells": [
+          {
+            "candidate": "fixture",
+            "vars": {
+              "numbers": [
+                1,
+                2,
+                3
+              ]
+            },
+            "repetition": 0,
+            "output": "hello",
+            "pass": true,
+            "score": 1,
+            "error": false
+          },
+          {
+            "candidate": "fixture",
+            "vars": {
+              "numbers": [
+                1,
+                2,
+                3
+              ]
+            },
+            "repetition": 1,
+            "output": "hello",
+            "pass": true,
+            "score": 1,
+            "error": false
+          }
+        ],
+        "passed": 2,
+        "mean_score": 1
+      }
+    },
+    {
+      "id": "missing-provider-output",
+      "vars": {},
+      "candidates": [
+        "fixture"
+      ],
+      "repetitions": 1,
+      "prompt": "hello",
+      "response": {},
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ],
+      "expected": {
+        "combinations": [
+          {}
+        ],
+        "cells": [
+          {
+            "candidate": "fixture",
+            "vars": {},
+            "output": null,
+            "pass": false,
+            "score": 0,
+            "error": true
+          }
+        ],
+        "passed": 0,
+        "mean_score": 0
+      }
+    },
+    {
+      "id": "provider-error",
+      "vars": {},
+      "candidates": [
+        "fixture"
+      ],
+      "repetitions": 1,
+      "prompt": "hello",
+      "response": {
+        "error": "synthetic provider failure"
+      },
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ],
+      "expected": {
+        "combinations": [
+          {}
+        ],
+        "cells": [
+          {
+            "candidate": "fixture",
+            "vars": {},
+            "output": null,
+            "pass": false,
+            "score": 0,
+            "error": true
+          }
+        ],
+        "passed": 0,
+        "mean_score": 0
+      }
+    }
+  ]
+}

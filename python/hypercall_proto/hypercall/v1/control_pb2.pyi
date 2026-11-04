@@ -213,18 +213,20 @@ class CheckpointSpec(_message.Message):
     def __init__(self, manifest_digest: _Optional[str] = ..., manifest_uri: _Optional[str] = ..., protocol_version: _Optional[str] = ..., event_position: _Optional[int] = ..., verified: bool = ..., branch_id: _Optional[str] = ..., compatibility: _Optional[_Mapping[str, str]] = ..., native_checkpoint_id: _Optional[str] = ..., snapshot_manifest: _Optional[bytes] = ..., barrier: _Optional[_Union[_harness_pb2.AgentBarrier, _Mapping]] = ..., route_digest: _Optional[str] = ..., budget_remaining_ms: _Optional[int] = ...) -> None: ...
 
 class OperationSpec(_message.Message):
-    __slots__ = ("branch_id", "action", "checkpoint_id", "child_branch_ids", "parent_operation_id")
+    __slots__ = ("branch_id", "action", "checkpoint_id", "child_branch_ids", "parent_operation_id", "evaluation_id")
     BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
     ACTION_FIELD_NUMBER: _ClassVar[int]
     CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
     CHILD_BRANCH_IDS_FIELD_NUMBER: _ClassVar[int]
     PARENT_OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
+    EVALUATION_ID_FIELD_NUMBER: _ClassVar[int]
     branch_id: str
     action: str
     checkpoint_id: str
     child_branch_ids: _containers.RepeatedScalarFieldContainer[str]
     parent_operation_id: str
-    def __init__(self, branch_id: _Optional[str] = ..., action: _Optional[str] = ..., checkpoint_id: _Optional[str] = ..., child_branch_ids: _Optional[_Iterable[str]] = ..., parent_operation_id: _Optional[str] = ...) -> None: ...
+    evaluation_id: str
+    def __init__(self, branch_id: _Optional[str] = ..., action: _Optional[str] = ..., checkpoint_id: _Optional[str] = ..., child_branch_ids: _Optional[_Iterable[str]] = ..., parent_operation_id: _Optional[str] = ..., evaluation_id: _Optional[str] = ...) -> None: ...
 
 class BranchStatus(_message.Message):
     __slots__ = ("desired", "observed", "execution_id", "epoch", "lease_until", "last_event", "error", "checkpoint_id", "budget_remaining_ms", "sandbox_id", "agent_gate", "route_digest", "agent_step", "trace_complete")
@@ -575,3 +577,139 @@ class Divergence(_message.Message):
     right_digest: str
     reason: str
     def __init__(self, comparator: _Optional[str] = ..., state: _Optional[str] = ..., step: _Optional[int] = ..., position: _Optional[int] = ..., left_digest: _Optional[str] = ..., right_digest: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+
+class CompileEvaluationRequest(_message.Message):
+    __slots__ = ("project_id", "config_yaml")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    CONFIG_YAML_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    config_yaml: str
+    def __init__(self, project_id: _Optional[str] = ..., config_yaml: _Optional[str] = ...) -> None: ...
+
+class EvaluationPlan(_message.Message):
+    __slots__ = ("digest", "plan_json")
+    DIGEST_FIELD_NUMBER: _ClassVar[int]
+    PLAN_JSON_FIELD_NUMBER: _ClassVar[int]
+    digest: str
+    plan_json: bytes
+    def __init__(self, digest: _Optional[str] = ..., plan_json: _Optional[bytes] = ...) -> None: ...
+
+class EvaluationCost(_message.Message):
+    __slots__ = ("micro_usd", "kind", "price_digest", "recorded_at")
+    MICRO_USD_FIELD_NUMBER: _ClassVar[int]
+    KIND_FIELD_NUMBER: _ClassVar[int]
+    PRICE_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    RECORDED_AT_FIELD_NUMBER: _ClassVar[int]
+    micro_usd: int
+    kind: str
+    price_digest: str
+    recorded_at: str
+    def __init__(self, micro_usd: _Optional[int] = ..., kind: _Optional[str] = ..., price_digest: _Optional[str] = ..., recorded_at: _Optional[str] = ...) -> None: ...
+
+class EvaluationMeasurements(_message.Message):
+    __slots__ = ("latency_ms", "cost")
+    LATENCY_MS_FIELD_NUMBER: _ClassVar[int]
+    COST_FIELD_NUMBER: _ClassVar[int]
+    latency_ms: int
+    cost: EvaluationCost
+    def __init__(self, latency_ms: _Optional[int] = ..., cost: _Optional[_Union[EvaluationCost, _Mapping]] = ...) -> None: ...
+
+class EvaluationObservation(_message.Message):
+    __slots__ = ("cell_id", "source", "output", "state", "trace_complete", "branch_id", "call_id", "measurements")
+    CELL_ID_FIELD_NUMBER: _ClassVar[int]
+    SOURCE_FIELD_NUMBER: _ClassVar[int]
+    OUTPUT_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    TRACE_COMPLETE_FIELD_NUMBER: _ClassVar[int]
+    BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
+    CALL_ID_FIELD_NUMBER: _ClassVar[int]
+    MEASUREMENTS_FIELD_NUMBER: _ClassVar[int]
+    cell_id: str
+    source: str
+    output: str
+    state: str
+    trace_complete: bool
+    branch_id: str
+    call_id: str
+    measurements: EvaluationMeasurements
+    def __init__(self, cell_id: _Optional[str] = ..., source: _Optional[str] = ..., output: _Optional[str] = ..., state: _Optional[str] = ..., trace_complete: bool = ..., branch_id: _Optional[str] = ..., call_id: _Optional[str] = ..., measurements: _Optional[_Union[EvaluationMeasurements, _Mapping]] = ...) -> None: ...
+
+class SubmitEvaluationRequest(_message.Message):
+    __slots__ = ("project_id", "config_yaml", "observations", "idempotency_key")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    CONFIG_YAML_FIELD_NUMBER: _ClassVar[int]
+    OBSERVATIONS_FIELD_NUMBER: _ClassVar[int]
+    IDEMPOTENCY_KEY_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    config_yaml: str
+    observations: _containers.RepeatedCompositeFieldContainer[EvaluationObservation]
+    idempotency_key: str
+    def __init__(self, project_id: _Optional[str] = ..., config_yaml: _Optional[str] = ..., observations: _Optional[_Iterable[_Union[EvaluationObservation, _Mapping]]] = ..., idempotency_key: _Optional[str] = ...) -> None: ...
+
+class GetEvaluationRequest(_message.Message):
+    __slots__ = ("project_id", "id")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    id: str
+    def __init__(self, project_id: _Optional[str] = ..., id: _Optional[str] = ...) -> None: ...
+
+class Evaluation(_message.Message):
+    __slots__ = ("id", "operation_id", "input_digest", "state", "attempts", "plan_json", "created_at", "completed_at")
+    ID_FIELD_NUMBER: _ClassVar[int]
+    OPERATION_ID_FIELD_NUMBER: _ClassVar[int]
+    INPUT_DIGEST_FIELD_NUMBER: _ClassVar[int]
+    STATE_FIELD_NUMBER: _ClassVar[int]
+    ATTEMPTS_FIELD_NUMBER: _ClassVar[int]
+    PLAN_JSON_FIELD_NUMBER: _ClassVar[int]
+    CREATED_AT_FIELD_NUMBER: _ClassVar[int]
+    COMPLETED_AT_FIELD_NUMBER: _ClassVar[int]
+    id: str
+    operation_id: str
+    input_digest: str
+    state: str
+    attempts: int
+    plan_json: bytes
+    created_at: _timestamp_pb2.Timestamp
+    completed_at: _timestamp_pb2.Timestamp
+    def __init__(self, id: _Optional[str] = ..., operation_id: _Optional[str] = ..., input_digest: _Optional[str] = ..., state: _Optional[str] = ..., attempts: _Optional[int] = ..., plan_json: _Optional[bytes] = ..., created_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ..., completed_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
+
+class GetReportRequest(_message.Message):
+    __slots__ = ("project_id", "id")
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    ID_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    id: str
+    def __init__(self, project_id: _Optional[str] = ..., id: _Optional[str] = ...) -> None: ...
+
+class EvaluationReport(_message.Message):
+    __slots__ = ("evaluation_id", "report_json", "markdown", "ci_pass", "reasons", "projection")
+    EVALUATION_ID_FIELD_NUMBER: _ClassVar[int]
+    REPORT_JSON_FIELD_NUMBER: _ClassVar[int]
+    MARKDOWN_FIELD_NUMBER: _ClassVar[int]
+    CI_PASS_FIELD_NUMBER: _ClassVar[int]
+    REASONS_FIELD_NUMBER: _ClassVar[int]
+    PROJECTION_FIELD_NUMBER: _ClassVar[int]
+    evaluation_id: str
+    report_json: bytes
+    markdown: str
+    ci_pass: bool
+    reasons: _containers.RepeatedScalarFieldContainer[str]
+    projection: ProjectionStatusResponse
+    def __init__(self, evaluation_id: _Optional[str] = ..., report_json: _Optional[bytes] = ..., markdown: _Optional[str] = ..., ci_pass: bool = ..., reasons: _Optional[_Iterable[str]] = ..., projection: _Optional[_Union[ProjectionStatusResponse, _Mapping]] = ...) -> None: ...
+
+class ProjectionStatusRequest(_message.Message):
+    __slots__ = ("project_id",)
+    PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
+    project_id: str
+    def __init__(self, project_id: _Optional[str] = ...) -> None: ...
+
+class ProjectionStatusResponse(_message.Message):
+    __slots__ = ("pending", "oldest_pending_seconds", "last_delivered_at")
+    PENDING_FIELD_NUMBER: _ClassVar[int]
+    OLDEST_PENDING_SECONDS_FIELD_NUMBER: _ClassVar[int]
+    LAST_DELIVERED_AT_FIELD_NUMBER: _ClassVar[int]
+    pending: int
+    oldest_pending_seconds: float
+    last_delivered_at: _timestamp_pb2.Timestamp
+    def __init__(self, pending: _Optional[int] = ..., oldest_pending_seconds: _Optional[float] = ..., last_delivered_at: _Optional[_Union[datetime.datetime, _timestamp_pb2.Timestamp, _Mapping]] = ...) -> None: ...
