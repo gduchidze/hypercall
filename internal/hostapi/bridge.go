@@ -23,6 +23,7 @@ import (
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
 	"github.com/gduchidze/hypercall/internal/controlplane"
+	"github.com/gduchidze/hypercall/internal/harness"
 	"github.com/gduchidze/hypercall/internal/sandbox"
 	"github.com/gduchidze/hypercall/internal/snapshot"
 )
@@ -35,6 +36,7 @@ type Config struct {
 	Logger                *slog.Logger
 	SnapshotStore         *snapshot.Store
 	ControlledSnapshots   bool
+	CooperativeAgents     bool
 	ControlledAgentDigest string
 }
 type record struct {
@@ -120,16 +122,32 @@ func (b *Bridge) Close() error {
 func (b *Bridge) Supports(action string) bool {
 	if action == "suspend" || action == "resume" {
 		_, ok := b.runtime.(sandbox.SnapshotBackend)
-		return b.cfg.ControlledSnapshots && b.cfg.SnapshotStore != nil && validDigest(b.cfg.ControlledAgentDigest) && ok
+		return (b.cfg.ControlledSnapshots || b.cfg.CooperativeAgents) && b.cfg.SnapshotStore != nil && validDigest(b.cfg.ControlledAgentDigest) && ok
 	}
 	return true
 }
 func (b *Bridge) SupportsRun(action string, run controlplane.RunSpec) bool {
-	if action != "suspend" && action != "resume" {
+	if action != "suspend" && action != "resume" && action != "fork" {
 		return true
 	}
 	var t controlplane.TaskSpec
-	return b.Supports(action) && decode(run.Task.Spec, &t) == nil && t.ExecutionMode == "controlled_python_v1" && t.AgentDigest == b.cfg.ControlledAgentDigest
+	if decode(run.Task.Spec, &t) != nil || t.AgentDigest != b.cfg.ControlledAgentDigest || !b.Supports("suspend") {
+		return false
+	}
+	if t.ExecutionMode == "controlled_python_v1" {
+		return b.cfg.ControlledSnapshots
+	}
+	if t.ExecutionMode == "cooperative_python_v1" {
+		_, ok := b.runtime.(sandbox.AgentBackend)
+		return b.cfg.CooperativeAgents && ok
+	}
+	return false
+}
+func sessionHash(a controlplane.Assignment) string {
+	if a.HarnessSession != nil {
+		return a.HarnessSession.SessionHash
+	}
+	return ""
 }
 func sandboxID(a controlplane.Assignment) string {
 	if a.SandboxID != "" {
@@ -160,6 +178,12 @@ func (b *Bridge) validate(a controlplane.Assignment, live bool) error {
 	}
 	if a.Scope != b.cfg.Scope {
 		return fail("permission_denied", "assignment outside authenticated host scope")
+	}
+	if a.HarnessSession != nil {
+		h := a.HarnessSession
+		if harness.ValidateSession(h) != nil || h.TenantId != a.Scope.TenantID || h.ProjectId != a.Scope.ProjectID || h.BranchId != a.BranchID || h.SandboxId != sandboxID(a) || h.ExecutionId != a.ExecutionID || h.Epoch != a.Epoch || h.ModelDigest != a.SelectedModel.Metadata.Digest {
+			return fail("invalid_argument", "immutable harness session assignment mismatch")
+		}
 	}
 	if a.Epoch < 1 || allocation(a).Validate() != nil || a.LeaseUntil.IsZero() {
 		return fail("invalid_argument", "invalid assignment identity, epoch or lease")
@@ -234,7 +258,7 @@ func (b *Bridge) save(a controlplane.Assignment, r record) error {
 	return errors.Join(dir.Sync(), dir.Close())
 }
 func same(a, c controlplane.Assignment) bool {
-	return a.Scope == c.Scope && a.BranchID == c.BranchID && sandboxID(a) == sandboxID(c) && a.ExecutionID == c.ExecutionID && a.Epoch == c.Epoch && a.LeaseUntil.Equal(c.LeaseUntil)
+	return sessionHash(a) == sessionHash(c) && a.Scope == c.Scope && a.BranchID == c.BranchID && sandboxID(a) == sandboxID(c) && a.ExecutionID == c.ExecutionID && a.Epoch == c.Epoch && a.LeaseUntil.Equal(c.LeaseUntil)
 }
 func (b *Bridge) existing(a controlplane.Assignment) (record, bool, error) {
 	r, ok, e := b.read(a)
@@ -330,7 +354,7 @@ func inputs(a controlplane.Assignment, digest string) (controlplane.TaskSpec, co
 	if len(w.Repositories) > 0 || !w.PrivateWrites {
 		return t, w, fail("failed_precondition", "only private file workspaces supported; repository materialization unavailable")
 	}
-	controlled := t.ExecutionMode == "controlled_python_v1"
+	controlled := t.ExecutionMode == "controlled_python_v1" || t.ExecutionMode == "cooperative_python_v1"
 	if t.ExecutionMode != "" && t.ExecutionMode != "foreground_v1" && !controlled {
 		return t, w, fail("failed_precondition", "unsupported task execution mode")
 	}
@@ -365,7 +389,7 @@ func inputs(a controlplane.Assignment, digest string) (controlplane.TaskSpec, co
 	paths := map[string]bool{}
 	total := 0
 	for _, f := range w.Files {
-		if controlled && (f.Path == "controlled-origin.txt" || f.Path == "controlled-state.json") {
+		if controlled && (f.Path == "controlled-origin.txt" || f.Path == "controlled-state.json" || f.Path == "agent-state.json" || f.Path == ".agent-state.pending") {
 			return t, w, fail("invalid_argument", "controlled profile workspace names are reserved")
 		}
 		if strings.Contains(f.Path, "/") {
@@ -396,6 +420,10 @@ func (b *Bridge) Ensure(ctx context.Context, a controlplane.Assignment) (control
 	if e = b.profile(t); e != nil {
 		return controlplane.Observation{}, e
 	}
+	if (t.ExecutionMode == "cooperative_python_v1") != (a.HarnessSession != nil) {
+		return controlplane.Observation{}, fail("failed_precondition", "execution mode requires its immutable cooperative session")
+	}
+
 	data, _ := json.Marshal(a.Run)
 	h := sha256.Sum256(data)
 	hash := hex.EncodeToString(h[:])
@@ -415,7 +443,7 @@ func (b *Bridge) Ensure(ctx context.Context, a controlplane.Assignment) (control
 	if ok && r.Stage == "suspended" {
 		return controlplane.Observation{}, fail("failed_precondition", "suspended assignment requires Resume")
 	}
-	req := sandbox.CreateRequest{Allocation: allocation(a), Limits: taskLimits(t), AbsoluteExpiresAt: a.LeaseUntil}
+	req := sandbox.CreateRequest{HarnessSession: a.HarnessSession, Allocation: allocation(a), Limits: taskLimits(t), AbsoluteExpiresAt: a.LeaseUntil}
 	if e = req.Validate(); e != nil {
 		return controlplane.Observation{}, runtimeError(e)
 	}
@@ -443,6 +471,13 @@ func (b *Bridge) Ensure(ctx context.Context, a controlplane.Assignment) (control
 		if _, e = b.runtime.WriteFile(ctx, allocation(a), &guestv1.WriteFileRequest{Path: f.Path, Data: f.Content}); e != nil {
 			return controlplane.Observation{}, runtimeError(e)
 		}
+	}
+	if t.ExecutionMode == "cooperative_python_v1" {
+		r.Stage = "agent_starting"
+		if e = b.save(a, r); e != nil {
+			return controlplane.Observation{}, e
+		}
+		return b.startAgentLocked(ctx, a, r)
 	}
 	if t.ExecutionMode == "controlled_python_v1" {
 		r.Stage = "controlled_starting"
@@ -510,6 +545,9 @@ func (b *Bridge) execute(ctx context.Context, cancel context.CancelFunc, a contr
 	}
 }
 func (b *Bridge) observeLocked(ctx context.Context, a controlplane.Assignment, r record) (controlplane.Observation, error) {
+	if r.Mode == "cooperative_python_v1" && r.Stage != "closed" && r.Stage != "closing" {
+		return b.observeAgentLocked(ctx, a, r)
+	}
 	if r.Mode == "controlled_python_v1" && r.Stage != "closed" && r.Stage != "closing" {
 		return b.observeSnapshotLocked(ctx, a, r)
 	}
@@ -585,7 +623,7 @@ func (b *Bridge) proxy(ctx context.Context, a controlplane.Assignment) (context.
 	if e != nil {
 		return nil, nil, e
 	}
-	if !ok || !same(a, r.Assignment) || r.Stage != "executing" && r.Stage != "controlled_running" {
+	if !ok || !same(a, r.Assignment) || r.Stage != "executing" && r.Stage != "controlled_running" && r.Stage != "agent_running" {
 		return nil, nil, fail("failed_precondition", "assignment is not executing")
 	}
 	until := a.LeaseUntil
@@ -601,6 +639,9 @@ func (b *Bridge) Exec(ctx context.Context, a controlplane.Assignment, r *guestv1
 		return e
 	}
 	defer cancel()
+	if a.HarnessSession != nil {
+		return fail("failed_precondition", "unregistered command/file mutations are unsupported for cooperative agents")
+	}
 	return runtimeError(b.runtime.Exec(c, allocation(a), r, emit))
 }
 func (b *Bridge) ReadFile(ctx context.Context, a controlplane.Assignment, r *guestv1.ReadFileRequest) (*guestv1.ReadFileResponse, error) {
@@ -618,6 +659,9 @@ func (b *Bridge) WriteFile(ctx context.Context, a controlplane.Assignment, r *gu
 		return nil, e
 	}
 	defer cancel()
+	if a.HarnessSession != nil {
+		return nil, fail("failed_precondition", "unregistered command/file mutations are unsupported for cooperative agents")
+	}
 	v, e := b.runtime.WriteFile(c, allocation(a), r)
 	return v, runtimeError(e)
 }

@@ -16,6 +16,56 @@
     "application/json"
   ],
   "paths": {
+    "/v1/projects/{projectId}/branches/{branchId}/calls": {
+      "get": {
+        "operationId": "ControlPlane_Calls",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CallsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "afterSequence",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
     "/v1/projects/{projectId}/branches/{branchId}/commands": {
       "post": {
         "operationId": "ControlPlane_Exec",
@@ -211,6 +261,56 @@
         ]
       }
     },
+    "/v1/projects/{projectId}/branches/{branchId}/steps": {
+      "get": {
+        "operationId": "ControlPlane_Steps",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StepsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "afterStep",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
     "/v1/projects/{projectId}/branches/{branchId}:action": {
       "post": {
         "operationId": "ControlPlane_Action",
@@ -247,6 +347,50 @@
             "required": true,
             "schema": {
               "$ref": "#/definitions/ControlPlaneActionBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/checkpoints/{checkpointId}:fork": {
+      "post": {
+        "operationId": "ControlPlane_Fork",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ForkResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "checkpointId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneForkBody"
             }
           }
         ],
@@ -459,6 +603,44 @@
           "ControlPlane"
         ]
       }
+    },
+    "/v1/projects/{projectId}/trajectories:compare": {
+      "post": {
+        "operationId": "ControlPlane_Compare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Divergence"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneCompareBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
     }
   },
   "definitions": {
@@ -473,11 +655,40 @@
         }
       }
     },
+    "ControlPlaneCompareBody": {
+      "type": "object",
+      "properties": {
+        "leftBranch": {
+          "type": "string"
+        },
+        "rightBranch": {
+          "type": "string"
+        },
+        "comparator": {
+          "type": "string"
+        }
+      }
+    },
     "ControlPlaneExecBody": {
       "type": "object",
       "properties": {
         "command": {
           "$ref": "#/definitions/hypercallguestv1ExecRequest"
+        }
+      }
+    },
+    "ControlPlaneForkBody": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Ref"
+          }
+        },
+        "idempotencyKey": {
+          "type": "string"
         }
       }
     },
@@ -588,6 +799,148 @@
         }
       }
     },
+    "v1AgentBarrier": {
+      "type": "object",
+      "properties": {
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "eventSequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stateDigest": {
+          "type": "string"
+        },
+        "protocolVersion": {
+          "type": "string"
+        },
+        "sessionHash": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AgentCall": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "$ref": "#/definitions/v1AgentRequest"
+        },
+        "result": {
+          "$ref": "#/definitions/v1AgentResult"
+        },
+        "executionId": {
+          "type": "string"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "modelDigest": {
+          "type": "string"
+        },
+        "routeDigest": {
+          "type": "string"
+        },
+        "adapterVersion": {
+          "type": "string"
+        },
+        "mutating": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "registeredSequence": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1AgentRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        },
+        "payloadDigest": {
+          "type": "string"
+        },
+        "sessionHash": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AgentResult": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        },
+        "eventSequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "errorCode": {
+          "type": "string"
+        },
+        "replayed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1AgentStep": {
+      "type": "object",
+      "properties": {
+        "branchId": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stateDigest": {
+          "type": "string"
+        },
+        "eventSequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sessionHash": {
+          "type": "string"
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      }
+    },
     "v1BranchSpec": {
       "type": "object",
       "properties": {
@@ -598,6 +951,12 @@
           "$ref": "#/definitions/v1Resource"
         },
         "parentCheckpointId": {
+          "type": "string"
+        },
+        "parentBranchId": {
+          "type": "string"
+        },
+        "forkOperationId": {
           "type": "string"
         }
       }
@@ -638,6 +997,35 @@
         },
         "sandboxId": {
           "type": "string"
+        },
+        "agentGate": {
+          "type": "string"
+        },
+        "routeDigest": {
+          "type": "string"
+        },
+        "agentStep": {
+          "type": "string",
+          "format": "int64"
+        },
+        "traceComplete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CallsResponse": {
+      "type": "object",
+      "properties": {
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AgentCall"
+          }
+        },
+        "nextSequence": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },
@@ -675,9 +1063,47 @@
         "snapshotManifest": {
           "type": "string",
           "format": "byte"
+        },
+        "barrier": {
+          "$ref": "#/definitions/v1AgentBarrier"
+        },
+        "routeDigest": {
+          "type": "string"
+        },
+        "budgetRemainingMs": {
+          "type": "string",
+          "format": "int64"
         }
       },
       "description": "Phase 2A exposes inspection only; runtime checkpoint creation requires Phase 1B."
+    },
+    "v1Divergence": {
+      "type": "object",
+      "properties": {
+        "comparator": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "leftDigest": {
+          "type": "string"
+        },
+        "rightDigest": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
     },
     "v1Event": {
       "type": "object",
@@ -752,6 +1178,21 @@
         },
         "outputTruncated": {
           "type": "boolean"
+        }
+      }
+    },
+    "v1ForkResult": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Resource"
+          }
         }
       }
     },
@@ -897,6 +1338,15 @@
         },
         "checkpointId": {
           "type": "string"
+        },
+        "childBranchIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parentOperationId": {
+          "type": "string"
         }
       }
     },
@@ -1001,6 +1451,22 @@
         },
         "gateway": {
           "$ref": "#/definitions/v1Resource"
+        }
+      }
+    },
+    "v1StepsResponse": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AgentStep"
+          }
+        },
+        "nextStep": {
+          "type": "string",
+          "format": "int64"
         }
       }
     },

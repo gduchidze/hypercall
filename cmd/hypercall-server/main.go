@@ -58,6 +58,7 @@ func run() error {
 	keyFile := flag.String("tls-key", "", "private PEM server key")
 	serverName := flag.String("tls-server-name", "localhost", "certificate name used by the local REST bridge")
 	insecureLocal := flag.Bool("insecure-loopback", false, "allow plaintext only on literal loopback listen addresses")
+	hostCooperative := flag.Bool("host-cooperative-agents", false, "enable cooperative Python step/checkpoint/fork profile on a configured capable host")
 	hostControlled := flag.Bool("host-controlled-snapshots", false, "enable controlled_python_v1 snapshot requests to an explicitly configured capable host")
 	hostAddress := flag.String("host-address", "", "separate authenticated sandbox host gRPC endpoint")
 	hostCA := flag.String("host-ca", "", "CA PEM for the sandbox host")
@@ -142,9 +143,9 @@ func run() error {
 			return e
 		}
 		defer hostConn.Close()
-		backend = hostapi.NewClient(hostConn, hostapi.ClientOptions{ControlledSnapshots: *hostControlled})
+		backend = hostapi.NewClient(hostConn, hostapi.ClientOptions{ControlledSnapshots: *hostControlled, CooperativeAgents: *hostCooperative})
 		backendName = "authenticated-host"
-	} else if *hostCA != "" || *hostCert != "" || *hostKey != "" || *hostName != "" || *hostControlled {
+	} else if *hostCA != "" || *hostCert != "" || *hostKey != "" || *hostName != "" || *hostControlled || *hostCooperative {
 		return errors.New("host TLS flags require --host-address")
 	}
 	service := cp.NewService(store, backend)

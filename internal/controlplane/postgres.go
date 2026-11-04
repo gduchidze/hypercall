@@ -47,7 +47,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		return e
 	}
 
-	const latest = 3
+	const latest = 4
 	var future bool
 	if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version>$1 OR version<1)", latest).Scan(&future); e != nil {
 		return e
@@ -55,7 +55,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if future {
 		return failure("failed_precondition", "database schema is newer or unsupported; use a compatible binary")
 	}
-	for version, name := range []string{"001_initial.sql", "002_resume.sql", "003_physical_sandbox.sql"} {
+	for version, name := range []string{"001_initial.sql", "002_resume.sql", "003_physical_sandbox.sql", "004_agent_trajectories.sql"} {
 		data, err := migrations.ReadFile("migrations/" + name)
 		if err != nil {
 			return err
@@ -206,7 +206,7 @@ func (s *Store) GetResource(ctx context.Context, scope Scope, kind, id string) (
 	if kind == "Branch" {
 		var st BranchStatus
 		var until sql.NullTime
-		e = s.db.QueryRowContext(ctx, `SELECT desired,observed,execution_id,epoch,lease_until,sequence,revision,COALESCE(checkpoint_id,''),budget_remaining_ms,sandbox_id FROM branches WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, scope.TenantID, scope.ProjectID, id).Scan(&st.Desired, &st.Observed, &st.ExecutionID, &st.Epoch, &until, &st.LastEvent, &r.Metadata.Revision, &st.CheckpointID, &st.BudgetRemainingMS, &st.SandboxID)
+		e = s.db.QueryRowContext(ctx, `SELECT desired,observed,execution_id,epoch,lease_until,sequence,revision,COALESCE(checkpoint_id,''),budget_remaining_ms,sandbox_id,agent_gate,route_digest,agent_step,trace_complete FROM branches WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, scope.TenantID, scope.ProjectID, id).Scan(&st.Desired, &st.Observed, &st.ExecutionID, &st.Epoch, &until, &st.LastEvent, &r.Metadata.Revision, &st.CheckpointID, &st.BudgetRemainingMS, &st.SandboxID, &st.AgentGate, &st.RouteDigest, &st.AgentStep, &st.TraceComplete)
 		st.LeaseUntil = until.Time
 		r.Status = encode(st)
 	}
@@ -306,6 +306,13 @@ func (s *Store) Submit(ctx context.Context, scope Scope, taskID, key string) (Su
 		}
 		models = append(models, m)
 	}
+	if spec.ExecutionMode == "cooperative_python_v1" {
+		for _, model := range models {
+			if e = validateAgentRoute(RunSpec{Task: task, Workspace: ws, Models: models, Gateway: gw}, model); e != nil {
+				return out, e
+			}
+		}
+	}
 	out.Run = makeResource(scope, "Run", newID(), RunSpec{task, ws, models, gw})
 	out.Branch = makeResource(scope, "Branch", newID(), BranchSpec{RunID: out.Run.Metadata.ID, Model: models[0]})
 	out.Operation = operation(scope, out.Branch.Metadata.ID, "start")
@@ -373,6 +380,22 @@ func (s *Store) action(ctx context.Context, scope Scope, branch, action, key str
 	nextObserved := observed
 	revision++
 	if action == "suspend" {
+		run, e := loadRun(ctx, tx, scope, branch)
+		if e != nil {
+			return out, e
+		}
+		if isCooperative(run) {
+			var gate string
+			var barrier []byte
+			if e = tx.QueryRowContext(ctx, `SELECT agent_gate,sealed_barrier FROM branches WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, scope.TenantID, scope.ProjectID, branch).Scan(&gate, &barrier); e != nil {
+				return out, e
+			}
+			if gate != "sealed" || len(barrier) == 0 {
+				return out, failure("failed_precondition", "semantic suspend requires a sealed committed harness barrier")
+			}
+		}
+	}
+	if action == "suspend" {
 		if desired != "running" || observed != "running" {
 			return out, failure("failed_precondition", "suspend requires a running branch")
 		}
@@ -398,7 +421,7 @@ func (s *Store) action(ctx context.Context, scope Scope, branch, action, key str
 		}
 		epoch++
 		nextObserved = "resuming"
-		_, e = tx.ExecContext(ctx, `UPDATE branches SET execution_id=$4,epoch=$5,lease_until=clock_timestamp()+($6*interval '1 millisecond'),sandbox_id=$7 WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, scope.TenantID, scope.ProjectID, branch, newID(), epoch, budget, newID())
+		_, e = tx.ExecContext(ctx, `UPDATE branches SET execution_id=$4,epoch=$5,lease_until=clock_timestamp()+($6*interval '1 millisecond'),sandbox_id=$7,harness_session=NULL,session_parent_checkpoint_id=$8 WHERE tenant_id=$1 AND project_id=$2 AND id=$3`, scope.TenantID, scope.ProjectID, branch, newID(), epoch, budget, newID(), checkpointID)
 		if e != nil {
 			return out, e
 		}
@@ -495,7 +518,19 @@ func loadCheckpoint(ctx context.Context, tx *sql.Tx, scope Scope, branch, id str
 	if e = json.Unmarshal(run.Task.Spec, &task); e != nil {
 		return cp, e
 	}
-	if cp.BranchID != branch || !cp.Verified || !digestPattern.MatchString(cp.ManifestDigest) || cp.ManifestURI == "" || cp.ProtocolVersion != "hypercall.snapshot.v1" || cp.Compatibility["template_digest"] != task.TemplateDigest || cp.Compatibility["snapshot_format"] == "" || cp.Compatibility["architecture"] == "" || cp.EventPosition < 1 {
+	sourceAllowed := cp.BranchID == branch
+	if !sourceAllowed {
+		resource, e := load(ctx, tx, scope, "Branch", branch)
+		if e != nil {
+			return cp, e
+		}
+		var spec BranchSpec
+		if e = json.Unmarshal(resource.Spec, &spec); e != nil {
+			return cp, e
+		}
+		sourceAllowed = spec.ParentCheckpointID == id && spec.ParentBranchID == cp.BranchID
+	}
+	if !sourceAllowed || !cp.Verified || !digestPattern.MatchString(cp.ManifestDigest) || cp.ManifestURI == "" || cp.ProtocolVersion != "hypercall.snapshot.v1" || cp.Compatibility["template_digest"] != task.TemplateDigest || cp.Compatibility["snapshot_format"] == "" || cp.Compatibility["architecture"] == "" || cp.EventPosition < 1 {
 		return cp, failure("failed_precondition", "retained checkpoint is unverified or incompatible with this branch")
 	}
 	if e := validateNativeCheckpoint(cp); e != nil {

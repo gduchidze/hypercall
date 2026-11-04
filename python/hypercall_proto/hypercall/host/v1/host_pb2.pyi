@@ -1,5 +1,6 @@
 from hypercall_proto.hypercall.guest.v1 import guest_pb2 as _guest_pb2
 from hypercall_proto.hypercall.v1 import control_pb2 as _control_pb2
+from hypercall_proto.hypercall.harness.v1 import harness_pb2 as _harness_pb2
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
 from collections.abc import Mapping as _Mapping
@@ -8,7 +9,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Assignment(_message.Message):
-    __slots__ = ("tenant_id", "project_id", "branch_id", "execution_id", "epoch", "lease_until_unix_nano", "resolved_run_json", "sandbox_id")
+    __slots__ = ("tenant_id", "project_id", "branch_id", "execution_id", "epoch", "lease_until_unix_nano", "resolved_run_json", "sandbox_id", "harness_session", "selected_model_json", "parent_checkpoint_id", "parent_branch_id", "barrier")
     TENANT_ID_FIELD_NUMBER: _ClassVar[int]
     PROJECT_ID_FIELD_NUMBER: _ClassVar[int]
     BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
@@ -17,6 +18,11 @@ class Assignment(_message.Message):
     LEASE_UNTIL_UNIX_NANO_FIELD_NUMBER: _ClassVar[int]
     RESOLVED_RUN_JSON_FIELD_NUMBER: _ClassVar[int]
     SANDBOX_ID_FIELD_NUMBER: _ClassVar[int]
+    HARNESS_SESSION_FIELD_NUMBER: _ClassVar[int]
+    SELECTED_MODEL_JSON_FIELD_NUMBER: _ClassVar[int]
+    PARENT_CHECKPOINT_ID_FIELD_NUMBER: _ClassVar[int]
+    PARENT_BRANCH_ID_FIELD_NUMBER: _ClassVar[int]
+    BARRIER_FIELD_NUMBER: _ClassVar[int]
     tenant_id: str
     project_id: str
     branch_id: str
@@ -25,7 +31,12 @@ class Assignment(_message.Message):
     lease_until_unix_nano: int
     resolved_run_json: bytes
     sandbox_id: str
-    def __init__(self, tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., branch_id: _Optional[str] = ..., execution_id: _Optional[str] = ..., epoch: _Optional[int] = ..., lease_until_unix_nano: _Optional[int] = ..., resolved_run_json: _Optional[bytes] = ..., sandbox_id: _Optional[str] = ...) -> None: ...
+    harness_session: _harness_pb2.HarnessSession
+    selected_model_json: bytes
+    parent_checkpoint_id: str
+    parent_branch_id: str
+    barrier: _harness_pb2.AgentBarrier
+    def __init__(self, tenant_id: _Optional[str] = ..., project_id: _Optional[str] = ..., branch_id: _Optional[str] = ..., execution_id: _Optional[str] = ..., epoch: _Optional[int] = ..., lease_until_unix_nano: _Optional[int] = ..., resolved_run_json: _Optional[bytes] = ..., sandbox_id: _Optional[str] = ..., harness_session: _Optional[_Union[_harness_pb2.HarnessSession, _Mapping]] = ..., selected_model_json: _Optional[bytes] = ..., parent_checkpoint_id: _Optional[str] = ..., parent_branch_id: _Optional[str] = ..., barrier: _Optional[_Union[_harness_pb2.AgentBarrier, _Mapping]] = ...) -> None: ...
 
 class Observation(_message.Message):
     __slots__ = ("state", "checkpoint")
@@ -66,3 +77,11 @@ class WriteFileRequest(_message.Message):
     assignment: Assignment
     file: _guest_pb2.WriteFileRequest
     def __init__(self, assignment: _Optional[_Union[Assignment, _Mapping]] = ..., file: _Optional[_Union[_guest_pb2.WriteFileRequest, _Mapping]] = ...) -> None: ...
+
+class HostAgentDelivery(_message.Message):
+    __slots__ = ("assignment", "delivery")
+    ASSIGNMENT_FIELD_NUMBER: _ClassVar[int]
+    DELIVERY_FIELD_NUMBER: _ClassVar[int]
+    assignment: Assignment
+    delivery: _harness_pb2.AgentDelivery
+    def __init__(self, assignment: _Optional[_Union[Assignment, _Mapping]] = ..., delivery: _Optional[_Union[_harness_pb2.AgentDelivery, _Mapping]] = ...) -> None: ...

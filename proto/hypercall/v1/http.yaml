@@ -28,3 +28,13 @@ http:
     - selector: hypercall.v1.ControlPlane.WriteFile
       post: /v1/projects/{project_id}/branches/{branch_id}/files/{path=**}
       body: '*'
+    - selector: hypercall.v1.ControlPlane.Fork
+      post: /v1/projects/{project_id}/checkpoints/{checkpoint_id}:fork
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.Calls
+      get: /v1/projects/{project_id}/branches/{branch_id}/calls
+    - selector: hypercall.v1.ControlPlane.Steps
+      get: /v1/projects/{project_id}/branches/{branch_id}/steps
+    - selector: hypercall.v1.ControlPlane.Compare
+      post: /v1/projects/{project_id}/trajectories:compare
+      body: '*'

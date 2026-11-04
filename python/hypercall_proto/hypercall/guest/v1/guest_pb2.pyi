@@ -1,3 +1,4 @@
+from hypercall_proto.hypercall.harness.v1 import harness_pb2 as _harness_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -25,18 +26,22 @@ class GetInfoRequest(_message.Message):
     def __init__(self) -> None: ...
 
 class GetInfoResponse(_message.Message):
-    __slots__ = ("protocol_version", "identity", "max_file_bytes", "max_exec_output_bytes", "server_time_unix_nano")
+    __slots__ = ("protocol_version", "identity", "max_file_bytes", "max_exec_output_bytes", "server_time_unix_nano", "harness_session_hash", "agent_started")
     PROTOCOL_VERSION_FIELD_NUMBER: _ClassVar[int]
     IDENTITY_FIELD_NUMBER: _ClassVar[int]
     MAX_FILE_BYTES_FIELD_NUMBER: _ClassVar[int]
     MAX_EXEC_OUTPUT_BYTES_FIELD_NUMBER: _ClassVar[int]
     SERVER_TIME_UNIX_NANO_FIELD_NUMBER: _ClassVar[int]
+    HARNESS_SESSION_HASH_FIELD_NUMBER: _ClassVar[int]
+    AGENT_STARTED_FIELD_NUMBER: _ClassVar[int]
     protocol_version: str
     identity: AllocationIdentity
     max_file_bytes: int
     max_exec_output_bytes: int
     server_time_unix_nano: int
-    def __init__(self, protocol_version: _Optional[str] = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., max_file_bytes: _Optional[int] = ..., max_exec_output_bytes: _Optional[int] = ..., server_time_unix_nano: _Optional[int] = ...) -> None: ...
+    harness_session_hash: str
+    agent_started: bool
+    def __init__(self, protocol_version: _Optional[str] = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., max_file_bytes: _Optional[int] = ..., max_exec_output_bytes: _Optional[int] = ..., server_time_unix_nano: _Optional[int] = ..., harness_session_hash: _Optional[str] = ..., agent_started: bool = ...) -> None: ...
 
 class ExecRequest(_message.Message):
     __slots__ = ("argv", "cwd", "env", "timeout_ms")
@@ -136,17 +141,31 @@ class RebindCloneRequest(_message.Message):
     def __init__(self, host_unix_nano: _Optional[int] = ...) -> None: ...
 
 class ControlledState(_message.Message):
-    __slots__ = ("counter", "file_data", "pid", "at_barrier", "identity", "random_probe")
+    __slots__ = ("counter", "file_data", "pid", "at_barrier", "identity", "random_probe", "semantic_barrier")
     COUNTER_FIELD_NUMBER: _ClassVar[int]
     FILE_DATA_FIELD_NUMBER: _ClassVar[int]
     PID_FIELD_NUMBER: _ClassVar[int]
     AT_BARRIER_FIELD_NUMBER: _ClassVar[int]
     IDENTITY_FIELD_NUMBER: _ClassVar[int]
     RANDOM_PROBE_FIELD_NUMBER: _ClassVar[int]
+    SEMANTIC_BARRIER_FIELD_NUMBER: _ClassVar[int]
     counter: int
     file_data: bytes
     pid: int
     at_barrier: bool
     identity: AllocationIdentity
     random_probe: bytes
-    def __init__(self, counter: _Optional[int] = ..., file_data: _Optional[bytes] = ..., pid: _Optional[int] = ..., at_barrier: bool = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., random_probe: _Optional[bytes] = ...) -> None: ...
+    semantic_barrier: _harness_pb2.SemanticBarrier
+    def __init__(self, counter: _Optional[int] = ..., file_data: _Optional[bytes] = ..., pid: _Optional[int] = ..., at_barrier: bool = ..., identity: _Optional[_Union[AllocationIdentity, _Mapping]] = ..., random_probe: _Optional[bytes] = ..., semantic_barrier: _Optional[_Union[_harness_pb2.SemanticBarrier, _Mapping]] = ...) -> None: ...
+
+class StartAgentRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class PollAgentRequest(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...
+
+class DeliverAgentResponse(_message.Message):
+    __slots__ = ()
+    def __init__(self) -> None: ...

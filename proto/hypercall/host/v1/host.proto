@@ -3,6 +3,7 @@ package hypercall.host.v1;
 option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/host/v1;hostv1";
 import "hypercall/guest/v1/guest.proto";
 import "hypercall/v1/control.proto";
+import "hypercall/harness/v1/harness.proto";
 // Private mTLS control-plane to host protocol. Certificate identity authorizes a
 // configured tenant/project; payload scope never establishes authentication.
 service Host {
@@ -11,6 +12,8 @@ service Host {
  rpc Stop(Assignment) returns (Observation);
  rpc Suspend(Assignment) returns (Observation);
  rpc Resume(ResumeRequest) returns (Observation);
+ rpc AgentPoll(Assignment) returns (hypercall.harness.v1.AgentPoll);
+ rpc AgentDeliver(HostAgentDelivery) returns (hypercall.guest.v1.DeliverAgentResponse);
  rpc Exec(ExecRequest) returns (stream hypercall.guest.v1.ExecEvent);
  rpc ReadFile(ReadFileRequest) returns (hypercall.guest.v1.ReadFileResponse);
  rpc WriteFile(WriteFileRequest) returns (hypercall.guest.v1.WriteFileResponse);
@@ -27,9 +30,15 @@ message Assignment {
  bytes resolved_run_json = 7;
  // Physical VM allocation; a resumed branch receives a fresh sandbox identity.
  string sandbox_id = 8;
+ hypercall.harness.v1.HarnessSession harness_session = 9;
+ bytes selected_model_json = 10;
+ string parent_checkpoint_id = 11;
+ string parent_branch_id = 12;
+ hypercall.harness.v1.AgentBarrier barrier = 13;
 }
 message Observation { string state = 1; hypercall.v1.CheckpointSpec checkpoint = 2; }
 message ResumeRequest { Assignment assignment = 1; hypercall.v1.CheckpointSpec checkpoint = 2; }
 message ExecRequest { Assignment assignment = 1; hypercall.guest.v1.ExecRequest command = 2; }
 message ReadFileRequest { Assignment assignment = 1; hypercall.guest.v1.ReadFileRequest file = 2; }
 message WriteFileRequest { Assignment assignment = 1; hypercall.guest.v1.WriteFileRequest file = 2; }
+message HostAgentDelivery { Assignment assignment = 1; hypercall.harness.v1.AgentDelivery delivery = 2; }

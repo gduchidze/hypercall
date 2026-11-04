@@ -87,6 +87,26 @@ class ControlPlaneStub(object):
                 request_serializer=hypercall_dot_v1_dot_control__pb2.WriteFileRequest.SerializeToString,
                 response_deserializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.WriteFileResponse.FromString,
                 _registered_method=True)
+        self.Fork = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/Fork',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.ForkRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.ForkResult.FromString,
+                _registered_method=True)
+        self.Calls = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/Calls',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.CallsRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.CallsResponse.FromString,
+                _registered_method=True)
+        self.Steps = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/Steps',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.StepsRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.StepsResponse.FromString,
+                _registered_method=True)
+        self.Compare = channel.unary_unary(
+                '/hypercall.v1.ControlPlane/Compare',
+                request_serializer=hypercall_dot_v1_dot_control__pb2.CompareRequest.SerializeToString,
+                response_deserializer=hypercall_dot_v1_dot_control__pb2.Divergence.FromString,
+                _registered_method=True)
 
 
 class ControlPlaneServicer(object):
@@ -154,6 +174,30 @@ class ControlPlaneServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def Fork(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Calls(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Steps(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def Compare(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_ControlPlaneServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -206,6 +250,26 @@ def add_ControlPlaneServicer_to_server(servicer, server):
                     servicer.WriteFile,
                     request_deserializer=hypercall_dot_v1_dot_control__pb2.WriteFileRequest.FromString,
                     response_serializer=hypercall_dot_guest_dot_v1_dot_guest__pb2.WriteFileResponse.SerializeToString,
+            ),
+            'Fork': grpc.unary_unary_rpc_method_handler(
+                    servicer.Fork,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.ForkRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.ForkResult.SerializeToString,
+            ),
+            'Calls': grpc.unary_unary_rpc_method_handler(
+                    servicer.Calls,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.CallsRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.CallsResponse.SerializeToString,
+            ),
+            'Steps': grpc.unary_unary_rpc_method_handler(
+                    servicer.Steps,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.StepsRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.StepsResponse.SerializeToString,
+            ),
+            'Compare': grpc.unary_unary_rpc_method_handler(
+                    servicer.Compare,
+                    request_deserializer=hypercall_dot_v1_dot_control__pb2.CompareRequest.FromString,
+                    response_serializer=hypercall_dot_v1_dot_control__pb2.Divergence.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -480,6 +544,114 @@ class ControlPlane(object):
             '/hypercall.v1.ControlPlane/WriteFile',
             hypercall_dot_v1_dot_control__pb2.WriteFileRequest.SerializeToString,
             hypercall_dot_guest_dot_v1_dot_guest__pb2.WriteFileResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Fork(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/Fork',
+            hypercall_dot_v1_dot_control__pb2.ForkRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.ForkResult.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Calls(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/Calls',
+            hypercall_dot_v1_dot_control__pb2.CallsRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.CallsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Steps(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/Steps',
+            hypercall_dot_v1_dot_control__pb2.StepsRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.StepsResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def Compare(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/hypercall.v1.ControlPlane/Compare',
+            hypercall_dot_v1_dot_control__pb2.CompareRequest.SerializeToString,
+            hypercall_dot_v1_dot_control__pb2.Divergence.FromString,
             options,
             channel_credentials,
             insecure,

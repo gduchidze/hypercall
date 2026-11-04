@@ -3,6 +3,7 @@ package controlplane
 import (
 	"context"
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"time"
 )
 
@@ -13,17 +14,24 @@ import (
 // reporting a verified checkpoint. Resume must renew guest identity, credentials
 // and transports before continuation; it cannot fall back to cold Ensure.
 type Assignment struct {
-	Scope                            Scope
-	BranchID, SandboxID, ExecutionID string
-	Epoch                            int64
-	LeaseUntil                       time.Time
-	Run                              RunSpec
+	SelectedModel                      Resource
+	HarnessSession                     *harnessv1.HarnessSession
+	Barrier                            *AgentBarrier
+	ParentCheckpointID, ParentBranchID string
+	Scope                              Scope
+	BranchID, SandboxID, ExecutionID   string
+	Epoch                              int64
+	LeaseUntil                         time.Time
+	Run                                RunSpec
 }
 type Observation struct {
 	State      string
 	Checkpoint *CheckpointSpec
 }
 type CheckpointSpec struct {
+	Barrier            *AgentBarrier     `json:"barrier,omitempty"`
+	RouteDigest        string            `json:"route_digest,omitempty"`
+	BudgetRemainingMS  int64             `json:"budget_remaining_ms,omitempty"`
 	NativeCheckpointID string            `json:"native_checkpoint_id,omitempty"`
 	SnapshotManifest   []byte            `json:"snapshot_manifest,omitempty"`
 	BranchID           string            `json:"branch_id"`

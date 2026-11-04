@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"strings"
 	"time"
 
 	guest "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
@@ -46,7 +47,7 @@ func run(ctx context.Context, args []string, out, errout io.Writer) error {
 	after := flags.Int64("after", 0, "exclusive durable event cursor")
 	limit := flags.Int("limit", 100, "maximum page size")
 	flags.Usage = func() {
-		fmt.Fprintln(errout, "hypercall [flags] submit FILE | inspect KIND ID | list KIND | events BRANCH | suspend/resume/cancel BRANCH | exec BRANCH ARGV... | read-file BRANCH PATH | write-file BRANCH PATH LOCAL_FILE")
+		fmt.Fprintln(errout, "hypercall [flags] submit FILE | inspect KIND ID | list KIND | events/calls/steps BRANCH | suspend/resume/cancel BRANCH | fork CHECKPOINT MODEL_ID@DIGEST... | compare LEFT RIGHT COMPARATOR | exec BRANCH ARGV... | read-file BRANCH PATH | write-file BRANCH PATH LOCAL_FILE")
 		flags.PrintDefaults()
 	}
 	if err := flags.Parse(args); err != nil {
@@ -151,6 +152,50 @@ func run(ctx context.Context, args []string, out, errout io.Writer) error {
 			return err
 		}
 		v, e := client.Events(ctx, &pb.EventsRequest{ProjectId: *project, BranchId: argv[1], AfterSequence: *after, Limit: int32(*limit)})
+		if e != nil {
+			return e
+		}
+		return print(v)
+	case "calls":
+		if err := need(2); err != nil {
+			return err
+		}
+		v, e := client.Calls(ctx, &pb.CallsRequest{ProjectId: *project, BranchId: argv[1], AfterSequence: *after, Limit: int32(*limit)})
+		if e != nil {
+			return e
+		}
+		return print(v)
+	case "steps":
+		if err := need(2); err != nil {
+			return err
+		}
+		v, e := client.Steps(ctx, &pb.StepsRequest{ProjectId: *project, BranchId: argv[1], AfterStep: *after, Limit: int32(*limit)})
+		if e != nil {
+			return e
+		}
+		return print(v)
+	case "fork":
+		if len(argv) < 3 || len(argv) > 4 || *key == "" {
+			return errors.New("fork expects CHECKPOINT and 1..2 MODEL_ID@DIGEST candidates, with --key")
+		}
+		models := []*pb.Ref{}
+		for _, value := range argv[2:] {
+			id, digest, ok := strings.Cut(value, "@")
+			if !ok || id == "" || !strings.HasPrefix(digest, "sha256:") {
+				return errors.New("candidate must be immutable MODEL_ID@sha256:DIGEST")
+			}
+			models = append(models, &pb.Ref{Id: id, Digest: digest})
+		}
+		v, e := client.Fork(ctx, &pb.ForkRequest{ProjectId: *project, CheckpointId: argv[1], Models: models, IdempotencyKey: *key})
+		if e != nil {
+			return e
+		}
+		return print(v)
+	case "compare":
+		if err := need(4); err != nil {
+			return err
+		}
+		v, e := client.Compare(ctx, &pb.CompareRequest{ProjectId: *project, LeftBranch: argv[1], RightBranch: argv[2], Comparator: argv[3]})
 		if e != nil {
 			return e
 		}

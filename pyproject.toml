@@ -1,10 +1,10 @@
 [project]
 name = "hypercall-sdk"
-version = "0.2.0"
+version = "0.3.0"
 description = "Hypercall authenticated sync/async client and generated protocol contracts"
 license = "BSD-3-Clause"
 license-files = ["LICENSE"]
-requires-python = ">=3.13,<3.14"
+requires-python = ">=3.12,<3.14"
 dependencies = ["grpcio==1.76.0", "protobuf==6.33.0"]
 
 [dependency-groups]

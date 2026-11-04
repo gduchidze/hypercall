@@ -11,20 +11,24 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"github.com/gduchidze/hypercall/internal/controlplane"
+	"github.com/gduchidze/hypercall/internal/harness"
 	"github.com/gduchidze/hypercall/internal/sandbox"
 	"github.com/gduchidze/hypercall/internal/snapshot"
+	"google.golang.org/protobuf/proto"
 )
 
 func taskLimits(t controlplane.TaskSpec) sandbox.Limits {
 	return sandbox.Limits{VCPUs: uint32(t.Limits.CPU), MemoryMiB: uint32(t.Limits.MemoryMB), WorkspaceBytes: int64(t.Limits.DiskMB) << 20, PIDs: 64, TTL: time.Duration(t.Limits.TimeoutSeconds) * time.Second}
 }
 func (b *Bridge) profile(t controlplane.TaskSpec) error {
-	if t.ExecutionMode != "controlled_python_v1" {
+	if t.ExecutionMode != "controlled_python_v1" && t.ExecutionMode != "cooperative_python_v1" {
 		return nil
 	}
-	if !b.Supports("suspend") || t.AgentDigest != b.cfg.ControlledAgentDigest {
-		return fail("failed_precondition", "controlled snapshot profile is not configured for verified guest artifact")
+	raw, _ := json.Marshal(t)
+	if !b.SupportsRun("suspend", controlplane.RunSpec{Task: controlplane.Resource{Spec: raw}}) {
+		return fail("failed_precondition", "snapshot profile is not configured for verified guest artifact")
 	}
 	return nil
 }
@@ -56,18 +60,62 @@ func (b *Bridge) checkpoint(a controlplane.Assignment, m snapshot.Manifest) (con
 	if m.Scope.TenantID != a.Scope.TenantID || m.Scope.ProjectID != a.Scope.ProjectID || "sha256:"+m.Compatibility.TemplateSHA256 != b.cfg.TemplateDigest || "sha256:"+m.Compatibility.GuestSHA256 != b.cfg.ControlledAgentDigest {
 		return controlplane.CheckpointSpec{}, fail("failed_precondition", "snapshot scope/template/guest mismatch")
 	}
+	mode := "controlled_python_v1"
+	if a.HarnessSession != nil {
+		mode = "cooperative_python_v1"
+		if m.SemanticBarrier == nil || a.Barrier == nil || m.SemanticBarrier.SourceSessionHash != a.HarnessSession.SessionHash || m.SemanticBarrier.SourceBranchID != a.BranchID || m.SemanticBarrier.SourceExecutionID != a.ExecutionID || m.SemanticBarrier.SourceEpoch != a.Epoch || m.SemanticBarrier.Step != a.Barrier.Step || m.SemanticBarrier.EventSequence != a.Barrier.EventSequence || m.SemanticBarrier.StateDigest != a.Barrier.StateDigest || m.Compatibility.BarrierProtocolVersion != harness.Protocol {
+			return controlplane.CheckpointSpec{}, fail("failed_precondition", "native semantic marker differs from committed controller barrier")
+		}
+	}
 	data, digest := manifestBytes(m)
-	return controlplane.CheckpointSpec{NativeCheckpointID: m.Scope.CheckpointID, SnapshotManifest: data, BranchID: a.BranchID, ManifestDigest: digest, ManifestURI: "hypercall-snapshot://" + m.Scope.TenantID + "/" + m.Scope.ProjectID + "/" + m.Scope.CheckpointID, ProtocolVersion: "hypercall.snapshot.v1", Verified: true, Compatibility: map[string]string{"architecture": m.Compatibility.Architecture, "snapshot_format": m.Compatibility.SnapshotFormatVersion, "template_digest": b.cfg.TemplateDigest, "guest_agent_digest": b.cfg.ControlledAgentDigest, "execution_mode": "controlled_python_v1", "source_sandbox_id": sandboxID(a), "source_execution_id": a.ExecutionID, "source_epoch": strconv.FormatInt(a.Epoch, 10)}}, nil
+	cp := controlplane.CheckpointSpec{NativeCheckpointID: m.Scope.CheckpointID, SnapshotManifest: data, BranchID: a.BranchID, ManifestDigest: digest, ManifestURI: "hypercall-snapshot://" + m.Scope.TenantID + "/" + m.Scope.ProjectID + "/" + m.Scope.CheckpointID, ProtocolVersion: "hypercall.snapshot.v1", Verified: true, Compatibility: map[string]string{"architecture": m.Compatibility.Architecture, "snapshot_format": m.Compatibility.SnapshotFormatVersion, "template_digest": b.cfg.TemplateDigest, "guest_agent_digest": b.cfg.ControlledAgentDigest, "execution_mode": mode, "source_sandbox_id": sandboxID(a), "source_execution_id": a.ExecutionID, "source_epoch": strconv.FormatInt(a.Epoch, 10)}}
+	if m.SemanticBarrier != nil {
+		v := m.SemanticBarrier
+		cp.Barrier = &controlplane.AgentBarrier{Step: v.Step, EventSequence: v.EventSequence, StateDigest: v.StateDigest, SessionHash: v.SourceSessionHash, ProtocolVersion: v.ProtocolVersion}
+		cp.EventPosition = v.EventSequence
+		cp.RouteDigest = a.HarnessSession.RouteDigest
+		cp.BudgetRemainingMS = time.Until(a.LeaseUntil).Milliseconds()
+		if cp.BudgetRemainingMS < 0 {
+			cp.BudgetRemainingMS = 0
+		}
+	}
+	return cp, nil
+}
+func semanticWire(v *snapshot.SemanticBarrier) *harnessv1.SemanticBarrier {
+	if v == nil {
+		return nil
+	}
+	return &harnessv1.SemanticBarrier{ProtocolVersion: v.ProtocolVersion, Step: v.Step, EventSequence: v.EventSequence, StateDigest: v.StateDigest, SourceSessionHash: v.SourceSessionHash, SourceBranchId: v.SourceBranchID, SourceExecutionId: v.SourceExecutionID, SourceEpoch: v.SourceEpoch}
 }
 func (b *Bridge) verifyCheckpoint(ctx context.Context, a controlplane.Assignment, cp controlplane.CheckpointSpec) (snapshot.Manifest, error) {
 	var m snapshot.Manifest
-	if !cp.Verified || cp.BranchID != a.BranchID || cp.ProtocolVersion != "hypercall.snapshot.v1" || len(cp.SnapshotManifest) > 1<<20 || decode(cp.SnapshotManifest, &m) != nil || m.Scope != nativeScope(a, cp.NativeCheckpointID) {
+	sourceBranch := a.BranchID
+	if cp.Compatibility["source_execution_id"] != a.ExecutionID && a.ParentBranchID != "" {
+		sourceBranch = a.ParentBranchID
+	}
+	if !cp.Verified || cp.BranchID != sourceBranch || cp.ProtocolVersion != "hypercall.snapshot.v1" || len(cp.SnapshotManifest) > 1<<20 || decode(cp.SnapshotManifest, &m) != nil || m.Scope != nativeScope(a, cp.NativeCheckpointID) {
 		return m, fail("failed_precondition", "invalid retained snapshot manifest")
 	}
-	parentEpoch, parseErr := strconv.ParseInt(cp.Compatibility["source_epoch"], 10, 64)
-	parent := controlplane.Assignment{Scope: a.Scope, BranchID: a.BranchID, SandboxID: cp.Compatibility["source_sandbox_id"], ExecutionID: cp.Compatibility["source_execution_id"], Epoch: parentEpoch}
-	if parseErr != nil || parentEpoch < 1 || allocation(parent).Validate() != nil || checkpointID(parent) != cp.NativeCheckpointID || cp.Compatibility["execution_mode"] != "controlled_python_v1" || cp.Compatibility["template_digest"] != b.cfg.TemplateDigest || cp.Compatibility["guest_agent_digest"] != b.cfg.ControlledAgentDigest || cp.Compatibility["architecture"] != m.Compatibility.Architecture || cp.Compatibility["snapshot_format"] != m.Compatibility.SnapshotFormatVersion || m.Compatibility.BarrierProtocolVersion != "controlled-python-v2-host-clock" {
+	epoch, e := strconv.ParseInt(cp.Compatibility["source_epoch"], 10, 64)
+	parent := controlplane.Assignment{Scope: a.Scope, BranchID: cp.BranchID, SandboxID: cp.Compatibility["source_sandbox_id"], ExecutionID: cp.Compatibility["source_execution_id"], Epoch: epoch}
+	mode := cp.Compatibility["execution_mode"]
+	if e != nil || epoch < 1 || parent.SandboxID == "" || parent.ExecutionID == "" || allocation(parent).Validate() != nil || checkpointID(parent) != cp.NativeCheckpointID || cp.Compatibility["template_digest"] != b.cfg.TemplateDigest || cp.Compatibility["guest_agent_digest"] != b.cfg.ControlledAgentDigest || cp.Compatibility["architecture"] != m.Compatibility.Architecture || cp.Compatibility["snapshot_format"] != m.Compatibility.SnapshotFormatVersion {
 		return m, fail("failed_precondition", "retained checkpoint source/profile binding mismatch")
+	}
+	if mode == "controlled_python_v1" {
+		if a.HarnessSession != nil || m.SemanticBarrier != nil || m.Compatibility.BarrierProtocolVersion != "controlled-python-v2-host-clock" {
+			return m, fail("failed_precondition", "controlled checkpoint profile mismatch")
+		}
+	} else if mode == "cooperative_python_v1" {
+		v := m.SemanticBarrier
+		if a.HarnessSession == nil || v == nil || v.Validate() != nil || m.Compatibility.BarrierProtocolVersion != harness.Protocol || cp.Barrier == nil || cp.EventPosition != v.EventSequence || cp.Barrier.Step != v.Step || cp.Barrier.EventSequence != v.EventSequence || cp.Barrier.StateDigest != v.StateDigest || cp.Barrier.SessionHash != v.SourceSessionHash || cp.Barrier.ProtocolVersion != v.ProtocolVersion || v.SourceBranchID != cp.BranchID || v.SourceExecutionID != parent.ExecutionID || v.SourceEpoch != parent.Epoch {
+			return m, fail("failed_precondition", "semantic checkpoint metadata mismatch")
+		}
+		if parent.ExecutionID != a.ExecutionID && (a.HarnessSession.ParentCheckpointId != cp.NativeCheckpointID || !proto.Equal(a.HarnessSession.InheritedBarrier, semanticWire(v))) {
+			return m, fail("failed_precondition", "fresh child session inherited marker mismatch")
+		}
+	} else {
+		return m, fail("failed_precondition", "unsupported retained execution profile")
 	}
 	data, digest := manifestBytes(m)
 	if !bytes.Equal(data, cp.SnapshotManifest) || digest != cp.ManifestDigest || "sha256:"+m.Compatibility.TemplateSHA256 != b.cfg.TemplateDigest || "sha256:"+m.Compatibility.GuestSHA256 != b.cfg.ControlledAgentDigest {
@@ -102,7 +150,7 @@ func (b *Bridge) Suspend(ctx context.Context, a controlplane.Assignment) (contro
 	if e != nil {
 		return controlplane.Observation{}, e
 	}
-	if !ok || !same(a, r.Assignment) || r.Mode != "controlled_python_v1" || !b.Supports("suspend") {
+	if !ok || !same(a, r.Assignment) || (r.Mode != "controlled_python_v1" && r.Mode != "cooperative_python_v1") || !b.Supports("suspend") {
 		return controlplane.Observation{}, fail("failed_precondition", "only configured controlled Python assignments support suspension")
 	}
 	if r.Stage == "suspended" {
@@ -112,9 +160,21 @@ func (b *Bridge) Suspend(ctx context.Context, a controlplane.Assignment) (contro
 		return controlplane.Observation{}, fail("aborted", "assignment permanently closed")
 	}
 	native := b.runtime.(sandbox.SnapshotBackend)
-	if r.Stage == "controlled_running" {
+	if r.Stage == "controlled_running" || r.Stage == "agent_running" {
 		if !time.Now().Before(a.LeaseUntil) {
 			return controlplane.Observation{}, fail("failed_precondition", "execution lease expired")
+		}
+		if r.Mode == "cooperative_python_v1" {
+			if a.HarnessSession == nil || a.Barrier == nil || a.Barrier.SessionHash != a.HarnessSession.SessionHash || a.Barrier.ProtocolVersion != harness.Protocol {
+				return controlplane.Observation{}, fail("failed_precondition", "controller must seal the cooperative barrier before capture")
+			}
+			pending, e := b.runtime.(sandbox.AgentBackend).PollAgent(ctx, allocation(a))
+			if e != nil {
+				return controlplane.Observation{}, runtimeError(e)
+			}
+			if pending == nil || pending.Pending != nil {
+				return controlplane.Observation{}, fail("failed_precondition", "guest must acknowledge sealed barrier delivery before capture")
+			}
 		}
 		r.CaptureID = checkpointID(a)
 		r.Stage = "capturing"
@@ -187,7 +247,7 @@ func (b *Bridge) Resume(ctx context.Context, a controlplane.Assignment, cp contr
 	if e != nil {
 		return controlplane.Observation{}, e
 	}
-	if t.ExecutionMode != "controlled_python_v1" {
+	if t.ExecutionMode != "controlled_python_v1" && t.ExecutionMode != "cooperative_python_v1" {
 		return controlplane.Observation{}, fail("failed_precondition", "foreground tasks cannot resume snapshots")
 	}
 	if e = b.profile(t); e != nil {
@@ -210,6 +270,9 @@ func (b *Bridge) Resume(ctx context.Context, a controlplane.Assignment, cp contr
 		if r.RunHash != runHash(a) || r.RestoreCheckpoint == nil || r.RestoreCheckpoint.ManifestDigest != cp.ManifestDigest || r.RestoreCheckpoint.NativeCheckpointID != cp.NativeCheckpointID {
 			return controlplane.Observation{}, fail("aborted", "resume inputs changed")
 		}
+		if r.Stage == "agent_running" {
+			return b.observeAgentLocked(ctx, a, r)
+		}
 		if r.Stage == "controlled_running" {
 			return b.observeSnapshotLocked(ctx, a, r)
 		}
@@ -217,7 +280,7 @@ func (b *Bridge) Resume(ctx context.Context, a controlplane.Assignment, cp contr
 			return controlplane.Observation{}, fail("failed_precondition", "resume cannot replay this assignment")
 		}
 	} else {
-		request := sandbox.RestoreRequest{OperationID: "resume-" + a.ExecutionID, CheckpointID: cp.NativeCheckpointID, Allocation: allocation(a), Limits: taskLimits(t), AbsoluteExpiresAt: a.LeaseUntil}
+		request := sandbox.RestoreRequest{HarnessSession: a.HarnessSession, OperationID: "resume-" + a.ExecutionID, CheckpointID: cp.NativeCheckpointID, Allocation: allocation(a), Limits: taskLimits(t), AbsoluteExpiresAt: a.LeaseUntil}
 		if e = request.Validate(); e != nil {
 			return controlplane.Observation{}, runtimeError(e)
 		}
@@ -235,17 +298,29 @@ func (b *Bridge) Resume(ctx context.Context, a controlplane.Assignment, cp contr
 	if o.State != sandbox.StateRunning {
 		return controlplane.Observation{}, fail("unavailable", "restored VM is not running")
 	}
-	state, e := b.runtime.(sandbox.SnapshotBackend).InspectControlled(ctx, allocation(a))
-	if e != nil {
-		return controlplane.Observation{}, runtimeError(e)
-	}
-	if e = controlledIdentity(state, a); e != nil {
-		return controlplane.Observation{}, e
+	if t.ExecutionMode == "cooperative_python_v1" {
+		native := b.runtime.(sandbox.AgentBackend)
+		info, e := native.InspectAgent(ctx, allocation(a))
+		if e != nil {
+			return controlplane.Observation{}, runtimeError(e)
+		}
+		if a.HarnessSession == nil || info.HarnessSessionHash != a.HarnessSession.SessionHash || !info.AgentStarted {
+			return controlplane.Observation{}, fail("failed_precondition", "restored cooperative readiness mismatch")
+		}
+		r.Stage = "agent_running"
+	} else {
+		state, e := b.runtime.(sandbox.SnapshotBackend).InspectControlled(ctx, allocation(a))
+		if e != nil {
+			return controlplane.Observation{}, runtimeError(e)
+		}
+		if e = controlledIdentity(state, a); e != nil {
+			return controlplane.Observation{}, e
+		}
+		r.Stage = "controlled_running"
 	}
 	if !o.ExpiresAt.IsZero() && o.ExpiresAt.Before(r.ExpiresAt) {
 		r.ExpiresAt = o.ExpiresAt
 	}
-	r.Stage = "controlled_running"
 	if e = b.save(a, r); e != nil {
 		return controlplane.Observation{}, e
 	}

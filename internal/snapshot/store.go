@@ -84,11 +84,44 @@ func digestValid(s string) bool {
 	return e == nil && len(b) == 32 && s == strings.ToLower(s)
 }
 
+// SemanticBarrier binds an instrumented agent's committed event position and
+// state to the immutable VM artifacts. It is separate from lifecycle ownership.
+type SemanticBarrier struct {
+	ProtocolVersion   string `json:"protocol_version"`
+	Step              int64  `json:"step"`
+	EventSequence     int64  `json:"event_sequence"`
+	StateDigest       string `json:"state_digest"`
+	SourceSessionHash string `json:"source_session_hash"`
+	SourceBranchID    string `json:"source_branch_id"`
+	SourceExecutionID string `json:"source_execution_id"`
+	SourceEpoch       int64  `json:"source_epoch"`
+}
+
+func (b SemanticBarrier) Validate() error {
+	if b.ProtocolVersion != "hypercall.harness.v1" || b.Step < 0 || b.EventSequence < 1 || b.SourceEpoch < 1 || !component.MatchString(b.SourceBranchID) || !component.MatchString(b.SourceExecutionID) || !strings.HasPrefix(b.StateDigest, "sha256:") || !digestValid(strings.TrimPrefix(b.StateDigest, "sha256:")) || !strings.HasPrefix(b.SourceSessionHash, "sha256:") || !digestValid(strings.TrimPrefix(b.SourceSessionHash, "sha256:")) {
+		return ErrInvalid
+	}
+	return nil
+}
+func barrierValid(b *SemanticBarrier, c Compatibility) bool {
+	if b == nil {
+		return c.BarrierProtocolVersion != "hypercall.harness.v1"
+	}
+	return b.Validate() == nil && c.BarrierProtocolVersion == b.ProtocolVersion
+}
+func sameBarrier(a, b *SemanticBarrier) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return *a == *b
+}
+
 type Source struct {
 	Kind string
 	Path string
 }
 type PublishRequest struct {
+	SemanticBarrier    *SemanticBarrier
 	Scope              Scope
 	ParentCheckpointID string
 	Compatibility      Compatibility
@@ -101,12 +134,13 @@ type Artifact struct {
 	Size   int64  `json:"size"`
 }
 type Manifest struct {
-	SchemaVersion      uint32        `json:"schema_version"`
-	Scope              Scope         `json:"scope"`
-	ParentCheckpointID string        `json:"parent_checkpoint_id,omitempty"`
-	Compatibility      Compatibility `json:"compatibility"`
-	UploadID           string        `json:"upload_id"`
-	Artifacts          []Artifact    `json:"artifacts"`
+	SemanticBarrier    *SemanticBarrier `json:"semantic_barrier,omitempty"`
+	SchemaVersion      uint32           `json:"schema_version"`
+	Scope              Scope            `json:"scope"`
+	ParentCheckpointID string           `json:"parent_checkpoint_id,omitempty"`
+	Compatibility      Compatibility    `json:"compatibility"`
+	UploadID           string           `json:"upload_id"`
+	Artifacts          []Artifact       `json:"artifacts"`
 }
 type Options struct {
 	Logger           *slog.Logger
@@ -211,7 +245,7 @@ func (s *Store) Publish(ctx context.Context, req PublishRequest) (publishedManif
 	ctx, cancel := s.operation(ctx)
 	defer cancel()
 	var zero Manifest
-	if req.Scope.validate() != nil || req.Compatibility.validate() != nil || (req.ParentCheckpointID != "" && (!component.MatchString(req.ParentCheckpointID) || req.ParentCheckpointID == req.Scope.CheckpointID)) || len(req.Sources) != 3 {
+	if req.Scope.validate() != nil || req.Compatibility.validate() != nil || !barrierValid(req.SemanticBarrier, req.Compatibility) || (req.ParentCheckpointID != "" && (!component.MatchString(req.ParentCheckpointID) || req.ParentCheckpointID == req.Scope.CheckpointID)) || len(req.Sources) != 3 {
 		return zero, ErrInvalid
 	}
 	sources := append([]Source(nil), req.Sources...)
@@ -221,7 +255,7 @@ func (s *Store) Publish(ctx context.Context, req PublishRequest) (publishedManif
 			return zero, ErrInvalid
 		}
 	}
-	m := Manifest{SchemaVersion: SchemaVersion, Scope: req.Scope, ParentCheckpointID: req.ParentCheckpointID, Compatibility: req.Compatibility, UploadID: randomID()}
+	m := Manifest{SemanticBarrier: req.SemanticBarrier, SchemaVersion: SchemaVersion, Scope: req.Scope, ParentCheckpointID: req.ParentCheckpointID, Compatibility: req.Compatibility, UploadID: randomID()}
 	files := make([]*os.File, 0, len(sources))
 	defer func() {
 		for _, f := range files {
@@ -264,7 +298,7 @@ func (s *Store) Publish(ctx context.Context, req PublishRequest) (publishedManif
 		if sum(b) != existing.ManifestSHA256 {
 			return zero, ErrIntegrity
 		}
-		if published.Scope != m.Scope || published.SchemaVersion != SchemaVersion || published.Compatibility != m.Compatibility || published.ParentCheckpointID != m.ParentCheckpointID || len(published.Artifacts) != len(m.Artifacts) {
+		if published.Scope != m.Scope || published.SchemaVersion != SchemaVersion || published.Compatibility != m.Compatibility || published.ParentCheckpointID != m.ParentCheckpointID || !sameBarrier(published.SemanticBarrier, m.SemanticBarrier) || len(published.Artifacts) != len(m.Artifacts) {
 			return zero, ErrConflict
 		}
 		for i, a := range published.Artifacts {
@@ -341,7 +375,7 @@ func (s *Store) OpenVerified(ctx context.Context, scope Scope, expected Compatib
 	if err != nil {
 		return nil, err
 	}
-	if sum(b) != st.ManifestSHA256 || m.SchemaVersion != SchemaVersion || m.Scope != scope || m.Compatibility.validate() != nil || m.UploadID != st.UploadID || len(m.Artifacts) != 3 {
+	if sum(b) != st.ManifestSHA256 || m.SchemaVersion != SchemaVersion || m.Scope != scope || m.Compatibility.validate() != nil || !barrierValid(m.SemanticBarrier, m.Compatibility) || m.UploadID != st.UploadID || len(m.Artifacts) != 3 {
 		return nil, ErrIntegrity
 	}
 	if m.Compatibility != expected {
@@ -425,7 +459,7 @@ func (s *Store) ReadyManifest(ctx context.Context, scope Scope) (Manifest, error
 	if e != nil {
 		return m, e
 	}
-	if sum(data) != st.ManifestSHA256 || m.SchemaVersion != SchemaVersion || m.Scope != scope || m.Compatibility.validate() != nil || m.UploadID != st.UploadID || len(m.Artifacts) != 3 {
+	if sum(data) != st.ManifestSHA256 || m.SchemaVersion != SchemaVersion || m.Scope != scope || m.Compatibility.validate() != nil || !barrierValid(m.SemanticBarrier, m.Compatibility) || m.UploadID != st.UploadID || len(m.Artifacts) != 3 {
 		return Manifest{}, ErrIntegrity
 	}
 	for i, k := range []string{Disk, Memory, VMState} {

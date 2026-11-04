@@ -434,3 +434,23 @@ func TestPublicationKeepsCapturedDescriptorWhenSourcePathIsReplaced(t *testing.T
 		t.Fatalf("publication read replacement path: %q %v", data, err)
 	}
 }
+
+func TestSemanticCheckpointRetainsExactCommittedMarkerAndRejectsReplacement(t *testing.T) {
+	store, _ := newStore(t)
+	req := request(t)
+	req.Compatibility.BarrierProtocolVersion = "hypercall.harness.v1"
+	req.SemanticBarrier = &snapshot.SemanticBarrier{ProtocolVersion: "hypercall.harness.v1", Step: 2, EventSequence: 17, StateDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", SourceSessionHash: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", SourceBranchID: "branch", SourceExecutionID: "execution", SourceEpoch: 3}
+	if _, e := store.Publish(t.Context(), req); e != nil {
+		t.Fatal(e)
+	}
+	ready, e := store.ReadyManifest(t.Context(), req.Scope)
+	if e != nil || ready.SemanticBarrier == nil || *ready.SemanticBarrier != *req.SemanticBarrier {
+		t.Fatalf("semantic marker not retained: %v %v", ready, e)
+	}
+	changed := *req.SemanticBarrier
+	changed.EventSequence = 18
+	req.SemanticBarrier = &changed
+	if _, e = store.Publish(t.Context(), req); !errors.Is(e, snapshot.ErrConflict) {
+		t.Fatalf("same artifact bytes replaced committed event position: %v", e)
+	}
+}

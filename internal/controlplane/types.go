@@ -86,11 +86,17 @@ type RunSpec struct {
 	Gateway   Resource   `json:"gateway"`
 }
 type BranchSpec struct {
+	ParentBranchID     string   `json:"parent_branch_id,omitempty"`
+	ForkOperationID    string   `json:"fork_operation_id,omitempty"`
 	RunID              string   `json:"run_id"`
 	Model              Resource `json:"model"`
 	ParentCheckpointID string   `json:"parent_checkpoint_id,omitempty"`
 }
 type BranchStatus struct {
+	AgentGate         string    `json:"agent_gate,omitempty"`
+	RouteDigest       string    `json:"route_digest,omitempty"`
+	AgentStep         int64     `json:"agent_step"`
+	TraceComplete     bool      `json:"trace_complete"`
 	SandboxID         string    `json:"sandbox_id"`
 	CheckpointID      string    `json:"checkpoint_id,omitempty"`
 	BudgetRemainingMS int64     `json:"budget_remaining_ms"`
@@ -107,9 +113,11 @@ type OperationStatus struct {
 	Error string `json:"error,omitempty"`
 }
 type OperationSpec struct {
-	CheckpointID string `json:"checkpoint_id,omitempty"`
-	BranchID     string `json:"branch_id"`
-	Action       string `json:"action"`
+	ChildBranchIDs    []string `json:"child_branch_ids,omitempty"`
+	ParentOperationID string   `json:"parent_operation_id,omitempty"`
+	CheckpointID      string   `json:"checkpoint_id,omitempty"`
+	BranchID          string   `json:"branch_id"`
+	Action            string   `json:"action"`
 }
 type Submission struct {
 	Run       Resource `json:"run"`

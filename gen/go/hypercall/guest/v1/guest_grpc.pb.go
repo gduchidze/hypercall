@@ -8,6 +8,7 @@ package guestv1
 
 import (
 	context "context"
+	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -19,6 +20,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
+	Guest_StartAgent_FullMethodName         = "/hypercall.guest.v1.Guest/StartAgent"
+	Guest_PollAgent_FullMethodName          = "/hypercall.guest.v1.Guest/PollAgent"
+	Guest_DeliverAgent_FullMethodName       = "/hypercall.guest.v1.Guest/DeliverAgent"
 	Guest_StartControlled_FullMethodName    = "/hypercall.guest.v1.Guest/StartControlled"
 	Guest_InspectControlled_FullMethodName  = "/hypercall.guest.v1.Guest/InspectControlled"
 	Guest_ContinueControlled_FullMethodName = "/hypercall.guest.v1.Guest/ContinueControlled"
@@ -40,6 +44,9 @@ const (
 // value. The credential is provisioned out of band and binds the allocation;
 // request fields never establish authority. Credentials must change on a fork.
 type GuestClient interface {
+	StartAgent(ctx context.Context, in *StartAgentRequest, opts ...grpc.CallOption) (*GetInfoResponse, error)
+	PollAgent(ctx context.Context, in *PollAgentRequest, opts ...grpc.CallOption) (*v1.AgentPoll, error)
+	DeliverAgent(ctx context.Context, in *v1.AgentDelivery, opts ...grpc.CallOption) (*DeliverAgentResponse, error)
 	// Guest-owned bounded qualification process; survives host transport reset.
 	StartControlled(ctx context.Context, in *StartControlledRequest, opts ...grpc.CallOption) (*ControlledState, error)
 	InspectControlled(ctx context.Context, in *InspectControlledRequest, opts ...grpc.CallOption) (*ControlledState, error)
@@ -60,6 +67,36 @@ type guestClient struct {
 
 func NewGuestClient(cc grpc.ClientConnInterface) GuestClient {
 	return &guestClient{cc}
+}
+
+func (c *guestClient) StartAgent(ctx context.Context, in *StartAgentRequest, opts ...grpc.CallOption) (*GetInfoResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetInfoResponse)
+	err := c.cc.Invoke(ctx, Guest_StartAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) PollAgent(ctx context.Context, in *PollAgentRequest, opts ...grpc.CallOption) (*v1.AgentPoll, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AgentPoll)
+	err := c.cc.Invoke(ctx, Guest_PollAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *guestClient) DeliverAgent(ctx context.Context, in *v1.AgentDelivery, opts ...grpc.CallOption) (*DeliverAgentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(DeliverAgentResponse)
+	err := c.cc.Invoke(ctx, Guest_DeliverAgent_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 func (c *guestClient) StartControlled(ctx context.Context, in *StartControlledRequest, opts ...grpc.CallOption) (*ControlledState, error) {
@@ -180,6 +217,9 @@ func (c *guestClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts 
 // value. The credential is provisioned out of band and binds the allocation;
 // request fields never establish authority. Credentials must change on a fork.
 type GuestServer interface {
+	StartAgent(context.Context, *StartAgentRequest) (*GetInfoResponse, error)
+	PollAgent(context.Context, *PollAgentRequest) (*v1.AgentPoll, error)
+	DeliverAgent(context.Context, *v1.AgentDelivery) (*DeliverAgentResponse, error)
 	// Guest-owned bounded qualification process; survives host transport reset.
 	StartControlled(context.Context, *StartControlledRequest) (*ControlledState, error)
 	InspectControlled(context.Context, *InspectControlledRequest) (*ControlledState, error)
@@ -202,6 +242,15 @@ type GuestServer interface {
 // pointer dereference when methods are called.
 type UnimplementedGuestServer struct{}
 
+func (UnimplementedGuestServer) StartAgent(context.Context, *StartAgentRequest) (*GetInfoResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method StartAgent not implemented")
+}
+func (UnimplementedGuestServer) PollAgent(context.Context, *PollAgentRequest) (*v1.AgentPoll, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method PollAgent not implemented")
+}
+func (UnimplementedGuestServer) DeliverAgent(context.Context, *v1.AgentDelivery) (*DeliverAgentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DeliverAgent not implemented")
+}
 func (UnimplementedGuestServer) StartControlled(context.Context, *StartControlledRequest) (*ControlledState, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method StartControlled not implemented")
 }
@@ -251,6 +300,60 @@ func RegisterGuestServer(s grpc.ServiceRegistrar, srv GuestServer) {
 		t.testEmbeddedByValue()
 	}
 	s.RegisterService(&Guest_ServiceDesc, srv)
+}
+
+func _Guest_StartAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(StartAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).StartAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_StartAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).StartAgent(ctx, req.(*StartAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_PollAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(PollAgentRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).PollAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_PollAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).PollAgent(ctx, req.(*PollAgentRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Guest_DeliverAgent_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(v1.AgentDelivery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(GuestServer).DeliverAgent(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Guest_DeliverAgent_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(GuestServer).DeliverAgent(ctx, req.(*v1.AgentDelivery))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 func _Guest_StartControlled_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -433,6 +536,18 @@ var Guest_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "hypercall.guest.v1.Guest",
 	HandlerType: (*GuestServer)(nil),
 	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "StartAgent",
+			Handler:    _Guest_StartAgent_Handler,
+		},
+		{
+			MethodName: "PollAgent",
+			Handler:    _Guest_PollAgent_Handler,
+		},
+		{
+			MethodName: "DeliverAgent",
+			Handler:    _Guest_DeliverAgent_Handler,
+		},
 		{
 			MethodName: "StartControlled",
 			Handler:    _Guest_StartControlled_Handler,

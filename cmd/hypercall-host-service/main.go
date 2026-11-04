@@ -46,6 +46,7 @@ func run() error {
 	cgroup := flag.String("cgroup-dir", "", "delegated cgroups v2 parent")
 	uid := flag.Int("jailer-uid", -1, "non-root jailer/workload uid")
 	gid := flag.Int("jailer-gid", -1, "non-root jailer/workload gid")
+	cooperative := flag.Bool("cooperative-agents", false, "opt in to instrumented cooperative Python fixture agents and semantic checkpoints")
 	controlled := flag.Bool("controlled-snapshots", false, "opt in to UNQUALIFIED controlled-Python snapshot implementation")
 	localStore := flag.String("snapshot-store", "", "private local snapshot object directory")
 	bucket := flag.String("gcs-bucket", "", "existing authorized snapshot GCS bucket")
@@ -86,7 +87,7 @@ func run() error {
 			return e
 		}
 	}
-	if *controlled && store == nil {
+	if (*controlled || *cooperative) && store == nil {
 		return errors.New("controlled snapshot opt-in requires an explicit snapshot store")
 	}
 	guestDigest, e := pinnedGuestDigest(manifest)
@@ -98,7 +99,7 @@ func run() error {
 		return e
 	}
 	defer runtime.Close()
-	bridge, e := hostapi.NewBridge(hostapi.Config{Scope: controlplane.Scope{TenantID: *tenant, ProjectID: *project}, StateDir: *ledger, TemplateDigest: "sha256:" + strings.ToLower(manifest.Template.SHA256), Logger: slog.Default(), SnapshotStore: store, ControlledSnapshots: *controlled, ControlledAgentDigest: guestDigest}, runtime)
+	bridge, e := hostapi.NewBridge(hostapi.Config{Scope: controlplane.Scope{TenantID: *tenant, ProjectID: *project}, StateDir: *ledger, TemplateDigest: "sha256:" + strings.ToLower(manifest.Template.SHA256), Logger: slog.Default(), SnapshotStore: store, ControlledSnapshots: *controlled, CooperativeAgents: *cooperative, ControlledAgentDigest: guestDigest}, runtime)
 	if e != nil {
 		return e
 	}

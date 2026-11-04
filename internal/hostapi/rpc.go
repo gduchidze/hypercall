@@ -11,6 +11,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	hostv1 "github.com/gduchidze/hypercall/gen/go/hypercall/host/v1"
 	publicv1 "github.com/gduchidze/hypercall/gen/go/hypercall/v1"
 	"github.com/gduchidze/hypercall/internal/controlplane"
@@ -102,17 +103,23 @@ func fromWire(a *hostv1.Assignment) (controlplane.Assignment, error) {
 	if a == nil {
 		return controlplane.Assignment{}, fail("invalid_argument", "assignment required")
 	}
-	v := controlplane.Assignment{Scope: controlplane.Scope{TenantID: a.TenantId, ProjectID: a.ProjectId}, BranchID: a.BranchId, SandboxID: a.SandboxId, ExecutionID: a.ExecutionId, Epoch: a.Epoch, LeaseUntil: time.Unix(0, a.LeaseUntilUnixNano).UTC()}
+	v := controlplane.Assignment{Scope: controlplane.Scope{TenantID: a.TenantId, ProjectID: a.ProjectId}, BranchID: a.BranchId, SandboxID: a.SandboxId, ExecutionID: a.ExecutionId, Epoch: a.Epoch, LeaseUntil: time.Unix(0, a.LeaseUntilUnixNano).UTC(), HarnessSession: a.HarnessSession, ParentCheckpointID: a.ParentCheckpointId, ParentBranchID: a.ParentBranchId, Barrier: barrierFromWire(a.Barrier)}
 	if len(a.ResolvedRunJson) > 0 {
 		if len(a.ResolvedRunJson) > 4<<20 || decode(a.ResolvedRunJson, &v.Run) != nil {
 			return v, fail("invalid_argument", "invalid resolved run JSON")
+		}
+	}
+	if len(a.SelectedModelJson) > 0 {
+		if len(a.SelectedModelJson) > 1<<20 || decode(a.SelectedModelJson, &v.SelectedModel) != nil {
+			return v, fail("invalid_argument", "invalid immutable selected model JSON")
 		}
 	}
 	return v, nil
 }
 func wire(a controlplane.Assignment) *hostv1.Assignment {
 	run, _ := json.Marshal(a.Run)
-	return &hostv1.Assignment{TenantId: a.Scope.TenantID, ProjectId: a.Scope.ProjectID, BranchId: a.BranchID, SandboxId: a.SandboxID, ExecutionId: a.ExecutionID, Epoch: a.Epoch, LeaseUntilUnixNano: a.LeaseUntil.UnixNano(), ResolvedRunJson: run}
+	selected, _ := json.Marshal(a.SelectedModel)
+	return &hostv1.Assignment{TenantId: a.Scope.TenantID, ProjectId: a.Scope.ProjectID, BranchId: a.BranchID, SandboxId: a.SandboxID, ExecutionId: a.ExecutionID, Epoch: a.Epoch, LeaseUntilUnixNano: a.LeaseUntil.UnixNano(), ResolvedRunJson: run, HarnessSession: a.HarnessSession, SelectedModelJson: selected, ParentCheckpointId: a.ParentCheckpointID, ParentBranchId: a.ParentBranchID, Barrier: barrierWire(a.Barrier)}
 }
 func grpcError(e error) error {
 	if e == nil {
@@ -121,7 +128,7 @@ func grpcError(e error) error {
 	if _, ok := status.FromError(e); ok {
 		return e
 	}
-	mapping := map[string]codes.Code{"invalid_argument": codes.InvalidArgument, "permission_denied": codes.PermissionDenied, "aborted": codes.Aborted, "not_found": codes.NotFound, "failed_precondition": codes.FailedPrecondition, "unavailable": codes.Unavailable, "cancelled": codes.Canceled, "deadline_exceeded": codes.DeadlineExceeded}
+	mapping := map[string]codes.Code{"invalid_argument": codes.InvalidArgument, "permission_denied": codes.PermissionDenied, "aborted": codes.Aborted, "not_found": codes.NotFound, "failed_precondition": codes.FailedPrecondition, "unavailable": codes.Unavailable, "cancelled": codes.Canceled, "deadline_exceeded": codes.DeadlineExceeded, "resource_exhausted": codes.ResourceExhausted}
 	c, ok := mapping[controlplane.Code(e)]
 	if !ok {
 		c = codes.Internal
@@ -132,7 +139,7 @@ func clientError(e error) error {
 	if e == nil {
 		return nil
 	}
-	mapping := map[codes.Code]string{codes.InvalidArgument: "invalid_argument", codes.PermissionDenied: "permission_denied", codes.Unauthenticated: "unauthenticated", codes.Aborted: "aborted", codes.NotFound: "not_found", codes.FailedPrecondition: "failed_precondition", codes.Unavailable: "unavailable", codes.Canceled: "cancelled", codes.DeadlineExceeded: "deadline_exceeded"}
+	mapping := map[codes.Code]string{codes.InvalidArgument: "invalid_argument", codes.PermissionDenied: "permission_denied", codes.Unauthenticated: "unauthenticated", codes.Aborted: "aborted", codes.NotFound: "not_found", codes.FailedPrecondition: "failed_precondition", codes.Unavailable: "unavailable", codes.Canceled: "cancelled", codes.DeadlineExceeded: "deadline_exceeded", codes.ResourceExhausted: "resource_exhausted"}
 	s := status.Convert(e)
 	c, ok := mapping[s.Code()]
 	if !ok {
@@ -184,7 +191,10 @@ func (s *server) WriteFile(ctx context.Context, r *hostv1.WriteFileRequest) (*gu
 	return v, grpcError(e)
 }
 
-type ClientOptions struct{ ControlledSnapshots bool }
+type ClientOptions struct {
+	ControlledSnapshots bool
+	CooperativeAgents   bool
+}
 type Client struct {
 	rpc     hostv1.HostClient
 	options ClientOptions
@@ -198,7 +208,7 @@ func NewClient(conn grpc.ClientConnInterface, options ...ClientOptions) *Client 
 	return c
 }
 func (c *Client) Supports(action string) bool {
-	return action != "suspend" && action != "resume" || c.options.ControlledSnapshots
+	return action != "suspend" && action != "resume" && action != "fork" || c.options.ControlledSnapshots || c.options.CooperativeAgents
 }
 func observation(v *hostv1.Observation, e error) (controlplane.Observation, error) {
 	if e != nil {
@@ -219,21 +229,24 @@ func (c *Client) Stop(ctx context.Context, a controlplane.Assignment) (controlpl
 	return observation(v, e)
 }
 func (c *Client) SupportsRun(action string, run controlplane.RunSpec) bool {
-	if action != "suspend" && action != "resume" {
+	if action != "suspend" && action != "resume" && action != "fork" {
 		return true
 	}
 	var t controlplane.TaskSpec
-	return c.options.ControlledSnapshots && decode(run.Task.Spec, &t) == nil && t.ExecutionMode == "controlled_python_v1"
+	if decode(run.Task.Spec, &t) != nil {
+		return false
+	}
+	return c.options.ControlledSnapshots && t.ExecutionMode == "controlled_python_v1" || c.options.CooperativeAgents && t.ExecutionMode == "cooperative_python_v1"
 }
 func (c *Client) Suspend(ctx context.Context, a controlplane.Assignment) (controlplane.Observation, error) {
-	if !c.options.ControlledSnapshots {
+	if !c.options.ControlledSnapshots && !c.options.CooperativeAgents {
 		return controlplane.Observation{}, fail("failed_precondition", "snapshot host adapter is not enabled")
 	}
 	v, e := c.rpc.Suspend(ctx, wire(a))
 	return observation(v, e)
 }
 func (c *Client) Resume(ctx context.Context, a controlplane.Assignment, cp controlplane.CheckpointSpec) (controlplane.Observation, error) {
-	if !c.options.ControlledSnapshots {
+	if !c.options.ControlledSnapshots && !c.options.CooperativeAgents {
 		return controlplane.Observation{}, fail("failed_precondition", "snapshot host adapter is not enabled")
 	}
 	v, e := c.rpc.Resume(ctx, &hostv1.ResumeRequest{Assignment: wire(a), Checkpoint: checkpointWire(&cp)})
@@ -285,13 +298,13 @@ func checkpointWire(cp *controlplane.CheckpointSpec) *publicv1.CheckpointSpec {
 	if cp == nil {
 		return nil
 	}
-	return &publicv1.CheckpointSpec{NativeCheckpointId: cp.NativeCheckpointID, SnapshotManifest: cp.SnapshotManifest, BranchId: cp.BranchID, Compatibility: cp.Compatibility, ManifestDigest: cp.ManifestDigest, ManifestUri: cp.ManifestURI, ProtocolVersion: cp.ProtocolVersion, EventPosition: cp.EventPosition, Verified: cp.Verified}
+	return &publicv1.CheckpointSpec{Barrier: barrierWire(cp.Barrier), RouteDigest: cp.RouteDigest, BudgetRemainingMs: cp.BudgetRemainingMS, NativeCheckpointId: cp.NativeCheckpointID, SnapshotManifest: cp.SnapshotManifest, BranchId: cp.BranchID, Compatibility: cp.Compatibility, ManifestDigest: cp.ManifestDigest, ManifestUri: cp.ManifestURI, ProtocolVersion: cp.ProtocolVersion, EventPosition: cp.EventPosition, Verified: cp.Verified}
 }
 func checkpointFromWire(cp *publicv1.CheckpointSpec) *controlplane.CheckpointSpec {
 	if cp == nil {
 		return nil
 	}
-	return &controlplane.CheckpointSpec{NativeCheckpointID: cp.NativeCheckpointId, SnapshotManifest: cp.SnapshotManifest, BranchID: cp.BranchId, Compatibility: cp.Compatibility, ManifestDigest: cp.ManifestDigest, ManifestURI: cp.ManifestUri, ProtocolVersion: cp.ProtocolVersion, EventPosition: cp.EventPosition, Verified: cp.Verified}
+	return &controlplane.CheckpointSpec{Barrier: barrierFromWire(cp.Barrier), RouteDigest: cp.RouteDigest, BudgetRemainingMS: cp.BudgetRemainingMs, NativeCheckpointID: cp.NativeCheckpointId, SnapshotManifest: cp.SnapshotManifest, BranchID: cp.BranchId, Compatibility: cp.Compatibility, ManifestDigest: cp.ManifestDigest, ManifestURI: cp.ManifestUri, ProtocolVersion: cp.ProtocolVersion, EventPosition: cp.EventPosition, Verified: cp.Verified}
 }
 func (s *server) Suspend(ctx context.Context, a *hostv1.Assignment) (*hostv1.Observation, error) {
 	return s.call(ctx, a, s.bridge.Suspend)
@@ -310,4 +323,43 @@ func (s *server) Resume(ctx context.Context, r *hostv1.ResumeRequest) (*hostv1.O
 		return nil, grpcError(e)
 	}
 	return &hostv1.Observation{State: o.State, Checkpoint: checkpointWire(o.Checkpoint)}, nil
+}
+
+func (c *Client) AgentPoll(ctx context.Context, a controlplane.Assignment) (controlplane.AgentPoll, error) {
+	if !c.options.CooperativeAgents {
+		return controlplane.AgentPoll{}, fail("failed_precondition", "cooperative host adapter is not enabled")
+	}
+	p, e := c.rpc.AgentPoll(ctx, wire(a))
+	if e != nil {
+		return controlplane.AgentPoll{}, clientError(e)
+	}
+	return pollFromWire(p), nil
+}
+func (c *Client) AgentDeliver(ctx context.Context, a controlplane.Assignment, d controlplane.AgentDelivery) error {
+	if !c.options.CooperativeAgents {
+		return fail("failed_precondition", "cooperative host adapter is not enabled")
+	}
+	_, e := c.rpc.AgentDeliver(ctx, &hostv1.HostAgentDelivery{Assignment: wire(a), Delivery: deliveryWire(d)})
+	return clientError(e)
+}
+func (s *server) AgentPoll(ctx context.Context, a *hostv1.Assignment) (*harnessv1.AgentPoll, error) {
+	v, e := fromWire(a)
+	if e != nil {
+		return nil, grpcError(e)
+	}
+	p, e := s.bridge.AgentPoll(ctx, v)
+	if e != nil {
+		return nil, grpcError(e)
+	}
+	return pollWire(p), nil
+}
+func (s *server) AgentDeliver(ctx context.Context, r *hostv1.HostAgentDelivery) (*guestv1.DeliverAgentResponse, error) {
+	a, e := fromWire(r.Assignment)
+	if e != nil {
+		return nil, grpcError(e)
+	}
+	if e = s.bridge.AgentDeliver(ctx, a, deliveryFromWire(r.Delivery)); e != nil {
+		return nil, grpcError(e)
+	}
+	return &guestv1.DeliverAgentResponse{}, nil
 }

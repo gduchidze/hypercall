@@ -1,0 +1,85 @@
+syntax = "proto3";
+package hypercall.harness.v1;
+option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1;harnessv1";
+
+// Harness is guest-local Unix gRPC. It carries no ingress or provider keys.
+// The guest derives execution authority from its current provisioned session.
+service Harness {
+  rpc GetSession(GetSessionRequest) returns (HarnessSession);
+  rpc Submit(AgentRequest) returns (AgentResult);
+  rpc AwaitResume(AgentBarrier) returns (HarnessSession);
+  // Local acknowledgement alone does not open the action gate. This RPC returns
+  // only after the controller durably acknowledges and delivers this session.
+  rpc AcknowledgeResume(SessionAckRequest) returns (SessionAck);
+}
+message GetSessionRequest {}
+message HarnessSession {
+  string tenant_id = 1;
+  string project_id = 2;
+  string branch_id = 3;
+  string sandbox_id = 4;
+  string execution_id = 5;
+  int64 epoch = 6;
+  string call_namespace = 7;
+  string route_digest = 8;
+  string model_digest = 9;
+  string protocol_version = 10;
+  // sha256:<hex> of deterministic protobuf serialization with this field empty.
+  string session_hash = 11;
+  string parent_checkpoint_id = 12;
+  SemanticBarrier inherited_barrier = 13;
+}
+message SemanticBarrier {
+  string protocol_version = 1;
+  int64 step = 2;
+  int64 event_sequence = 3;
+  string state_digest = 4;
+  string source_session_hash = 5;
+  string source_branch_id = 6;
+  string source_execution_id = 7;
+  int64 source_epoch = 8;
+}
+message AgentRequest {
+  string id = 1;
+  string kind = 2;
+  int64 step = 3;
+  int32 position = 4;
+  string name = 5;
+  bytes payload = 6;
+  string payload_digest = 7;
+  string session_hash = 8;
+}
+message AgentResult {
+  string id = 1;
+  string state = 2;
+  bytes payload = 3;
+  int64 event_sequence = 4;
+  string error_code = 5;
+  bool replayed = 6;
+}
+message AgentBarrier {
+  int64 step = 1;
+  int64 event_sequence = 2;
+  string state_digest = 3;
+  string protocol_version = 4;
+  string session_hash = 5;
+}
+message AgentPoll {
+  oneof pending {
+    AgentRequest request = 1;
+    string session_ack = 2;
+    AgentBarrier barrier = 3;
+  }
+}
+message AgentDelivery {
+  string session_hash = 1;
+  // sha256:<hex> of the exact deterministic AgentRequest protobuf bytes.
+  string request_hash = 2;
+  oneof delivery {
+    AgentResult result = 3;
+    string session_ack = 4;
+    AgentBarrier sealed_barrier = 5;
+  }
+}
+message SessionAckRequest { string session_hash = 1; }
+message SessionAck { string session_hash = 1; }

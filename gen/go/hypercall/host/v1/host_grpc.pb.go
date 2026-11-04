@@ -8,7 +8,8 @@ package hostv1
 
 import (
 	context "context"
-	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	v11 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	v1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
@@ -20,14 +21,16 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	Host_Ensure_FullMethodName    = "/hypercall.host.v1.Host/Ensure"
-	Host_Observe_FullMethodName   = "/hypercall.host.v1.Host/Observe"
-	Host_Stop_FullMethodName      = "/hypercall.host.v1.Host/Stop"
-	Host_Suspend_FullMethodName   = "/hypercall.host.v1.Host/Suspend"
-	Host_Resume_FullMethodName    = "/hypercall.host.v1.Host/Resume"
-	Host_Exec_FullMethodName      = "/hypercall.host.v1.Host/Exec"
-	Host_ReadFile_FullMethodName  = "/hypercall.host.v1.Host/ReadFile"
-	Host_WriteFile_FullMethodName = "/hypercall.host.v1.Host/WriteFile"
+	Host_Ensure_FullMethodName       = "/hypercall.host.v1.Host/Ensure"
+	Host_Observe_FullMethodName      = "/hypercall.host.v1.Host/Observe"
+	Host_Stop_FullMethodName         = "/hypercall.host.v1.Host/Stop"
+	Host_Suspend_FullMethodName      = "/hypercall.host.v1.Host/Suspend"
+	Host_Resume_FullMethodName       = "/hypercall.host.v1.Host/Resume"
+	Host_AgentPoll_FullMethodName    = "/hypercall.host.v1.Host/AgentPoll"
+	Host_AgentDeliver_FullMethodName = "/hypercall.host.v1.Host/AgentDeliver"
+	Host_Exec_FullMethodName         = "/hypercall.host.v1.Host/Exec"
+	Host_ReadFile_FullMethodName     = "/hypercall.host.v1.Host/ReadFile"
+	Host_WriteFile_FullMethodName    = "/hypercall.host.v1.Host/WriteFile"
 )
 
 // HostClient is the client API for Host service.
@@ -42,9 +45,11 @@ type HostClient interface {
 	Stop(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*Observation, error)
 	Suspend(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*Observation, error)
 	Resume(ctx context.Context, in *ResumeRequest, opts ...grpc.CallOption) (*Observation, error)
-	Exec(ctx context.Context, in *ExecRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.ExecEvent], error)
-	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*v1.ReadFileResponse, error)
-	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*v1.WriteFileResponse, error)
+	AgentPoll(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*v1.AgentPoll, error)
+	AgentDeliver(ctx context.Context, in *HostAgentDelivery, opts ...grpc.CallOption) (*v11.DeliverAgentResponse, error)
+	Exec(ctx context.Context, in *ExecRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.ExecEvent], error)
+	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*v11.ReadFileResponse, error)
+	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*v11.WriteFileResponse, error)
 }
 
 type hostClient struct {
@@ -105,13 +110,33 @@ func (c *hostClient) Resume(ctx context.Context, in *ResumeRequest, opts ...grpc
 	return out, nil
 }
 
-func (c *hostClient) Exec(ctx context.Context, in *ExecRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v1.ExecEvent], error) {
+func (c *hostClient) AgentPoll(ctx context.Context, in *Assignment, opts ...grpc.CallOption) (*v1.AgentPoll, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v1.AgentPoll)
+	err := c.cc.Invoke(ctx, Host_AgentPoll_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hostClient) AgentDeliver(ctx context.Context, in *HostAgentDelivery, opts ...grpc.CallOption) (*v11.DeliverAgentResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(v11.DeliverAgentResponse)
+	err := c.cc.Invoke(ctx, Host_AgentDeliver_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *hostClient) Exec(ctx context.Context, in *ExecRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[v11.ExecEvent], error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	stream, err := c.cc.NewStream(ctx, &Host_ServiceDesc.Streams[0], Host_Exec_FullMethodName, cOpts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &grpc.GenericClientStream[ExecRequest, v1.ExecEvent]{ClientStream: stream}
+	x := &grpc.GenericClientStream[ExecRequest, v11.ExecEvent]{ClientStream: stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -122,11 +147,11 @@ func (c *hostClient) Exec(ctx context.Context, in *ExecRequest, opts ...grpc.Cal
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Host_ExecClient = grpc.ServerStreamingClient[v1.ExecEvent]
+type Host_ExecClient = grpc.ServerStreamingClient[v11.ExecEvent]
 
-func (c *hostClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*v1.ReadFileResponse, error) {
+func (c *hostClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*v11.ReadFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.ReadFileResponse)
+	out := new(v11.ReadFileResponse)
 	err := c.cc.Invoke(ctx, Host_ReadFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -134,9 +159,9 @@ func (c *hostClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...
 	return out, nil
 }
 
-func (c *hostClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*v1.WriteFileResponse, error) {
+func (c *hostClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*v11.WriteFileResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
-	out := new(v1.WriteFileResponse)
+	out := new(v11.WriteFileResponse)
 	err := c.cc.Invoke(ctx, Host_WriteFile_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
@@ -156,9 +181,11 @@ type HostServer interface {
 	Stop(context.Context, *Assignment) (*Observation, error)
 	Suspend(context.Context, *Assignment) (*Observation, error)
 	Resume(context.Context, *ResumeRequest) (*Observation, error)
-	Exec(*ExecRequest, grpc.ServerStreamingServer[v1.ExecEvent]) error
-	ReadFile(context.Context, *ReadFileRequest) (*v1.ReadFileResponse, error)
-	WriteFile(context.Context, *WriteFileRequest) (*v1.WriteFileResponse, error)
+	AgentPoll(context.Context, *Assignment) (*v1.AgentPoll, error)
+	AgentDeliver(context.Context, *HostAgentDelivery) (*v11.DeliverAgentResponse, error)
+	Exec(*ExecRequest, grpc.ServerStreamingServer[v11.ExecEvent]) error
+	ReadFile(context.Context, *ReadFileRequest) (*v11.ReadFileResponse, error)
+	WriteFile(context.Context, *WriteFileRequest) (*v11.WriteFileResponse, error)
 	mustEmbedUnimplementedHostServer()
 }
 
@@ -184,13 +211,19 @@ func (UnimplementedHostServer) Suspend(context.Context, *Assignment) (*Observati
 func (UnimplementedHostServer) Resume(context.Context, *ResumeRequest) (*Observation, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method Resume not implemented")
 }
-func (UnimplementedHostServer) Exec(*ExecRequest, grpc.ServerStreamingServer[v1.ExecEvent]) error {
+func (UnimplementedHostServer) AgentPoll(context.Context, *Assignment) (*v1.AgentPoll, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AgentPoll not implemented")
+}
+func (UnimplementedHostServer) AgentDeliver(context.Context, *HostAgentDelivery) (*v11.DeliverAgentResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AgentDeliver not implemented")
+}
+func (UnimplementedHostServer) Exec(*ExecRequest, grpc.ServerStreamingServer[v11.ExecEvent]) error {
 	return status.Errorf(codes.Unimplemented, "method Exec not implemented")
 }
-func (UnimplementedHostServer) ReadFile(context.Context, *ReadFileRequest) (*v1.ReadFileResponse, error) {
+func (UnimplementedHostServer) ReadFile(context.Context, *ReadFileRequest) (*v11.ReadFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadFile not implemented")
 }
-func (UnimplementedHostServer) WriteFile(context.Context, *WriteFileRequest) (*v1.WriteFileResponse, error) {
+func (UnimplementedHostServer) WriteFile(context.Context, *WriteFileRequest) (*v11.WriteFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteFile not implemented")
 }
 func (UnimplementedHostServer) mustEmbedUnimplementedHostServer() {}
@@ -304,16 +337,52 @@ func _Host_Resume_Handler(srv interface{}, ctx context.Context, dec func(interfa
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Host_AgentPoll_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(Assignment)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HostServer).AgentPoll(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Host_AgentPoll_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HostServer).AgentPoll(ctx, req.(*Assignment))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Host_AgentDeliver_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(HostAgentDelivery)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(HostServer).AgentDeliver(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Host_AgentDeliver_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(HostServer).AgentDeliver(ctx, req.(*HostAgentDelivery))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _Host_Exec_Handler(srv interface{}, stream grpc.ServerStream) error {
 	m := new(ExecRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(HostServer).Exec(m, &grpc.GenericServerStream[ExecRequest, v1.ExecEvent]{ServerStream: stream})
+	return srv.(HostServer).Exec(m, &grpc.GenericServerStream[ExecRequest, v11.ExecEvent]{ServerStream: stream})
 }
 
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
-type Host_ExecServer = grpc.ServerStreamingServer[v1.ExecEvent]
+type Host_ExecServer = grpc.ServerStreamingServer[v11.ExecEvent]
 
 func _Host_ReadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(ReadFileRequest)
@@ -377,6 +446,14 @@ var Host_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "Resume",
 			Handler:    _Host_Resume_Handler,
+		},
+		{
+			MethodName: "AgentPoll",
+			Handler:    _Host_AgentPoll_Handler,
+		},
+		{
+			MethodName: "AgentDeliver",
+			Handler:    _Host_AgentDeliver_Handler,
 		},
 		{
 			MethodName: "ReadFile",

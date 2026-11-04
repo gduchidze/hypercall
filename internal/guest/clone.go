@@ -8,16 +8,18 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 )
 
 type cloneSession struct {
-	Identity   *guestv1.AllocationIdentity `json:"identity"`
-	Credential string                      `json:"credential"`
-	ExpiresAt  time.Time                   `json:"expires_at"`
-	Entropy    string                      `json:"entropy"`
+	HarnessSession *harnessv1.HarnessSession   `json:"harness_session,omitempty"`
+	Identity       *guestv1.AllocationIdentity `json:"identity"`
+	Credential     string                      `json:"credential"`
+	ExpiresAt      time.Time                   `json:"expires_at"`
+	Entropy        string                      `json:"entropy"`
 }
 
 func (s cloneSession) CredentialHash() [32]byte { return sha256.Sum256([]byte(s.Credential)) }

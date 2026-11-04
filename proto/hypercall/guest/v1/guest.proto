@@ -3,12 +3,16 @@ syntax = "proto3";
 package hypercall.guest.v1;
 
 option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1;guestv1";
+import "hypercall/harness/v1/harness.proto";
 
 // Guest is the private host-to-guest interface. Production uses vsock. Every RPC
 // requires exactly one `authorization: Bearer <session credential>` metadata
 // value. The credential is provisioned out of band and binds the allocation;
 // request fields never establish authority. Credentials must change on a fork.
 service Guest {
+  rpc StartAgent(StartAgentRequest) returns (GetInfoResponse);
+  rpc PollAgent(PollAgentRequest) returns (hypercall.harness.v1.AgentPoll);
+  rpc DeliverAgent(hypercall.harness.v1.AgentDelivery) returns (DeliverAgentResponse);
   // Guest-owned bounded qualification process; survives host transport reset.
   rpc StartControlled(StartControlledRequest) returns (ControlledState);
   rpc InspectControlled(InspectControlledRequest) returns (ControlledState);
@@ -40,6 +44,8 @@ message GetInfoResponse {
   uint32 max_exec_output_bytes = 4;
   // Guest UTC after authenticated renewal; never a monotonic clock.
   int64 server_time_unix_nano = 5;
+  string harness_session_hash = 6;
+  bool agent_started = 7;
 }
 
 message ExecRequest {
@@ -91,4 +97,8 @@ message ControlledState {
  bool at_barrier = 4;
  AllocationIdentity identity = 5;
  bytes random_probe = 6;
+ hypercall.harness.v1.SemanticBarrier semantic_barrier = 7;
 }
+message StartAgentRequest {}
+message PollAgentRequest {}
+message DeliverAgentResponse {}
