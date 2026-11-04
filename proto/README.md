@@ -1,7 +1,6 @@
 # Private guest protocol
 
-`hypercall.guest.v1.Guest` is the private host-to-guest interface. It is not a
-public control-plane API or an E2B compatibility promise. Production uses vsock;
+`hypercall.guest.v1.Guest` is the private host-to-guest interface. Production uses vsock;
 the explicitly enabled Unix socket is only for trusted local tests.
 
 Each RPC carries exactly one `authorization: Bearer <session credential>` metadata

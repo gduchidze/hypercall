@@ -10,7 +10,7 @@ Acceptance evidence is recorded in [local validation evidence](../validation/2A.
 
 The unprivileged Go API and controller own durable desired state in Postgres.
 A separate privileged host service owns observed VM state. The controller has one
-`Backend` boundary; AX Agent Substrate and the E2B scheduler are not retained.
+`Backend` boundary and is the single owner of sandbox lifecycle intent.
 Task, Workspace, ModelConfig and Gateway definitions are immutable named resources.
 A changed definition gets a new name and ID. Submission transactionally resolves
 same-tenant/project ID+digest references and embeds those definitions in the Run.

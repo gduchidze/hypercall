@@ -56,3 +56,60 @@ jobs:
           version: 0.12.11
           enable-cache: true
       - run: make test-postgres
+  phase3-evaluation:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    services:
+      postgres:
+        image: postgres@sha256:f3bd19c606e442c3d7bdfa8002e03fe260a1023351e0ea4598032022b68dd6e3
+        env:
+          POSTGRES_USER: hypercall
+          POSTGRES_PASSWORD: hypercall-ci-phase3-test-only
+          POSTGRES_DB: hypercall_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U hypercall -d hypercall_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+      clickhouse:
+        image: clickhouse/clickhouse-server:25.8.3.66-alpine@sha256:707dcb39a8314977492b9b17a718f2aefb7ce9f27b8098c8b703d2a9f919007b
+        env:
+          CLICKHOUSE_USER: hypercall
+          CLICKHOUSE_PASSWORD: hypercall-ci-phase3-test-only
+          CLICKHOUSE_DB: hypercall_test
+          CLICKHOUSE_DEFAULT_ACCESS_MANAGEMENT: "1"
+        ports:
+          - 8123:8123
+        options: >-
+          --health-cmd "clickhouse-client --user hypercall --password hypercall-ci-phase3-test-only --query 'SELECT 1'"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      HYPERCALL_TEST_POSTGRES: postgres://hypercall:hypercall-ci-phase3-test-only@127.0.0.1:5432/hypercall_test?sslmode=disable
+      HYPERCALL_TEST_CLICKHOUSE_URL: http://127.0.0.1:8123
+      HYPERCALL_TEST_CLICKHOUSE_DATABASE: hypercall_test
+      HYPERCALL_TEST_CLICKHOUSE_USER: hypercall
+      HYPERCALL_TEST_CLICKHOUSE_PASSWORD: hypercall-ci-phase3-test-only
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@44694675825211faa026b3c33043df3e48a5fa00 # v6.0.0
+        with:
+          go-version-file: .go-version
+          cache: true
+      - uses: astral-sh/setup-uv@3259c6206f993105e3a61b142c2d97bf4b9ef83d # v7.1.0
+        with:
+          version: 0.12.11
+          enable-cache: true
+      - name: Initialize the derived ClickHouse schema
+        run: >-
+          curl --fail --silent --show-error
+          --user "$HYPERCALL_TEST_CLICKHOUSE_USER:$HYPERCALL_TEST_CLICKHOUSE_PASSWORD"
+          "$HYPERCALL_TEST_CLICKHOUSE_URL/?database=$HYPERCALL_TEST_CLICKHOUSE_DATABASE"
+          --data-binary @deploy/clickhouse/schema.sql
+      - name: Run every Phase 3 acceptance seam
+        run: make test-eval

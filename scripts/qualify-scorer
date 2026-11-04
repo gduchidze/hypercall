@@ -1,0 +1,13 @@
+#!/bin/sh
+# Local OCI scorer qualification; no provider or cloud calls.
+set -eu
+cd "$(dirname "$0")/.."
+docker build --provenance=false -f deploy/scorer/Dockerfile -t hypercall-scorer:phase3 .
+HYPERCALL_SCORER_IMAGE="$(docker image inspect --format '{{.Id}}' hypercall-scorer:phase3)"
+export HYPERCALL_SCORER_IMAGE
+printf 'Qualifying scorer image %s\n' "$HYPERCALL_SCORER_IMAGE"
+"${GO:-go}" test -race -count=1 ./internal/scorer -v
+"${GO:-go}" test -race -count=1 ./internal/eval -run '^TestIsolatedScorer' -v
+if [ -n "${HYPERCALL_TEST_POSTGRES:-}" ]; then
+    "${GO:-go}" test -race -count=1 ./internal/api -run '^TestPublicEvaluation' -v
+fi

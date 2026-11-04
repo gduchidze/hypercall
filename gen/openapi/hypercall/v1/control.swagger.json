@@ -16,6 +16,36 @@
     "application/json"
   ],
   "paths": {
+    "/v1/projects/{projectId}/analytics/status": {
+      "get": {
+        "operationId": "ControlPlane_ProjectionStatus",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ProjectionStatusResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
     "/v1/projects/{projectId}/branches/{branchId}/calls": {
       "get": {
         "operationId": "ControlPlane_Calls",
@@ -399,6 +429,154 @@
         ]
       }
     },
+    "/v1/projects/{projectId}/evaluations": {
+      "post": {
+        "operationId": "ControlPlane_SubmitEvaluation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Evaluation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneSubmitEvaluationBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/evaluations/{id}": {
+      "get": {
+        "operationId": "ControlPlane_GetEvaluation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Evaluation"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/evaluations/{id}/report": {
+      "get": {
+        "operationId": "ControlPlane_GetReport",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EvaluationReport"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/evaluations:compile": {
+      "post": {
+        "operationId": "ControlPlane_CompileEvaluation",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EvaluationPlan"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneCompileEvaluationBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
     "/v1/projects/{projectId}/resources": {
       "post": {
         "operationId": "ControlPlane_PutResource",
@@ -669,6 +847,14 @@
         }
       }
     },
+    "ControlPlaneCompileEvaluationBody": {
+      "type": "object",
+      "properties": {
+        "configYaml": {
+          "type": "string"
+        }
+      }
+    },
     "ControlPlaneExecBody": {
       "type": "object",
       "properties": {
@@ -708,6 +894,24 @@
       "properties": {
         "taskId": {
           "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlPlaneSubmitEvaluationBody": {
+      "type": "object",
+      "properties": {
+        "configYaml": {
+          "type": "string"
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1EvaluationObservation"
+          }
         },
         "idempotencyKey": {
           "type": "string"
@@ -1105,6 +1309,138 @@
         }
       }
     },
+    "v1Evaluation": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "operationId": {
+          "type": "string"
+        },
+        "inputDigest": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "attempts": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "planJson": {
+          "type": "string",
+          "format": "byte"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "completedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1EvaluationCost": {
+      "type": "object",
+      "properties": {
+        "microUsd": {
+          "type": "string",
+          "format": "int64"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "priceDigest": {
+          "type": "string"
+        },
+        "recordedAt": {
+          "type": "string"
+        }
+      }
+    },
+    "v1EvaluationMeasurements": {
+      "type": "object",
+      "properties": {
+        "latencyMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "cost": {
+          "$ref": "#/definitions/v1EvaluationCost"
+        }
+      }
+    },
+    "v1EvaluationObservation": {
+      "type": "object",
+      "properties": {
+        "cellId": {
+          "type": "string"
+        },
+        "source": {
+          "type": "string"
+        },
+        "output": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "traceComplete": {
+          "type": "boolean"
+        },
+        "branchId": {
+          "type": "string"
+        },
+        "callId": {
+          "type": "string"
+        },
+        "measurements": {
+          "$ref": "#/definitions/v1EvaluationMeasurements"
+        }
+      }
+    },
+    "v1EvaluationPlan": {
+      "type": "object",
+      "properties": {
+        "digest": {
+          "type": "string"
+        },
+        "planJson": {
+          "type": "string",
+          "format": "byte"
+        }
+      },
+      "description": "Canonical UTF-8 JSON preserves exact integer microUSD amounts. The versioned\nconfiguration/report schema is hypercall.io/eval/v1, documented with the API."
+    },
+    "v1EvaluationReport": {
+      "type": "object",
+      "properties": {
+        "evaluationId": {
+          "type": "string"
+        },
+        "reportJson": {
+          "type": "string",
+          "format": "byte"
+        },
+        "markdown": {
+          "type": "string"
+        },
+        "ciPass": {
+          "type": "boolean"
+        },
+        "reasons": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "projection": {
+          "$ref": "#/definitions/v1ProjectionStatusResponse"
+        }
+      }
+    },
     "v1Event": {
       "type": "object",
       "properties": {
@@ -1347,6 +1683,9 @@
         },
         "parentOperationId": {
           "type": "string"
+        },
+        "evaluationId": {
+          "type": "string"
         }
       }
     },
@@ -1358,6 +1697,23 @@
         },
         "error": {
           "type": "string"
+        }
+      }
+    },
+    "v1ProjectionStatusResponse": {
+      "type": "object",
+      "properties": {
+        "pending": {
+          "type": "string",
+          "format": "int64"
+        },
+        "oldestPendingSeconds": {
+          "type": "number",
+          "format": "double"
+        },
+        "lastDeliveredAt": {
+          "type": "string",
+          "format": "date-time"
         }
       }
     },

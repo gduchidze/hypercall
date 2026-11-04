@@ -123,7 +123,7 @@ paginated, and rejects objects outside its requested scope. Token refresh, IAM,
 bucket encryption/location, storage charges and cloud provisioning belong to the
 operator. No cloud account or destination was used to validate this implementation.
 
-Google API grounding: [object insert](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert),
+Google API references: [object insert](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/insert),
 [object get](https://docs.cloud.google.com/storage/docs/json_api/v1/objects/get),
 [request preconditions](https://docs.cloud.google.com/storage/docs/request-preconditions),
 and [checksum validation](https://docs.cloud.google.com/storage/docs/data-validation).

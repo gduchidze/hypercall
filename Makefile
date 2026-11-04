@@ -4,7 +4,7 @@ UV ?= uv
 GO_VERSION := go1.27.3
 UV_VERSION := 0.12.11
 
-.PHONY: toolchains generate generate-check test test-postgres test-contract test-artifacts test-kvm build build-testdriver verify host-doctor test-kvm-snapshot test-runtime-2a test-runtime-2b
+.PHONY: toolchains generate generate-check test test-postgres test-contract test-artifacts test-kvm build build-testdriver verify host-doctor test-kvm-snapshot test-runtime-2a test-runtime-2b test-eval
 
 toolchains:
 	@test "$$($(GO) version | cut -d ' ' -f 3)" = "$(GO_VERSION)" || { echo "Go 1.27.3 required (see .go-version)"; exit 1; }
@@ -65,3 +65,11 @@ verify: generate-check test test-contract test-artifacts build
 
 host-doctor:
 	$(GO) run ./cmd/hypercall-host doctor --json
+
+# Phase 3 explicit acceptance: every real external seam is required, not skipped.
+test-eval: toolchains
+	@test -n "$$HYPERCALL_TEST_POSTGRES" || { echo "HYPERCALL_TEST_POSTGRES is required"; exit 1; }
+	@test -n "$$HYPERCALL_TEST_CLICKHOUSE_URL" -a -n "$$HYPERCALL_TEST_CLICKHOUSE_DATABASE" -a -n "$$HYPERCALL_TEST_CLICKHOUSE_USER" -a -n "$$HYPERCALL_TEST_CLICKHOUSE_PASSWORD" || { echo "HYPERCALL_TEST_CLICKHOUSE_URL/DATABASE/USER/PASSWORD are required"; exit 1; }
+	@docker info >/dev/null || { echo "A local Docker daemon is required for scorer isolation acceptance"; exit 1; }
+	$(GO) test -race -count=1 ./internal/eval ./internal/controlplane ./internal/api ./internal/analytics
+	GO="$(GO)" scripts/qualify-scorer

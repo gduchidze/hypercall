@@ -1,0 +1,855 @@
+{
+  "schema_version": "evaluation-fixtures.v1",
+  "assertions": [
+    {
+      "id": "equals-text",
+      "output": "Hello world",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello world"
+        }
+      ]
+    },
+    {
+      "id": "equals-text-fails",
+      "output": "Hello world",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello"
+        }
+      ]
+    },
+    {
+      "id": "not-equals-text",
+      "output": "Hello",
+      "assertions": [
+        {
+          "type": "not-equals",
+          "value": "World"
+        }
+      ]
+    },
+    {
+      "id": "equals-number",
+      "output": "42",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": 42
+        }
+      ]
+    },
+    {
+      "id": "equals-bool",
+      "output": "true",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": true
+        }
+      ]
+    },
+    {
+      "id": "equals-object",
+      "output": "{\"foo\":\"bar\"}",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": {
+            "foo": "bar"
+          }
+        }
+      ]
+    },
+    {
+      "id": "equals-array",
+      "output": "[1,2]",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": [
+            1,
+            2
+          ]
+        }
+      ]
+    },
+    {
+      "id": "object-invalid-json-negated",
+      "output": "not JSON",
+      "assertions": [
+        {
+          "type": "not-equals",
+          "value": {
+            "foo": "bar"
+          }
+        }
+      ]
+    },
+    {
+      "id": "unicode-exact",
+      "output": "ქართული λ café",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "ქართული λ café"
+        }
+      ]
+    },
+    {
+      "id": "unicode-no-normalization",
+      "output": "café",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "café"
+        }
+      ]
+    },
+    {
+      "id": "equals-json-null",
+      "output": "null",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": null
+        }
+      ]
+    },
+    {
+      "id": "contains-unicode",
+      "output": "გამარჯობა λ world",
+      "assertions": [
+        {
+          "type": "contains",
+          "value": "λ"
+        }
+      ]
+    },
+    {
+      "id": "contains-numeric",
+      "output": "answer 42",
+      "assertions": [
+        {
+          "type": "contains",
+          "value": 42
+        }
+      ]
+    },
+    {
+      "id": "contains-fails",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "contains",
+          "value": "goodbye"
+        }
+      ]
+    },
+    {
+      "id": "not-contains",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-contains",
+          "value": "goodbye"
+        }
+      ]
+    },
+    {
+      "id": "json-valid-object",
+      "output": "{\"name\":\"Test\"}",
+      "assertions": [
+        {
+          "type": "is-json"
+        }
+      ]
+    },
+    {
+      "id": "json-valid-scalar",
+      "output": "null",
+      "assertions": [
+        {
+          "type": "is-json"
+        }
+      ]
+    },
+    {
+      "id": "json-malformed",
+      "output": "{\"name\":",
+      "assertions": [
+        {
+          "type": "is-json"
+        }
+      ]
+    },
+    {
+      "id": "json-negated-malformed",
+      "output": "not JSON",
+      "assertions": [
+        {
+          "type": "not-is-json"
+        }
+      ]
+    },
+    {
+      "id": "json-negated-valid",
+      "output": "[]",
+      "assertions": [
+        {
+          "type": "not-is-json"
+        }
+      ]
+    },
+    {
+      "id": "schema-object-valid",
+      "output": "{\"name\":\"Test\",\"age\":42}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema-required-missing",
+      "output": "{\"age\":42}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema-additional-property",
+      "output": "{\"name\":\"Test\",\"extra\":1}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema-type-fails",
+      "output": "{\"name\":42}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema-maximum-fails",
+      "output": "{\"name\":\"Test\",\"age\":121}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema-array-enum",
+      "output": "[\"a\",\"b\"]",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "a",
+                "b"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "id": "schema-negated",
+      "output": "{\"age\":42}",
+      "assertions": [
+        {
+          "type": "not-is-json",
+          "value": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "age": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 120
+              }
+            },
+            "required": [
+              "name"
+            ],
+            "additionalProperties": false
+          }
+        }
+      ]
+    },
+    {
+      "id": "weighted-no-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "weight": 3,
+          "value": "hello"
+        },
+        {
+          "type": "contains",
+          "weight": 1,
+          "value": "bye"
+        }
+      ]
+    },
+    {
+      "id": "weighted-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "weight": 3,
+          "value": "hello"
+        },
+        {
+          "type": "contains",
+          "weight": 1,
+          "value": "bye"
+        }
+      ],
+      "threshold": 0.7
+    },
+    {
+      "id": "zero-threshold",
+      "output": "wrong",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ],
+      "threshold": 0
+    },
+    {
+      "id": "zero-weight",
+      "output": "wrong",
+      "assertions": [
+        {
+          "type": "equals",
+          "weight": 0,
+          "value": "hello"
+        }
+      ]
+    },
+    {
+      "id": "no-assertions",
+      "output": "hello",
+      "assertions": [],
+      "reject": true,
+      "rejection_reason": "Hypercall requires 1..64 explicit assertions; empty assertion lists are unsupported."
+    },
+    {
+      "id": "case-variable",
+      "output": "Hello World",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello {{ name }}"
+        }
+      ],
+      "vars": {
+        "name": "World"
+      }
+    },
+    {
+      "id": "missing-equals-value",
+      "output": "null",
+      "assertions": [
+        {
+          "type": "equals"
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "missing-contains-value",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "contains"
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "invalid-schema",
+      "output": "{}",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "bogus"
+          }
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "unsupported-pattern",
+      "output": "\"hello\"",
+      "assertions": [
+        {
+          "type": "is-json",
+          "value": {
+            "type": "string",
+            "pattern": "h.*"
+          }
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "unicode-normalization-optin",
+      "output": "café",
+      "assertions": [
+        {
+          "type": "equals",
+          "normalizeUnicode": true,
+          "value": "café"
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "missing-case-variable",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "{{ missing }}"
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "latency-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 40
+      }
+    },
+    {
+      "id": "latency-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 50
+      }
+    },
+    {
+      "id": "latency-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 60
+      }
+    },
+    {
+      "id": "not-latency-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 40
+      }
+    },
+    {
+      "id": "not-latency-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 50
+      }
+    },
+    {
+      "id": "not-latency-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-latency",
+          "threshold": 50
+        }
+      ],
+      "measurements": {
+        "latency_ms": 60
+      }
+    },
+    {
+      "id": "cost-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 40,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": "cost-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 50,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": "cost-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 60,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": "not-cost-below",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 40,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": "not-cost-equal",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 50,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": "not-cost-above",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "not-cost",
+          "threshold": 5e-05
+        }
+      ],
+      "measurements": {
+        "cost": {
+          "micro_usd": 60,
+          "kind": "synthetic",
+          "price_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+          "recorded_at": "2026-11-04T00:00:00Z"
+        }
+      }
+    },
+    {
+      "id": "latency-missing-measurement",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency",
+          "threshold": 1
+        }
+      ],
+      "threshold": 0
+    },
+    {
+      "id": "latency-missing-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "latency"
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "cost-missing-measurement",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost",
+          "threshold": 1
+        }
+      ],
+      "threshold": 0
+    },
+    {
+      "id": "cost-missing-threshold",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "cost"
+        }
+      ],
+      "reject": true
+    },
+    {
+      "id": "weight-overflow",
+      "output": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello",
+          "weight": 1e+308
+        },
+        {
+          "type": "equals",
+          "value": "hello",
+          "weight": 1e+308
+        }
+      ],
+      "threshold": 0
+    }
+  ],
+  "matrices": [
+    {
+      "id": "string-cartesian-repeated",
+      "vars": {
+        "language": [
+          "English",
+          "French"
+        ],
+        "greeting": [
+          "Hello",
+          "Bonjour"
+        ]
+      },
+      "candidates": [
+        "fixture-a",
+        "fixture-b"
+      ],
+      "repetitions": 2,
+      "prompt": "{{ greeting }} {{ language }}",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "Hello English"
+        }
+      ]
+    },
+    {
+      "id": "atomic-numeric-array",
+      "vars": {
+        "numbers": [
+          1,
+          2,
+          3
+        ]
+      },
+      "candidates": [
+        "fixture"
+      ],
+      "repetitions": 2,
+      "prompt": "hello",
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ],
+      "reject": true,
+      "rejection_reason": "Only nonempty string arrays form supported variable dimensions; numeric arrays are rejected."
+    },
+    {
+      "id": "missing-provider-output",
+      "vars": {},
+      "candidates": [
+        "fixture"
+      ],
+      "repetitions": 1,
+      "prompt": "hello",
+      "response": {},
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ]
+    },
+    {
+      "id": "provider-error",
+      "vars": {},
+      "candidates": [
+        "fixture"
+      ],
+      "repetitions": 1,
+      "prompt": "hello",
+      "response": {
+        "error": "synthetic provider failure"
+      },
+      "assertions": [
+        {
+          "type": "equals",
+          "value": "hello"
+        }
+      ]
+    }
+  ]
+}

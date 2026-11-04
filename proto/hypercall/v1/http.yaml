@@ -38,3 +38,15 @@ http:
     - selector: hypercall.v1.ControlPlane.Compare
       post: /v1/projects/{project_id}/trajectories:compare
       body: '*'
+    - selector: hypercall.v1.ControlPlane.CompileEvaluation
+      post: /v1/projects/{project_id}/evaluations:compile
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.SubmitEvaluation
+      post: /v1/projects/{project_id}/evaluations
+      body: '*'
+    - selector: hypercall.v1.ControlPlane.GetEvaluation
+      get: /v1/projects/{project_id}/evaluations/{id}
+    - selector: hypercall.v1.ControlPlane.GetReport
+      get: /v1/projects/{project_id}/evaluations/{id}/report
+    - selector: hypercall.v1.ControlPlane.ProjectionStatus
+      get: /v1/projects/{project_id}/analytics/status

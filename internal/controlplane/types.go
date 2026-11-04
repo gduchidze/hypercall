@@ -113,6 +113,7 @@ type OperationStatus struct {
 	Error string `json:"error,omitempty"`
 }
 type OperationSpec struct {
+	EvaluationID string `json:"evaluation_id,omitempty"`
 	ChildBranchIDs    []string `json:"child_branch_ids,omitempty"`
 	ParentOperationID string   `json:"parent_operation_id,omitempty"`
 	CheckpointID      string   `json:"checkpoint_id,omitempty"`

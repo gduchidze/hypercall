@@ -154,7 +154,7 @@ SDK version 0.2.0 and server/public schema `hypercall.v1` are developed together
 Generated source drift is checked by `make generate-check`; regenerating requires
 the pinned Go/Python tools and plugin versions in `scripts/generate.py`. Changes
 to field numbers, types, or semantics require an explicit compatibility decision;
-the initial version does not promise compatibility with E2B or AX clients.
+clients must use the matching generated Hypercall contracts.
 
 `make test-postgres` requires `HYPERCALL_TEST_POSTGRES` and runs the real Postgres
 store plus authenticated gRPC/REST, sync/async Python and compiled Go CLI scenarios.

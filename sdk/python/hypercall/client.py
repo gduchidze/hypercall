@@ -77,6 +77,23 @@ class _Configuration:
 
 
 class Client(_Configuration):
+    def compile_evaluation(self, config: str, *, timeout: float | None = None) -> pb.EvaluationPlan:
+        return self._call("CompileEvaluation", self._request(pb.CompileEvaluationRequest, config_yaml=config), timeout=timeout)
+
+    def evaluate(self, config: str, observations: list[pb.EvaluationObservation], *, idempotency_key: str,
+                 timeout: float | None = None) -> pb.Evaluation:
+        return self._call("SubmitEvaluation", self._request(pb.SubmitEvaluationRequest, config_yaml=config,
+                          observations=observations, idempotency_key=idempotency_key), timeout=timeout, mutation=True)
+
+    def evaluation(self, evaluation_id: str, *, timeout: float | None = None) -> pb.Evaluation:
+        return self._call("GetEvaluation", self._request(pb.GetEvaluationRequest, id=evaluation_id), timeout=timeout)
+
+    def report(self, evaluation_id: str, *, timeout: float | None = None) -> pb.EvaluationReport:
+        return self._call("GetReport", self._request(pb.GetReportRequest, id=evaluation_id), timeout=timeout)
+
+    def projection_status(self, *, timeout: float | None = None) -> pb.ProjectionStatusResponse:
+        return self._call("ProjectionStatus", self._request(pb.ProjectionStatusRequest), timeout=timeout)
+
     def __init__(self, endpoint: str, **kwargs):
         super().__init__(endpoint, **kwargs)
         options = (("grpc.enable_retries", 0), ("grpc.max_receive_message_length", 4 << 20))
@@ -217,6 +234,23 @@ class Client(_Configuration):
 
 
 class AsyncClient(_Configuration):
+    async def compile_evaluation(self, config: str, *, timeout: float | None = None) -> pb.EvaluationPlan:
+        return await self._call("CompileEvaluation", self._request(pb.CompileEvaluationRequest, config_yaml=config), timeout=timeout)
+
+    async def evaluate(self, config: str, observations: list[pb.EvaluationObservation], *, idempotency_key: str,
+                       timeout: float | None = None) -> pb.Evaluation:
+        return await self._call("SubmitEvaluation", self._request(pb.SubmitEvaluationRequest, config_yaml=config,
+                                observations=observations, idempotency_key=idempotency_key), timeout=timeout, mutation=True)
+
+    async def evaluation(self, evaluation_id: str, *, timeout: float | None = None) -> pb.Evaluation:
+        return await self._call("GetEvaluation", self._request(pb.GetEvaluationRequest, id=evaluation_id), timeout=timeout)
+
+    async def report(self, evaluation_id: str, *, timeout: float | None = None) -> pb.EvaluationReport:
+        return await self._call("GetReport", self._request(pb.GetReportRequest, id=evaluation_id), timeout=timeout)
+
+    async def projection_status(self, *, timeout: float | None = None) -> pb.ProjectionStatusResponse:
+        return await self._call("ProjectionStatus", self._request(pb.ProjectionStatusRequest), timeout=timeout)
+
     def __init__(self, endpoint: str, **kwargs):
         super().__init__(endpoint, **kwargs)
         options = (("grpc.enable_retries", 0), ("grpc.max_receive_message_length", 4 << 20))

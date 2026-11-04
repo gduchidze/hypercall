@@ -1,0 +1,29 @@
+syntax = "proto3";
+package hypercall.scorer.v1;
+option go_package = "github.com/gduchidze/hypercall/gen/go/hypercall/scorer/v1;scorerv1";
+
+// Private per-invocation worker. Unix transport plus a random invocation nonce;
+// never expose this service or scorer artifacts on a public listener.
+service Scorer { rpc Score(ScoreRequest) returns (ScoreResult); }
+message ScoreRequest {
+ string output = 1;
+ map<string,string> variables = 2;
+ string scorer_digest = 3;
+ string rubric_digest = 4;
+ string judge_model_digest = 5;
+ map<string,string> parameters = 6;
+}
+message Cost {
+ double amount = 1;
+ string currency = 2;
+ // measured, estimated or synthetic; judge cost is distinct from agent inference cost.
+ string kind = 3;
+ string source = 4;
+}
+message ScoreResult {
+ bool pass = 1;
+ double score = 2;
+ string reason = 3;
+ string error_code = 4;
+ Cost cost = 5;
+}

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -46,6 +47,8 @@ func run(ctx context.Context, args []string, out, errout io.Writer) error {
 	key := flags.String("key", "", "idempotency key required for submit and lifecycle actions")
 	after := flags.Int64("after", 0, "exclusive durable event cursor")
 	limit := flags.Int("limit", 100, "maximum page size")
+	format := flags.String("format", "json", "report format: json or markdown")
+	check := flags.Bool("check", false, "return failure when report CI decision fails")
 	flags.Usage = func() {
 		fmt.Fprintln(errout, "hypercall [flags] submit FILE | inspect KIND ID | list KIND | events/calls/steps BRANCH | suspend/resume/cancel BRANCH | fork CHECKPOINT MODEL_ID@DIGEST... | compare LEFT RIGHT COMPARATOR | exec BRANCH ARGV... | read-file BRANCH PATH | write-file BRANCH PATH LOCAL_FILE")
 		flags.PrintDefaults()
@@ -113,6 +116,92 @@ func run(ctx context.Context, args []string, out, errout io.Writer) error {
 		return nil
 	}
 	switch argv[0] {
+	case "compile-eval":
+		if err := need(2); err != nil {
+			return err
+		}
+		data, err := os.ReadFile(argv[1])
+		if err != nil {
+			return err
+		}
+		v, err := client.CompileEvaluation(ctx, &pb.CompileEvaluationRequest{ProjectId: *project, ConfigYaml: string(data)})
+		if err != nil {
+			return err
+		}
+		_, err = fmt.Fprintln(out, string(v.PlanJson))
+		return err
+	case "evaluate":
+		if err := need(3); err != nil {
+			return err
+		}
+		if *key == "" {
+			return errors.New("--key required")
+		}
+		data, err := os.ReadFile(argv[1])
+		if err != nil {
+			return err
+		}
+		raw, err := os.ReadFile(argv[2])
+		if err != nil {
+			return err
+		}
+		var obs []json.RawMessage
+		if err = json.Unmarshal(raw, &obs); err != nil {
+			return err
+		}
+		request := &pb.SubmitEvaluationRequest{ProjectId: *project, ConfigYaml: string(data), IdempotencyKey: *key}
+		for _, b := range obs {
+			v := &pb.EvaluationObservation{}
+			if err = protojson.Unmarshal(b, v); err != nil {
+				return err
+			}
+			request.Observations = append(request.Observations, v)
+		}
+		v, err := client.SubmitEvaluation(ctx, request)
+		if err != nil {
+			return err
+		}
+		return print(v)
+	case "evaluation":
+		if err := need(2); err != nil {
+			return err
+		}
+		v, err := client.GetEvaluation(ctx, &pb.GetEvaluationRequest{ProjectId: *project, Id: argv[1]})
+		if err != nil {
+			return err
+		}
+		return print(v)
+	case "report":
+		if err := need(2); err != nil {
+			return err
+		}
+		if *format != "json" && *format != "markdown" {
+			return errors.New("--format must be json or markdown")
+		}
+		v, err := client.GetReport(ctx, &pb.GetReportRequest{ProjectId: *project, Id: argv[1]})
+		if err != nil {
+			return err
+		}
+		data := string(v.ReportJson)
+		if *format == "markdown" {
+			data = v.Markdown
+		}
+		if _, err = fmt.Fprintln(out, data); err != nil {
+			return err
+		}
+		if *check && !v.CiPass {
+			return fmt.Errorf("evaluation CI failed: %s", strings.Join(v.Reasons, ","))
+		}
+		return nil
+	case "analytics-status":
+		if err := need(1); err != nil {
+			return err
+		}
+		v, err := client.ProjectionStatus(ctx, &pb.ProjectionStatusRequest{ProjectId: *project})
+		if err != nil {
+			return err
+		}
+		return print(v)
 	case "submit":
 		if err := need(2); err != nil {
 			return err

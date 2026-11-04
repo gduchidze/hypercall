@@ -47,7 +47,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 		return e
 	}
 
-	const latest = 4
+	const latest = 5
 	var future bool
 	if e = tx.QueryRowContext(ctx, "SELECT EXISTS(SELECT 1 FROM schema_migrations WHERE version>$1 OR version<1)", latest).Scan(&future); e != nil {
 		return e
@@ -55,7 +55,7 @@ func (s *Store) Migrate(ctx context.Context) error {
 	if future {
 		return failure("failed_precondition", "database schema is newer or unsupported; use a compatible binary")
 	}
-	for version, name := range []string{"001_initial.sql", "002_resume.sql", "003_physical_sandbox.sql", "004_agent_trajectories.sql"} {
+	for version, name := range []string{"001_initial.sql", "002_resume.sql", "003_physical_sandbox.sql", "004_agent_trajectories.sql", "005_evaluations.sql"} {
 		data, err := migrations.ReadFile("migrations/" + name)
 		if err != nil {
 			return err
