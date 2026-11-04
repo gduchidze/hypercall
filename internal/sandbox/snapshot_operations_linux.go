@@ -184,7 +184,7 @@ func (b *Backend) Restore(ctx context.Context, r RestoreRequest) (Observation, e
 	if err := r.Validate(); err != nil {
 		return Observation{}, err
 	}
-	children, err := b.Fork(ctx, ForkRequest{OperationID: r.OperationID, CheckpointID: r.CheckpointID, Children: []CreateRequest{{Allocation: r.Allocation, Limits: r.Limits}}})
+	children, err := b.Fork(ctx, ForkRequest{OperationID: r.OperationID, CheckpointID: r.CheckpointID, Children: []CreateRequest{{HarnessSession: r.HarnessSession, Allocation: r.Allocation, Limits: r.Limits, AbsoluteExpiresAt: r.AbsoluteExpiresAt}}})
 	if err != nil {
 		return Observation{}, err
 	}
@@ -313,10 +313,16 @@ func (b *Backend) Fork(ctx context.Context, r ForkRequest) ([]ChildResult, error
 		attemptErr := b.cfg.SnapshotStore.AcquireReference(ctx, scope, child.Reference)
 		var verified *snapshot.Verified
 		if attemptErr == nil {
-			expected, e := b.compatibility(request.Limits)
+			expected, e := b.compatibility(request.Limits, request.HarnessSession)
 			attemptErr = e
 			if attemptErr == nil {
 				verified, attemptErr = b.cfg.SnapshotStore.OpenVerifiedIn(ctx, scope, expected, filepath.Join(b.cfg.StateDir, "materialized"))
+			}
+		}
+		if attemptErr == nil && request.HarnessSession != nil {
+			want := semanticFromWire(request.HarnessSession.InheritedBarrier)
+			if verified.Manifest.SemanticBarrier == nil || want == nil || *want != *verified.Manifest.SemanticBarrier {
+				attemptErr = snapshot.ErrIntegrity
 			}
 		}
 		if attemptErr == nil {

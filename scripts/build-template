@@ -39,6 +39,8 @@ def main():
     parser.add_argument('--guest-sha256', required=True)
     parser.add_argument('--guest-notices', type=Path, required=True)
     parser.add_argument('--guest-notices-sha256', required=True)
+    parser.add_argument('--harness-bundle', type=Path, help='pinned offline CPython3.12 cooperative SDK wheel archive')
+    parser.add_argument('--harness-bundle-sha256', help='exact SHA256 of offline harness archive')
     parser.add_argument('--namespace-child', action='store_true', help=argparse.SUPPRESS)
     args = parser.parse_args()
     if platform.system() != 'Linux' or os.geteuid() != 0:
@@ -50,6 +52,11 @@ def main():
     args.output = args.output.resolve()
     args.guest_agent = args.guest_agent.resolve()
     args.guest_notices = args.guest_notices.resolve()
+    if bool(args.harness_bundle) != bool(args.harness_bundle_sha256):
+        raise ValueError('harness bundle path and SHA256 must be supplied together')
+    if args.harness_bundle:
+        args.harness_bundle = args.harness_bundle.resolve()
+        fetcher.verify(args.harness_bundle, args.harness_bundle_sha256)
     fetcher.verify(args.guest_notices, args.guest_notices_sha256)
     fetcher.verify(args.guest_agent, args.guest_sha256)
     with args.guest_agent.open('rb') as stream:
@@ -125,6 +132,18 @@ def main():
         os.chmod(tree / 'usr/local/bin/hypercall-guest', 0o755)
         shutil.copyfile(ROOT / 'deploy/runtime/hypercall-init', tree / 'sbin/hypercall-init')
         os.chmod(tree / 'sbin/hypercall-init', 0o755)
+        if args.harness_bundle:
+            interpreter = subprocess.check_output(['chroot', str(tree), '/usr/bin/python3', '--version'], text=True).strip()
+            if not interpreter.startswith('Python 3.12.'):
+                raise ValueError('harness bundle requires actual image CPython3.12; found ' + interpreter)
+            installer = importlib.machinery.SourceFileLoader('harness_install', str(ROOT / 'scripts/install-harness-bundle.py')).load_module()
+            installer.install_bundle(args.harness_bundle, args.harness_bundle_sha256, args.arch, tree)
+            # Resolve the actual image ABI/shared libraries now, offline. Never
+            # publish a template whose interpreter cannot import its pinned SDK.
+            run('chroot', tree, '/usr/bin/python3', '-I', '-c',
+                'import sys;sys.path.insert(0,"/opt/hypercall/python");'
+                'import grpc,google.protobuf,hypercall.fixture_agent;'
+                'assert grpc.__version__=="1.76.0";assert google.protobuf.__version__=="6.33.0"')
         # Remove image-specific machine identity; no cloud init or login daemon runs.
         (tree / 'etc/machine-id').write_text('')
         for name in ['etc/hostname', 'etc/resolv.conf']:
@@ -220,6 +239,8 @@ def main():
         (publish / 'runtime.json').write_text(json.dumps(runtime, indent=2) + '\n')
         provenance = {'schema_version': 1, 'inputs': lock, 'guest_sha256': args.guest_sha256,
                       'guest_notices_sha256': args.guest_notices_sha256,
+                      'harness_bundle_sha256': args.harness_bundle_sha256,
+                      'harness_python': '3.12' if args.harness_bundle else None,
                       'bootstrap_sha256': fetcher.digest(ROOT / 'deploy/runtime/hypercall-init'),
                       'builder': {'mke2fs': version, 'architecture': args.arch},
                       'qualification': 'cold boot only; no snapshot, restore, or fork qualification'}

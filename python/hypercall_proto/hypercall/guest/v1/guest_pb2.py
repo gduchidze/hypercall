@@ -22,9 +22,10 @@ _runtime_version.ValidateProtobufRuntimeVersion(
 _sym_db = _symbol_database.Default()
 
 
+from hypercall_proto.hypercall.harness.v1 import harness_pb2 as hypercall_dot_harness_dot_v1_dot_harness__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1ehypercall/guest/v1/guest.proto\x12\x12hypercall.guest.v1\"t\n\x12\x41llocationIdentity\x12\x11\n\ttenant_id\x18\x01 \x01(\t\x12\x12\n\nproject_id\x18\x02 \x01(\t\x12\x12\n\nsandbox_id\x18\x03 \x01(\t\x12\x14\n\x0c\x65xecution_id\x18\x04 \x01(\t\x12\r\n\x05\x65poch\x18\x05 \x01(\x04\"\x10\n\x0eGetInfoRequest\"\xbb\x01\n\x0fGetInfoResponse\x12\x18\n\x10protocol_version\x18\x01 \x01(\t\x12\x38\n\x08identity\x18\x02 \x01(\x0b\x32&.hypercall.guest.v1.AllocationIdentity\x12\x16\n\x0emax_file_bytes\x18\x03 \x01(\r\x12\x1d\n\x15max_exec_output_bytes\x18\x04 \x01(\r\x12\x1d\n\x15server_time_unix_nano\x18\x05 \x01(\x03\"\x9f\x01\n\x0b\x45xecRequest\x12\x0c\n\x04\x61rgv\x18\x01 \x03(\t\x12\x0b\n\x03\x63wd\x18\x02 \x01(\t\x12\x35\n\x03\x65nv\x18\x03 \x03(\x0b\x32(.hypercall.guest.v1.ExecRequest.EnvEntry\x12\x12\n\ntimeout_ms\x18\x04 \x01(\r\x1a*\n\x08\x45nvEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"j\n\tExecEvent\x12\x10\n\x06stdout\x18\x01 \x01(\x0cH\x00\x12\x10\n\x06stderr\x18\x02 \x01(\x0cH\x00\x12\x30\n\x06result\x18\x03 \x01(\x0b\x32\x1e.hypercall.guest.v1.ExecResultH\x00\x42\x07\n\x05\x65vent\"L\n\nExecResult\x12\x11\n\texit_code\x18\x01 \x01(\x05\x12\x11\n\ttimed_out\x18\x02 \x01(\x08\x12\x18\n\x10output_truncated\x18\x03 \x01(\x08\"\x1f\n\x0fReadFileRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\" \n\x10ReadFileResponse\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\".\n\x10WriteFileRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"*\n\x11WriteFileResponse\x12\x15\n\rbytes_written\x18\x01 \x01(\x04\")\n\x16StartControlledRequest\x12\x0f\n\x07\x63ounter\x18\x01 \x01(\x03\"\x1a\n\x18InspectControlledRequest\"*\n\x19\x43ontinueControlledRequest\x12\r\n\x05\x64\x65lta\x18\x01 \x01(\x03\"\x17\n\x15PrepareCaptureRequest\"/\n\x15ReleaseCaptureRequest\x12\x16\n\x0ehost_unix_nano\x18\x01 \x01(\x03\",\n\x12RebindCloneRequest\x12\x16\n\x0ehost_unix_nano\x18\x01 \x01(\x03\"\xa6\x01\n\x0f\x43ontrolledState\x12\x0f\n\x07\x63ounter\x18\x01 \x01(\x03\x12\x11\n\tfile_data\x18\x02 \x01(\x0c\x12\x0b\n\x03pid\x18\x03 \x01(\x03\x12\x12\n\nat_barrier\x18\x04 \x01(\x08\x12\x38\n\x08identity\x18\x05 \x01(\x0b\x32&.hypercall.guest.v1.AllocationIdentity\x12\x14\n\x0crandom_probe\x18\x06 \x01(\x0c\x32\xac\x07\n\x05Guest\x12\x62\n\x0fStartControlled\x12*.hypercall.guest.v1.StartControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12\x66\n\x11InspectControlled\x12,.hypercall.guest.v1.InspectControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12h\n\x12\x43ontinueControlled\x12-.hypercall.guest.v1.ContinueControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12`\n\x0ePrepareCapture\x12).hypercall.guest.v1.PrepareCaptureRequest\x1a#.hypercall.guest.v1.ControlledState\x12`\n\x0eReleaseCapture\x12).hypercall.guest.v1.ReleaseCaptureRequest\x1a#.hypercall.guest.v1.ControlledState\x12Z\n\x0bRebindClone\x12&.hypercall.guest.v1.RebindCloneRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12R\n\x07GetInfo\x12\".hypercall.guest.v1.GetInfoRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12H\n\x04\x45xec\x12\x1f.hypercall.guest.v1.ExecRequest\x1a\x1d.hypercall.guest.v1.ExecEvent0\x01\x12U\n\x08ReadFile\x12#.hypercall.guest.v1.ReadFileRequest\x1a$.hypercall.guest.v1.ReadFileResponse\x12X\n\tWriteFile\x12$.hypercall.guest.v1.WriteFileRequest\x1a%.hypercall.guest.v1.WriteFileResponseBBZ@github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1;guestv1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1ehypercall/guest/v1/guest.proto\x12\x12hypercall.guest.v1\x1a\"hypercall/harness/v1/harness.proto\"t\n\x12\x41llocationIdentity\x12\x11\n\ttenant_id\x18\x01 \x01(\t\x12\x12\n\nproject_id\x18\x02 \x01(\t\x12\x12\n\nsandbox_id\x18\x03 \x01(\t\x12\x14\n\x0c\x65xecution_id\x18\x04 \x01(\t\x12\r\n\x05\x65poch\x18\x05 \x01(\x04\"\x10\n\x0eGetInfoRequest\"\xf0\x01\n\x0fGetInfoResponse\x12\x18\n\x10protocol_version\x18\x01 \x01(\t\x12\x38\n\x08identity\x18\x02 \x01(\x0b\x32&.hypercall.guest.v1.AllocationIdentity\x12\x16\n\x0emax_file_bytes\x18\x03 \x01(\r\x12\x1d\n\x15max_exec_output_bytes\x18\x04 \x01(\r\x12\x1d\n\x15server_time_unix_nano\x18\x05 \x01(\x03\x12\x1c\n\x14harness_session_hash\x18\x06 \x01(\t\x12\x15\n\ragent_started\x18\x07 \x01(\x08\"\x9f\x01\n\x0b\x45xecRequest\x12\x0c\n\x04\x61rgv\x18\x01 \x03(\t\x12\x0b\n\x03\x63wd\x18\x02 \x01(\t\x12\x35\n\x03\x65nv\x18\x03 \x03(\x0b\x32(.hypercall.guest.v1.ExecRequest.EnvEntry\x12\x12\n\ntimeout_ms\x18\x04 \x01(\r\x1a*\n\x08\x45nvEntry\x12\x0b\n\x03key\x18\x01 \x01(\t\x12\r\n\x05value\x18\x02 \x01(\t:\x02\x38\x01\"j\n\tExecEvent\x12\x10\n\x06stdout\x18\x01 \x01(\x0cH\x00\x12\x10\n\x06stderr\x18\x02 \x01(\x0cH\x00\x12\x30\n\x06result\x18\x03 \x01(\x0b\x32\x1e.hypercall.guest.v1.ExecResultH\x00\x42\x07\n\x05\x65vent\"L\n\nExecResult\x12\x11\n\texit_code\x18\x01 \x01(\x05\x12\x11\n\ttimed_out\x18\x02 \x01(\x08\x12\x18\n\x10output_truncated\x18\x03 \x01(\x08\"\x1f\n\x0fReadFileRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\" \n\x10ReadFileResponse\x12\x0c\n\x04\x64\x61ta\x18\x01 \x01(\x0c\".\n\x10WriteFileRequest\x12\x0c\n\x04path\x18\x01 \x01(\t\x12\x0c\n\x04\x64\x61ta\x18\x02 \x01(\x0c\"*\n\x11WriteFileResponse\x12\x15\n\rbytes_written\x18\x01 \x01(\x04\")\n\x16StartControlledRequest\x12\x0f\n\x07\x63ounter\x18\x01 \x01(\x03\"\x1a\n\x18InspectControlledRequest\"*\n\x19\x43ontinueControlledRequest\x12\r\n\x05\x64\x65lta\x18\x01 \x01(\x03\"\x17\n\x15PrepareCaptureRequest\"/\n\x15ReleaseCaptureRequest\x12\x16\n\x0ehost_unix_nano\x18\x01 \x01(\x03\",\n\x12RebindCloneRequest\x12\x16\n\x0ehost_unix_nano\x18\x01 \x01(\x03\"\xe7\x01\n\x0f\x43ontrolledState\x12\x0f\n\x07\x63ounter\x18\x01 \x01(\x03\x12\x11\n\tfile_data\x18\x02 \x01(\x0c\x12\x0b\n\x03pid\x18\x03 \x01(\x03\x12\x12\n\nat_barrier\x18\x04 \x01(\x08\x12\x38\n\x08identity\x18\x05 \x01(\x0b\x32&.hypercall.guest.v1.AllocationIdentity\x12\x14\n\x0crandom_probe\x18\x06 \x01(\x0c\x12?\n\x10semantic_barrier\x18\x07 \x01(\x0b\x32%.hypercall.harness.v1.SemanticBarrier\"\x13\n\x11StartAgentRequest\"\x12\n\x10PollAgentRequest\"\x16\n\x14\x44\x65liverAgentResponse2\xb9\t\n\x05Guest\x12X\n\nStartAgent\x12%.hypercall.guest.v1.StartAgentRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12R\n\tPollAgent\x12$.hypercall.guest.v1.PollAgentRequest\x1a\x1f.hypercall.harness.v1.AgentPoll\x12]\n\x0c\x44\x65liverAgent\x12#.hypercall.harness.v1.AgentDelivery\x1a(.hypercall.guest.v1.DeliverAgentResponse\x12\x62\n\x0fStartControlled\x12*.hypercall.guest.v1.StartControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12\x66\n\x11InspectControlled\x12,.hypercall.guest.v1.InspectControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12h\n\x12\x43ontinueControlled\x12-.hypercall.guest.v1.ContinueControlledRequest\x1a#.hypercall.guest.v1.ControlledState\x12`\n\x0ePrepareCapture\x12).hypercall.guest.v1.PrepareCaptureRequest\x1a#.hypercall.guest.v1.ControlledState\x12`\n\x0eReleaseCapture\x12).hypercall.guest.v1.ReleaseCaptureRequest\x1a#.hypercall.guest.v1.ControlledState\x12Z\n\x0bRebindClone\x12&.hypercall.guest.v1.RebindCloneRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12R\n\x07GetInfo\x12\".hypercall.guest.v1.GetInfoRequest\x1a#.hypercall.guest.v1.GetInfoResponse\x12H\n\x04\x45xec\x12\x1f.hypercall.guest.v1.ExecRequest\x1a\x1d.hypercall.guest.v1.ExecEvent0\x01\x12U\n\x08ReadFile\x12#.hypercall.guest.v1.ReadFileRequest\x1a$.hypercall.guest.v1.ReadFileResponse\x12X\n\tWriteFile\x12$.hypercall.guest.v1.WriteFileRequest\x1a%.hypercall.guest.v1.WriteFileResponseBBZ@github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1;guestv1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,42 +35,48 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z@github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1;guestv1'
   _globals['_EXECREQUEST_ENVENTRY']._loaded_options = None
   _globals['_EXECREQUEST_ENVENTRY']._serialized_options = b'8\001'
-  _globals['_ALLOCATIONIDENTITY']._serialized_start=54
-  _globals['_ALLOCATIONIDENTITY']._serialized_end=170
-  _globals['_GETINFOREQUEST']._serialized_start=172
-  _globals['_GETINFOREQUEST']._serialized_end=188
-  _globals['_GETINFORESPONSE']._serialized_start=191
-  _globals['_GETINFORESPONSE']._serialized_end=378
-  _globals['_EXECREQUEST']._serialized_start=381
-  _globals['_EXECREQUEST']._serialized_end=540
-  _globals['_EXECREQUEST_ENVENTRY']._serialized_start=498
-  _globals['_EXECREQUEST_ENVENTRY']._serialized_end=540
-  _globals['_EXECEVENT']._serialized_start=542
-  _globals['_EXECEVENT']._serialized_end=648
-  _globals['_EXECRESULT']._serialized_start=650
-  _globals['_EXECRESULT']._serialized_end=726
-  _globals['_READFILEREQUEST']._serialized_start=728
-  _globals['_READFILEREQUEST']._serialized_end=759
-  _globals['_READFILERESPONSE']._serialized_start=761
-  _globals['_READFILERESPONSE']._serialized_end=793
-  _globals['_WRITEFILEREQUEST']._serialized_start=795
-  _globals['_WRITEFILEREQUEST']._serialized_end=841
-  _globals['_WRITEFILERESPONSE']._serialized_start=843
-  _globals['_WRITEFILERESPONSE']._serialized_end=885
-  _globals['_STARTCONTROLLEDREQUEST']._serialized_start=887
-  _globals['_STARTCONTROLLEDREQUEST']._serialized_end=928
-  _globals['_INSPECTCONTROLLEDREQUEST']._serialized_start=930
-  _globals['_INSPECTCONTROLLEDREQUEST']._serialized_end=956
-  _globals['_CONTINUECONTROLLEDREQUEST']._serialized_start=958
-  _globals['_CONTINUECONTROLLEDREQUEST']._serialized_end=1000
-  _globals['_PREPARECAPTUREREQUEST']._serialized_start=1002
-  _globals['_PREPARECAPTUREREQUEST']._serialized_end=1025
-  _globals['_RELEASECAPTUREREQUEST']._serialized_start=1027
-  _globals['_RELEASECAPTUREREQUEST']._serialized_end=1074
-  _globals['_REBINDCLONEREQUEST']._serialized_start=1076
-  _globals['_REBINDCLONEREQUEST']._serialized_end=1120
-  _globals['_CONTROLLEDSTATE']._serialized_start=1123
-  _globals['_CONTROLLEDSTATE']._serialized_end=1289
-  _globals['_GUEST']._serialized_start=1292
-  _globals['_GUEST']._serialized_end=2232
+  _globals['_ALLOCATIONIDENTITY']._serialized_start=90
+  _globals['_ALLOCATIONIDENTITY']._serialized_end=206
+  _globals['_GETINFOREQUEST']._serialized_start=208
+  _globals['_GETINFOREQUEST']._serialized_end=224
+  _globals['_GETINFORESPONSE']._serialized_start=227
+  _globals['_GETINFORESPONSE']._serialized_end=467
+  _globals['_EXECREQUEST']._serialized_start=470
+  _globals['_EXECREQUEST']._serialized_end=629
+  _globals['_EXECREQUEST_ENVENTRY']._serialized_start=587
+  _globals['_EXECREQUEST_ENVENTRY']._serialized_end=629
+  _globals['_EXECEVENT']._serialized_start=631
+  _globals['_EXECEVENT']._serialized_end=737
+  _globals['_EXECRESULT']._serialized_start=739
+  _globals['_EXECRESULT']._serialized_end=815
+  _globals['_READFILEREQUEST']._serialized_start=817
+  _globals['_READFILEREQUEST']._serialized_end=848
+  _globals['_READFILERESPONSE']._serialized_start=850
+  _globals['_READFILERESPONSE']._serialized_end=882
+  _globals['_WRITEFILEREQUEST']._serialized_start=884
+  _globals['_WRITEFILEREQUEST']._serialized_end=930
+  _globals['_WRITEFILERESPONSE']._serialized_start=932
+  _globals['_WRITEFILERESPONSE']._serialized_end=974
+  _globals['_STARTCONTROLLEDREQUEST']._serialized_start=976
+  _globals['_STARTCONTROLLEDREQUEST']._serialized_end=1017
+  _globals['_INSPECTCONTROLLEDREQUEST']._serialized_start=1019
+  _globals['_INSPECTCONTROLLEDREQUEST']._serialized_end=1045
+  _globals['_CONTINUECONTROLLEDREQUEST']._serialized_start=1047
+  _globals['_CONTINUECONTROLLEDREQUEST']._serialized_end=1089
+  _globals['_PREPARECAPTUREREQUEST']._serialized_start=1091
+  _globals['_PREPARECAPTUREREQUEST']._serialized_end=1114
+  _globals['_RELEASECAPTUREREQUEST']._serialized_start=1116
+  _globals['_RELEASECAPTUREREQUEST']._serialized_end=1163
+  _globals['_REBINDCLONEREQUEST']._serialized_start=1165
+  _globals['_REBINDCLONEREQUEST']._serialized_end=1209
+  _globals['_CONTROLLEDSTATE']._serialized_start=1212
+  _globals['_CONTROLLEDSTATE']._serialized_end=1443
+  _globals['_STARTAGENTREQUEST']._serialized_start=1445
+  _globals['_STARTAGENTREQUEST']._serialized_end=1464
+  _globals['_POLLAGENTREQUEST']._serialized_start=1466
+  _globals['_POLLAGENTREQUEST']._serialized_end=1484
+  _globals['_DELIVERAGENTRESPONSE']._serialized_start=1486
+  _globals['_DELIVERAGENTRESPONSE']._serialized_end=1508
+  _globals['_GUEST']._serialized_start=1511
+  _globals['_GUEST']._serialized_end=2720
 # @@protoc_insertion_point(module_scope)

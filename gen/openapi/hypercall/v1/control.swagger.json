@@ -1,0 +1,1569 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "hypercall/v1/control.proto",
+    "version": "version not set"
+  },
+  "tags": [
+    {
+      "name": "ControlPlane"
+    }
+  ],
+  "consumes": [
+    "application/json"
+  ],
+  "produces": [
+    "application/json"
+  ],
+  "paths": {
+    "/v1/projects/{projectId}/branches/{branchId}/calls": {
+      "get": {
+        "operationId": "ControlPlane_Calls",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1CallsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "afterSequence",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/branches/{branchId}/commands": {
+      "post": {
+        "operationId": "ControlPlane_Exec",
+        "responses": {
+          "200": {
+            "description": "A successful response.(streaming responses)",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "result": {
+                  "$ref": "#/definitions/v1ExecEvent"
+                },
+                "error": {
+                  "$ref": "#/definitions/rpcStatus"
+                }
+              },
+              "title": "Stream result of v1ExecEvent"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneExecBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/branches/{branchId}/events": {
+      "get": {
+        "operationId": "ControlPlane_Events",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1EventsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "afterSequence",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/branches/{branchId}/files/{path}": {
+      "get": {
+        "operationId": "ControlPlane_ReadFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ReadFileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": ".+"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      },
+      "post": {
+        "operationId": "ControlPlane_WriteFile",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1WriteFileResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "path",
+            "in": "path",
+            "required": true,
+            "type": "string",
+            "pattern": ".+"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneWriteFileBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/branches/{branchId}/steps": {
+      "get": {
+        "operationId": "ControlPlane_Steps",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1StepsResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "afterStep",
+            "in": "query",
+            "required": false,
+            "type": "string",
+            "format": "int64"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/branches/{branchId}:action": {
+      "post": {
+        "operationId": "ControlPlane_Action",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Resource"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "branchId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneActionBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/checkpoints/{checkpointId}:fork": {
+      "post": {
+        "operationId": "ControlPlane_Fork",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ForkResult"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "checkpointId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneForkBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/resources": {
+      "post": {
+        "operationId": "ControlPlane_PutResource",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Resource"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlanePutResourceBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/resources/{kind}": {
+      "get": {
+        "operationId": "ControlPlane_ListResources",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1ListResourcesResponse"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "after",
+            "in": "query",
+            "required": false,
+            "type": "string"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "type": "integer",
+            "format": "int32"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/resources/{kind}/{id}": {
+      "get": {
+        "operationId": "ControlPlane_GetResource",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Resource"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "kind",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/runs:submit": {
+      "post": {
+        "operationId": "ControlPlane_Submit",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Submission"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneSubmitBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/runs:submitManifest": {
+      "post": {
+        "operationId": "ControlPlane_SubmitManifest",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Submission"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneSubmitManifestBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    },
+    "/v1/projects/{projectId}/trajectories:compare": {
+      "post": {
+        "operationId": "ControlPlane_Compare",
+        "responses": {
+          "200": {
+            "description": "A successful response.",
+            "schema": {
+              "$ref": "#/definitions/v1Divergence"
+            }
+          },
+          "default": {
+            "description": "An unexpected error response.",
+            "schema": {
+              "$ref": "#/definitions/rpcStatus"
+            }
+          }
+        },
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "path",
+            "required": true,
+            "type": "string"
+          },
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/ControlPlaneCompareBody"
+            }
+          }
+        ],
+        "tags": [
+          "ControlPlane"
+        ]
+      }
+    }
+  },
+  "definitions": {
+    "ControlPlaneActionBody": {
+      "type": "object",
+      "properties": {
+        "action": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlPlaneCompareBody": {
+      "type": "object",
+      "properties": {
+        "leftBranch": {
+          "type": "string"
+        },
+        "rightBranch": {
+          "type": "string"
+        },
+        "comparator": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlPlaneExecBody": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "$ref": "#/definitions/hypercallguestv1ExecRequest"
+        }
+      }
+    },
+    "ControlPlaneForkBody": {
+      "type": "object",
+      "properties": {
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Ref"
+          }
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlPlanePutResourceBody": {
+      "type": "object",
+      "properties": {
+        "resource": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlPlaneSubmitBody": {
+      "type": "object",
+      "properties": {
+        "taskId": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      }
+    },
+    "ControlPlaneSubmitManifestBody": {
+      "type": "object",
+      "properties": {
+        "manifestYaml": {
+          "type": "string"
+        },
+        "idempotencyKey": {
+          "type": "string"
+        }
+      },
+      "description": "Strict multi-document YAML. Definitions are applied in order; one final Task\nis submitted. Applying several definitions is not an atomic transaction."
+    },
+    "ControlPlaneWriteFileBody": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "hypercallguestv1ExecRequest": {
+      "type": "object",
+      "properties": {
+        "argv": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Explicit argv; no implicit shell. Detached processes and PTYs are excluded."
+        },
+        "cwd": {
+          "type": "string",
+          "description": "Relative to the configured workspace; empty means \".\". No path escape."
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Bounded overrides of the guest's minimal environment; never inherit host env."
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "format": "int64",
+          "description": "Required positive timeout, subject to a server maximum. RPC deadlines and\ndisconnection also cancel the foreground process group."
+        }
+      }
+    },
+    "protobufAny": {
+      "type": "object",
+      "properties": {
+        "@type": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": {}
+    },
+    "protobufNullValue": {
+      "type": "string",
+      "enum": [
+        "NULL_VALUE"
+      ],
+      "default": "NULL_VALUE",
+      "description": "`NullValue` is a singleton enumeration to represent the null value for the\n`Value` type union.\n\nThe JSON representation for `NullValue` is JSON `null`.\n\n - NULL_VALUE: Null value."
+    },
+    "rpcStatus": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "message": {
+          "type": "string"
+        },
+        "details": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/protobufAny"
+          }
+        }
+      }
+    },
+    "v1AgentBarrier": {
+      "type": "object",
+      "properties": {
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "eventSequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stateDigest": {
+          "type": "string"
+        },
+        "protocolVersion": {
+          "type": "string"
+        },
+        "sessionHash": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AgentCall": {
+      "type": "object",
+      "properties": {
+        "request": {
+          "$ref": "#/definitions/v1AgentRequest"
+        },
+        "result": {
+          "$ref": "#/definitions/v1AgentResult"
+        },
+        "executionId": {
+          "type": "string"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "modelDigest": {
+          "type": "string"
+        },
+        "routeDigest": {
+          "type": "string"
+        },
+        "adapterVersion": {
+          "type": "string"
+        },
+        "mutating": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "registeredSequence": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1AgentRequest": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "name": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        },
+        "payloadDigest": {
+          "type": "string"
+        },
+        "sessionHash": {
+          "type": "string"
+        }
+      }
+    },
+    "v1AgentResult": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "payload": {
+          "type": "string",
+          "format": "byte"
+        },
+        "eventSequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "errorCode": {
+          "type": "string"
+        },
+        "replayed": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1AgentStep": {
+      "type": "object",
+      "properties": {
+        "branchId": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "stateDigest": {
+          "type": "string"
+        },
+        "eventSequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sessionHash": {
+          "type": "string"
+        },
+        "complete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1BranchSpec": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string"
+        },
+        "model": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "parentCheckpointId": {
+          "type": "string"
+        },
+        "parentBranchId": {
+          "type": "string"
+        },
+        "forkOperationId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1BranchStatus": {
+      "type": "object",
+      "properties": {
+        "desired": {
+          "type": "string"
+        },
+        "observed": {
+          "type": "string"
+        },
+        "executionId": {
+          "type": "string"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "leaseUntil": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "lastEvent": {
+          "type": "string",
+          "format": "int64"
+        },
+        "error": {
+          "type": "string"
+        },
+        "checkpointId": {
+          "type": "string"
+        },
+        "budgetRemainingMs": {
+          "type": "string",
+          "format": "int64"
+        },
+        "sandboxId": {
+          "type": "string"
+        },
+        "agentGate": {
+          "type": "string"
+        },
+        "routeDigest": {
+          "type": "string"
+        },
+        "agentStep": {
+          "type": "string",
+          "format": "int64"
+        },
+        "traceComplete": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1CallsResponse": {
+      "type": "object",
+      "properties": {
+        "calls": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AgentCall"
+          }
+        },
+        "nextSequence": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1CheckpointSpec": {
+      "type": "object",
+      "properties": {
+        "manifestDigest": {
+          "type": "string"
+        },
+        "manifestUri": {
+          "type": "string"
+        },
+        "protocolVersion": {
+          "type": "string"
+        },
+        "eventPosition": {
+          "type": "string",
+          "format": "int64"
+        },
+        "verified": {
+          "type": "boolean"
+        },
+        "branchId": {
+          "type": "string"
+        },
+        "compatibility": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "nativeCheckpointId": {
+          "type": "string"
+        },
+        "snapshotManifest": {
+          "type": "string",
+          "format": "byte"
+        },
+        "barrier": {
+          "$ref": "#/definitions/v1AgentBarrier"
+        },
+        "routeDigest": {
+          "type": "string"
+        },
+        "budgetRemainingMs": {
+          "type": "string",
+          "format": "int64"
+        }
+      },
+      "description": "Phase 2A exposes inspection only; runtime checkpoint creation requires Phase 1B."
+    },
+    "v1Divergence": {
+      "type": "object",
+      "properties": {
+        "comparator": {
+          "type": "string"
+        },
+        "state": {
+          "type": "string"
+        },
+        "step": {
+          "type": "string",
+          "format": "int64"
+        },
+        "position": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "leftDigest": {
+          "type": "string"
+        },
+        "rightDigest": {
+          "type": "string"
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Event": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "branchId": {
+          "type": "string"
+        },
+        "sequence": {
+          "type": "string",
+          "format": "int64"
+        },
+        "epoch": {
+          "type": "string",
+          "format": "int64"
+        },
+        "type": {
+          "type": "string"
+        },
+        "data": {
+          "type": "object"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1EventsResponse": {
+      "type": "object",
+      "properties": {
+        "events": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Event"
+          }
+        },
+        "nextSequence": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1ExecEvent": {
+      "type": "object",
+      "properties": {
+        "stdout": {
+          "type": "string",
+          "format": "byte"
+        },
+        "stderr": {
+          "type": "string",
+          "format": "byte"
+        },
+        "result": {
+          "$ref": "#/definitions/v1ExecResult"
+        }
+      }
+    },
+    "v1ExecResult": {
+      "type": "object",
+      "properties": {
+        "exitCode": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timedOut": {
+          "type": "boolean"
+        },
+        "outputTruncated": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1ForkResult": {
+      "type": "object",
+      "properties": {
+        "operation": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "children": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Resource"
+          }
+        }
+      }
+    },
+    "v1GatewaySpec": {
+      "type": "object",
+      "properties": {
+        "routes": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "secretRefs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "allowedHosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1InputFile": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "content": {
+          "type": "string",
+          "format": "byte"
+        },
+        "digest": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Limits": {
+      "type": "object",
+      "properties": {
+        "cpu": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "memoryMb": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "diskMb": {
+          "type": "integer",
+          "format": "int32"
+        },
+        "timeoutSeconds": {
+          "type": "integer",
+          "format": "int32"
+        }
+      }
+    },
+    "v1ListResourcesResponse": {
+      "type": "object",
+      "properties": {
+        "resources": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Resource"
+          }
+        },
+        "nextAfter": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Metadata": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "tenantId": {
+          "type": "string",
+          "description": "Output only.",
+          "readOnly": true
+        },
+        "projectId": {
+          "type": "string",
+          "description": "Output only; request project_id establishes scope."
+        },
+        "name": {
+          "type": "string"
+        },
+        "schemaVersion": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string",
+          "format": "int64"
+        },
+        "digest": {
+          "type": "string"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "v1ModelConfigSpec": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string"
+        },
+        "model": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "artifactDigest": {
+          "type": "string"
+        },
+        "parameters": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "v1OperationSpec": {
+      "type": "object",
+      "properties": {
+        "branchId": {
+          "type": "string"
+        },
+        "action": {
+          "type": "string"
+        },
+        "checkpointId": {
+          "type": "string"
+        },
+        "childBranchIds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "parentOperationId": {
+          "type": "string"
+        }
+      }
+    },
+    "v1OperationStatus": {
+      "type": "object",
+      "properties": {
+        "state": {
+          "type": "string"
+        },
+        "error": {
+          "type": "string"
+        }
+      }
+    },
+    "v1ReadFileResponse": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "string",
+          "format": "byte"
+        }
+      }
+    },
+    "v1Ref": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "digest": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Repository": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string"
+        },
+        "commit": {
+          "type": "string"
+        }
+      }
+    },
+    "v1Resource": {
+      "type": "object",
+      "properties": {
+        "metadata": {
+          "$ref": "#/definitions/v1Metadata"
+        },
+        "kind": {
+          "type": "string"
+        },
+        "taskSpec": {
+          "$ref": "#/definitions/v1TaskSpec"
+        },
+        "workspaceSpec": {
+          "$ref": "#/definitions/v1WorkspaceSpec"
+        },
+        "modelConfigSpec": {
+          "$ref": "#/definitions/v1ModelConfigSpec"
+        },
+        "gatewaySpec": {
+          "$ref": "#/definitions/v1GatewaySpec"
+        },
+        "runSpec": {
+          "$ref": "#/definitions/v1RunSpec"
+        },
+        "branchSpec": {
+          "$ref": "#/definitions/v1BranchSpec"
+        },
+        "checkpointSpec": {
+          "$ref": "#/definitions/v1CheckpointSpec"
+        },
+        "operationSpec": {
+          "$ref": "#/definitions/v1OperationSpec"
+        },
+        "branchStatus": {
+          "$ref": "#/definitions/v1BranchStatus"
+        },
+        "operationStatus": {
+          "$ref": "#/definitions/v1OperationStatus"
+        }
+      }
+    },
+    "v1RunSpec": {
+      "type": "object",
+      "properties": {
+        "task": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "workspace": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Resource"
+          }
+        },
+        "gateway": {
+          "$ref": "#/definitions/v1Resource"
+        }
+      }
+    },
+    "v1StepsResponse": {
+      "type": "object",
+      "properties": {
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1AgentStep"
+          }
+        },
+        "nextStep": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1Submission": {
+      "type": "object",
+      "properties": {
+        "run": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "branch": {
+          "$ref": "#/definitions/v1Resource"
+        },
+        "operation": {
+          "$ref": "#/definitions/v1Resource"
+        }
+      }
+    },
+    "v1TaskSpec": {
+      "type": "object",
+      "properties": {
+        "workspace": {
+          "$ref": "#/definitions/v1Ref"
+        },
+        "models": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Ref"
+          }
+        },
+        "gateway": {
+          "$ref": "#/definitions/v1Ref"
+        },
+        "templateDigest": {
+          "type": "string"
+        },
+        "agentDigest": {
+          "type": "string"
+        },
+        "datasetDigest": {
+          "type": "string"
+        },
+        "command": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "env": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "limits": {
+          "$ref": "#/definitions/v1Limits"
+        },
+        "executionMode": {
+          "type": "string",
+          "description": "Empty uses the ordinary command profile. Snapshot-capable adapters may\nsupport the bounded Phase 1B controlled_python_v1 profile explicitly."
+        },
+        "controlledCounter": {
+          "type": "string",
+          "format": "int64"
+        }
+      }
+    },
+    "v1WorkspaceSpec": {
+      "type": "object",
+      "properties": {
+        "repositories": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1Repository"
+          }
+        },
+        "files": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "$ref": "#/definitions/v1InputFile"
+          }
+        },
+        "privateWrites": {
+          "type": "boolean"
+        }
+      }
+    },
+    "v1WriteFileResponse": {
+      "type": "object",
+      "properties": {
+        "bytesWritten": {
+          "type": "string",
+          "format": "uint64"
+        }
+      }
+    }
+  }
+}

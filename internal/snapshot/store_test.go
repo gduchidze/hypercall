@@ -136,7 +136,12 @@ func (o *interruptedObjects) Put(ctx context.Context, key string, r io.Reader, n
 func TestInterruptedPublicationRemainsUnavailableAndExpiredStagingIsCollected(t *testing.T) {
 	_, files := newStore(t)
 	objects := &interruptedObjects{Objects: files, interrupt: true}
-	store, err := snapshot.New(objects, snapshot.Options{TempDir: t.TempDir(), StagingTTL: 100 * time.Millisecond, OperationTimeout: 50 * time.Millisecond})
+	// Publication performs durable filesystem writes before reaching the injected
+	// memory-upload fault. Give those writes enough time under build/race-test
+	// load so this case tests the interruption, rather than an unrelated deadline.
+	const operationTimeout = time.Second
+	const stagingTTL = 2 * time.Second
+	store, err := snapshot.New(objects, snapshot.Options{TempDir: t.TempDir(), StagingTTL: stagingTTL, OperationTimeout: operationTimeout})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -149,7 +154,7 @@ func TestInterruptedPublicationRemainsUnavailableAndExpiredStagingIsCollected(t 
 	if err = store.RecoverExpired(context.Background(), scope()); !errors.Is(err, snapshot.ErrConflict) {
 		t.Fatalf("active upload swept: %v", err)
 	}
-	time.Sleep(180 * time.Millisecond)
+	time.Sleep(stagingTTL + operationTimeout + 100*time.Millisecond)
 	if err = store.RecoverExpired(context.Background(), scope()); err != nil {
 		t.Fatal(err)
 	}
@@ -427,5 +432,25 @@ func TestPublicationKeepsCapturedDescriptorWhenSourcePathIsReplaced(t *testing.T
 	data, err := os.ReadFile(verified.Paths[req.Sources[0].Kind])
 	if err != nil || string(data) != "abc" {
 		t.Fatalf("publication read replacement path: %q %v", data, err)
+	}
+}
+
+func TestSemanticCheckpointRetainsExactCommittedMarkerAndRejectsReplacement(t *testing.T) {
+	store, _ := newStore(t)
+	req := request(t)
+	req.Compatibility.BarrierProtocolVersion = "hypercall.harness.v1"
+	req.SemanticBarrier = &snapshot.SemanticBarrier{ProtocolVersion: "hypercall.harness.v1", Step: 2, EventSequence: 17, StateDigest: "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", SourceSessionHash: "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", SourceBranchID: "branch", SourceExecutionID: "execution", SourceEpoch: 3}
+	if _, e := store.Publish(t.Context(), req); e != nil {
+		t.Fatal(e)
+	}
+	ready, e := store.ReadyManifest(t.Context(), req.Scope)
+	if e != nil || ready.SemanticBarrier == nil || *ready.SemanticBarrier != *req.SemanticBarrier {
+		t.Fatalf("semantic marker not retained: %v %v", ready, e)
+	}
+	changed := *req.SemanticBarrier
+	changed.EventSequence = 18
+	req.SemanticBarrier = &changed
+	if _, e = store.Publish(t.Context(), req); !errors.Is(e, snapshot.ErrConflict) {
+		t.Fatalf("same artifact bytes replaced committed event position: %v", e)
 	}
 }

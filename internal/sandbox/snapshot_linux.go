@@ -19,6 +19,8 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
+	"github.com/gduchidze/hypercall/internal/harness"
 	"github.com/gduchidze/hypercall/internal/snapshot"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -66,8 +68,12 @@ func (b *Backend) releaseSnapshotReference(ctx context.Context, r record) error 
 	return err
 }
 func digest(data []byte) string { sum := sha256.Sum256(data); return hex.EncodeToString(sum[:]) }
-func (b *Backend) compatibility(l Limits) (snapshot.Compatibility, error) {
+func (b *Backend) compatibility(l Limits, session *harnessv1.HarnessSession) (snapshot.Compatibility, error) {
 	c := b.compatibilityBase
+	if session != nil {
+		c.BarrierProtocolVersion = harness.Protocol
+		c.RNGPolicy = "host256-rndaddentropy-rndreseedcrng-python-session-v1"
+	}
 	c.VCPUs = l.VCPUs
 	c.MemoryMiB = l.MemoryMiB
 	kernel, err := os.ReadFile("/proc/sys/kernel/osrelease")
@@ -203,7 +209,7 @@ func (b *Backend) Capture(ctx context.Context, r CaptureRequest) (manifest snaps
 	if h.cleaned || h.record.Observation.State != StateRunning {
 		return manifest, ErrUnavailable
 	}
-	compatibility, err := b.compatibility(h.record.Limits)
+	compatibility, err := b.compatibility(h.record.Limits, h.record.HarnessSession)
 	if err != nil {
 		return manifest, err
 	}
@@ -214,7 +220,9 @@ func (b *Backend) Capture(ctx context.Context, r CaptureRequest) (manifest snaps
 	if capability.ServerTimeUnixNano <= 0 {
 		return manifest, fmt.Errorf("%w: guest lacks authenticated UTC renewal protocol", ErrUnavailable)
 	}
-	if _, err = h.client.PrepareCapture(authContext(ctx, h.credential), &guestv1.PrepareCaptureRequest{}); err != nil {
+	captured, captureErr := h.client.PrepareCapture(authContext(ctx, h.credential), &guestv1.PrepareCaptureRequest{})
+	err = captureErr
+	if err != nil {
 		return manifest, err
 	}
 	client, closeClient := firecrackerClient(h.record.Observation.RootDir)
@@ -285,7 +293,7 @@ func (b *Backend) Capture(ctx context.Context, r CaptureRequest) (manifest snaps
 	if intentErr != nil {
 		return manifest, intentErr
 	}
-	manifest, err = b.cfg.SnapshotStore.Publish(ctx, snapshot.PublishRequest{Scope: snapshot.Scope{TenantID: r.Allocation.TenantID, ProjectID: r.Allocation.ProjectID, CheckpointID: r.CheckpointID}, ParentCheckpointID: r.ParentCheckpointID, Compatibility: compatibility, Sources: []snapshot.Source{{Kind: snapshot.Memory, Path: filepath.Join(root, "capture-memory")}, {Kind: snapshot.VMState, Path: filepath.Join(root, "capture-vmstate")}, {Kind: snapshot.Disk, Path: filepath.Join(root, "capture-disk")}}})
+	manifest, err = b.cfg.SnapshotStore.Publish(ctx, snapshot.PublishRequest{SemanticBarrier: semanticFromWire(captured.SemanticBarrier), Scope: snapshot.Scope{TenantID: r.Allocation.TenantID, ProjectID: r.Allocation.ProjectID, CheckpointID: r.CheckpointID}, ParentCheckpointID: r.ParentCheckpointID, Compatibility: compatibility, Sources: []snapshot.Source{{Kind: snapshot.Memory, Path: filepath.Join(root, "capture-memory")}, {Kind: snapshot.VMState, Path: filepath.Join(root, "capture-vmstate")}, {Kind: snapshot.Disk, Path: filepath.Join(root, "capture-disk")}}})
 	if err == nil {
 		err = b.clearCaptureIntent(intentPath)
 	}

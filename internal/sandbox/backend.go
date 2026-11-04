@@ -12,6 +12,8 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
+	"github.com/gduchidze/hypercall/internal/harness"
 	"github.com/gduchidze/hypercall/internal/snapshot"
 )
 
@@ -59,19 +61,46 @@ type Limits struct {
 // An admitted Create consumes its host-local sandbox epoch even if boot fails.
 // A retry needs a strictly greater epoch; fencing persists across host restarts.
 type CreateRequest struct {
-	Allocation Allocation `json:"allocation"`
-	Limits     Limits     `json:"limits"`
+	HarnessSession *harnessv1.HarnessSession `json:"harness_session,omitempty"`
+	Allocation     Allocation                `json:"allocation"`
+	Limits         Limits                    `json:"limits"`
+	// AbsoluteExpiresAt caps the runtime lifetime across retries. Persist this
+	// unchanged in snapshot operation journals; zero preserves standalone TTL.
+	AbsoluteExpiresAt time.Time `json:"absolute_expires_at,omitempty"`
 }
 
 func (r CreateRequest) Validate() error {
 	if err := r.Allocation.Validate(); err != nil {
 		return err
 	}
+	if r.HarnessSession != nil {
+		h := r.HarnessSession
+		if harness.ValidateSession(h) != nil || h.TenantId != r.Allocation.TenantID || h.ProjectId != r.Allocation.ProjectID || h.SandboxId != r.Allocation.SandboxID || h.ExecutionId != r.Allocation.ExecutionID || h.Epoch != int64(r.Allocation.Epoch) {
+			return fmt.Errorf("%w: harness session allocation mismatch", ErrInvalid)
+		}
+	}
 	l := r.Limits
 	if l.VCPUs < 1 || l.VCPUs > 8 || l.MemoryMiB < 128 || l.MemoryMiB > 8192 || l.WorkspaceBytes < 1<<20 || l.WorkspaceBytes > 1<<30 || l.WorkspaceBytes > int64(l.MemoryMiB-64)<<20 || l.PIDs < 8 || l.PIDs > 512 || l.TTL < time.Second || l.TTL > time.Hour {
 		return fmt.Errorf("%w: limits outside supported envelope (1..8 CPUs, 128..8192 MiB, 1 MiB..1 GiB workspace within guest memory, 8..512 PIDs, 1s..1h TTL)", ErrInvalid)
 	}
 	return nil
+}
+
+// Deadline resolves the admitted relative limit without extending an absolute
+// controller lease. Validate remains time-independent so expired durable
+// journals can still be decoded and reconciled after a host restart.
+func (r CreateRequest) Deadline(now time.Time) (time.Time, error) {
+	if e := r.Validate(); e != nil {
+		return time.Time{}, e
+	}
+	until := now.Add(r.Limits.TTL)
+	if !r.AbsoluteExpiresAt.IsZero() && r.AbsoluteExpiresAt.Before(until) {
+		until = r.AbsoluteExpiresAt
+	}
+	if !until.After(now) {
+		return time.Time{}, fmt.Errorf("%w: absolute allocation lease expired", ErrInvalid)
+	}
+	return until, nil
 }
 
 type State string

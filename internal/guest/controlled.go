@@ -16,6 +16,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/proto"
@@ -197,6 +198,15 @@ func (s *Server) PrepareCapture(ctx context.Context, _ *guestv1.PrepareCaptureRe
 	if err := s.authenticate(ctx); err != nil {
 		return nil, err
 	}
+	if s.harness != nil {
+		marker, e := s.harness.semanticBarrier()
+		if e != nil {
+			return nil, e
+		}
+		s.captureGate = true
+		syncGuestDisks()
+		return &guestv1.ControlledState{AtBarrier: true, Identity: proto.Clone(s.identity).(*guestv1.AllocationIdentity), SemanticBarrier: marker}, nil
+	}
 	if s.controlled == nil || s.controlled.state == nil || !s.controlled.state.AtBarrier {
 		return nil, status.Error(codes.FailedPrecondition, "controlled Python barrier required")
 	}
@@ -225,12 +235,21 @@ func (s *Server) ReleaseCapture(ctx context.Context, req *guestv1.ReleaseCapture
 		return nil, err
 	}
 	s.captureGate = false
+	if s.harness != nil {
+		s.harness.mu.Lock()
+		marker := proto.Clone(s.harness.captureMarker).(*harnessv1.SemanticBarrier)
+		s.harness.mu.Unlock()
+		return &guestv1.ControlledState{AtBarrier: true, Identity: proto.Clone(s.identity).(*guestv1.AllocationIdentity), SemanticBarrier: marker}, nil
+	}
 	if s.controlled == nil {
 		return nil, status.Error(codes.FailedPrecondition, "controlled workload missing")
 	}
 	return proto.Clone(s.controlled.state).(*guestv1.ControlledState), nil
 }
 func (s *Server) RebindClone(ctx context.Context, req *guestv1.RebindCloneRequest) (*guestv1.GetInfoResponse, error) {
+	if s.harness != nil {
+		return s.rebindAgentClone(ctx, req)
+	}
 	s.opMu.Lock()
 	defer s.opMu.Unlock()
 	if !s.captureGate {

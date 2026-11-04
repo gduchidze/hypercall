@@ -1,0 +1,240 @@
+#!/usr/bin/env python3
+"""Opt-in two real cooperative continuations, restored sequentially on an existing host."""
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import os
+from pathlib import Path
+import runpy
+import sys
+
+from hypercall import HypercallError, types
+
+base = runpy.run_path(str(Path(__file__).with_name("qualify-phase2a")))
+require = base["require"]
+QualificationFailure = base["QualificationFailure"]
+
+
+class AgentWorkflow(base["Workflow"]):
+    snapshot_flag = "--host-cooperative-agents"
+    barrier_protocol = "hypercall.harness.v1"
+
+    def __init__(self, *args):
+        super().__init__(*args)
+        self.prefix = self.prefix.replace("runtime-2a-", "runtime-2b-", 1)
+        self.report["idempotency_prefix"] = self.prefix
+        self.children = []
+        self.uncertain_fork = False
+
+    def history(self, branch_id):
+        after, events = 0, []
+        while True:
+            page = self.client.events(branch_id, after=after, limit=1000)
+            if not page.events:
+                break
+            require(page.next_sequence > after, "event_cursor_did_not_advance")
+            events.extend(page.events)
+            after = page.next_sequence
+        require([event.sequence for event in events] == list(range(1, after + 1)), "event_history_incomplete")
+        return events
+
+    def semantic_checkpoint(self, resource, task, parent, step, session_hash):
+        self.checkpoint(resource, task)
+        checkpoint = resource.checkpoint_spec
+        marker = checkpoint.barrier
+        native = json.loads(checkpoint.snapshot_manifest)
+        semantic = native.get("semantic_barrier")
+        require(checkpoint.HasField("barrier") and marker.protocol_version == "hypercall.harness.v1"
+                and marker.step == 1 and marker.event_sequence >= step.event_sequence
+                and marker.state_digest == step.state_digest and marker.session_hash == session_hash
+                and checkpoint.event_position == marker.event_sequence, "durable_semantic_marker_mismatch")
+        expected = {"protocol_version": marker.protocol_version, "step": marker.step,
+                    "event_sequence": marker.event_sequence, "state_digest": marker.state_digest,
+                    "source_session_hash": session_hash, "source_branch_id": self.branch_id,
+                    "source_execution_id": parent.branch_status.execution_id, "source_epoch": parent.branch_status.epoch}
+        require(semantic == expected, "native_semantic_marker_mismatch")
+        require(native["compatibility"]["rng_policy"] == "host256-rndaddentropy-rndreseedcrng-python-session-v1",
+                "cooperative_rng_policy_mismatch")
+        self.report["semantic_checkpoint"] = {"step": marker.step, "event_sequence": marker.event_sequence,
+                                               "state_digest": marker.state_digest, "route_digest": checkpoint.route_digest}
+
+    def run(self):
+        self.report["restore_schedule"] = "sequential-single-child-forks; no simultaneous fan-out capacity claim"
+        self.report["phase"] = "server_start"
+        self.start()
+        self.report["phase"] = "cooperative_submission"
+        submitted = self.cli("submit", self.config["manifest_file"], key=self.prefix + "-submit")
+        self.branch_id = submitted["branch"]["metadata"]["id"]
+        self.report.update(run_id=submitted["run"]["metadata"]["id"], parent_branch_id=self.branch_id)
+        run = self.client.inspect("Run", self.report["run_id"]).run_spec
+        task, models = run.task.task_spec, list(run.models)
+        require(task.execution_mode == "cooperative_python_v1" and len(models) == 2 and not task.command and not task.env,
+                "two_candidate_cooperative_task_required")
+        outputs = [model.model_config_spec.parameters.get("fixture_response", "") for model in models]
+        require(outputs[0].strip() != outputs[1].strip() and all(model.model_config_spec.provider == "fixture"
+                and model.model_config_spec.revision == "text-v1" for model in models), "distinct_pinned_fixture_candidates_required")
+        self.report["phase"] = "registered_prefix_and_barrier"
+        parent = self.wait("Branch", self.branch_id,
+                           lambda value: value.branch_status.observed == "running" and value.branch_status.agent_gate == "sealed"
+                           and value.branch_status.agent_step == 1)
+        calls = list(self.client.iter_calls(self.branch_id, page_size=1))
+        steps = list(self.client.iter_steps(self.branch_id, page_size=1))
+        require(len(calls) == 1 and calls[0].request.kind == "tool" and calls[0].request.name == "echo"
+                and calls[0].result.payload == b"shared-prefix" and len(steps) == 1 and steps[0].complete,
+                "instrumented_common_prefix_missing")
+        state = self.client.read_file(self.branch_id, "agent-state.json")
+        require("sha256:" + hashlib.sha256(state).hexdigest() == steps[0].state_digest,
+                "agent_disk_state_does_not_match_commit")
+        session_hash = calls[0].request.session_hash
+        require(calls[0].model_digest == models[0].metadata.digest, "parent_fixture_mapping_mismatch")
+        self.report["checks"]["registered_prefix_and_barrier"] = "passed"
+        self.report["phase"] = "semantic_snapshot_publication"
+        self.completed(self.client.suspend(self.branch_id, idempotency_key=self.prefix + "-suspend"))
+        paused = self.client.inspect("Branch", self.branch_id)
+        require(paused.branch_status.observed == "suspended", "parent_not_confirmed_paused")
+        checkpoint = self.client.inspect("Checkpoint", paused.branch_status.checkpoint_id)
+        self.report["checkpoint_id"] = checkpoint.metadata.id
+        self.semantic_checkpoint(checkpoint, task, parent, steps[0], session_hash)
+        self.report["checks"]["semantic_snapshot_publication"] = "passed"
+        self.report["phase"] = "controller_restart_after_checkpoint"
+        self.stop()
+        self.start()
+        require(self.client.inspect("Checkpoint", checkpoint.metadata.id) == checkpoint, "checkpoint_changed_on_restart")
+        self.report["checks"]["controller_restart_after_checkpoint"] = "passed"
+        self.report["children"] = []
+        for index, model in enumerate(models):
+            self.report["phase"] = "child_" + str(index + 1) + "_restore"
+            candidate = model.metadata.id + "@" + model.metadata.digest
+            key = self.prefix + "-fork-" + str(index)
+            self.uncertain_fork = True
+            fork = self.cli("fork", checkpoint.metadata.id, candidate, key=key)
+            self.uncertain_fork = False
+            require(len(fork["children"]) == 1, "single_child_restore_schedule_changed")
+            child_id = fork["children"][0]["metadata"]["id"]
+            self.children.append(child_id)
+            duplicate = self.client.fork(checkpoint.metadata.id, [types.Ref(id=model.metadata.id, digest=model.metadata.digest)],
+                                         idempotency_key=key)
+            require(duplicate.children[0].metadata.id == child_id and duplicate.operation.metadata.id == fork["operation"]["metadata"]["id"],
+                    "fork_retry_changed_child_or_operation")
+            self.wait("Operation", fork["operation"]["metadata"]["id"], lambda value: value.operation_status.state == "succeeded")
+            child = self.wait("Branch", child_id, lambda value: value.branch_status.trace_complete
+                              and value.branch_status.observed in {"stopped", "failed", "interrupted"})
+            require(child.branch_status.observed == "stopped" and child.branch_spec.parent_branch_id == self.branch_id
+                    and child.branch_spec.parent_checkpoint_id == checkpoint.metadata.id
+                    and child.branch_spec.model.metadata.digest == model.metadata.digest
+                    and child.branch_status.sandbox_id != parent.branch_status.sandbox_id
+                    and child.branch_status.execution_id != parent.branch_status.execution_id,
+                    "child_lineage_completion_or_identity_mismatch")
+            suffix = list(self.client.iter_calls(child_id, page_size=1))
+            committed = list(self.client.iter_steps(child_id, page_size=1))
+            require(len(suffix) == 2 and suffix[0].request.kind == "inference" and suffix[0].request.step == 2
+                    and suffix[0].result.payload == outputs[index].encode()
+                    and suffix[1].request.kind == "tool" and suffix[1].request.step == 3
+                    and suffix[1].result.payload == outputs[index].encode()
+                    and {step.step for step in committed if step.complete} >= {2, 3}, "child_fixture_suffix_mismatch")
+            for call in suffix:
+                require(call.model_digest == model.metadata.digest and call.route_digest == child.branch_status.route_digest
+                        and call.execution_id == child.branch_status.execution_id and call.epoch == child.branch_status.epoch
+                        and call.request.session_hash != session_hash
+                        and call.request.id.startswith(child.branch_status.execution_id + "/"),
+                        "child_used_stale_parent_mapping_or_identity")
+            events = self.history(child_id)
+            acks = [event for event in events if event.type == "agent_session_acknowledged"]
+            require(acks and acks[-1].sequence < suffix[0].registered_sequence
+                    and acks[-1].data.fields["session_hash"].string_value == suffix[0].request.session_hash,
+                    "child_dispatched_before_durable_session_ack")
+            self.report["children"].append({"branch_id": child_id, "operation_id": fork["operation"]["metadata"]["id"],
+                                             "model_digest": model.metadata.digest, "route_digest": child.branch_status.route_digest,
+                                             "sandbox_id": child.branch_status.sandbox_id, "execution_id": child.branch_status.execution_id,
+                                             "output_digest": "sha256:" + hashlib.sha256(suffix[0].result.payload).hexdigest(),
+                                             "trace_complete": True, "events": len(events)})
+            self.report["checks"]["child_" + str(index + 1) + "_fresh_routed_completion"] = "passed"
+            if index == 0:
+                self.stop()
+                self.start()
+                require(self.client.inspect("Checkpoint", checkpoint.metadata.id) == checkpoint, "retained_checkpoint_lost_between_children")
+        require(self.report["children"][0]["sandbox_id"] != self.report["children"][1]["sandbox_id"], "sibling_sandbox_reused")
+        self.report["phase"] = "declared_continuation_comparisons"
+        self.report["comparisons"] = {}
+        for comparator, expected_step in (("output_bytes_v1", 2), ("output_normalized_v1", 2),
+                                          ("tool_calls_v1", 3), ("observations_v1", 3)):
+            comparison = self.cli("compare", *self.children, comparator)
+            require(comparison["state"] == "diverged" and int(comparison["step"]) == expected_step
+                    and comparison["position"] == 1, "unexpected_declared_divergence")
+            self.report["comparisons"][comparator] = {"state": comparison["state"], "step": expected_step, "position": 1}
+        self.report["checks"]["declared_continuation_comparisons"] = "passed"
+        self.history(self.branch_id)
+        self.report["phase"] = "paused_parent_cancellation"
+        self.completed(self.client.cancel(self.branch_id, idempotency_key=self.prefix + "-cancel-parent"))
+        require(self.client.inspect("Branch", self.branch_id).branch_status.observed == "cancelled", "parent_cleanup_unconfirmed")
+        self.report["checks"]["parent_cleanup"] = "passed"
+        self.report.update(status="passed", phase="complete")
+
+    def close(self):
+        if self.report["status"] != "passed" and self.branch_id:
+            confirmed = not self.uncertain_fork
+            for branch in [*self.children, self.branch_id]:
+                try:
+                    require(self.process and self.process.poll() is None, "api_unavailable_during_cleanup")
+                    current = self.client.inspect("Branch", branch)
+                    if current.branch_status.observed not in {"stopped", "cancelled"}:
+                        self.completed(self.client.cancel(branch, idempotency_key=self.prefix + "-cleanup-" + branch))
+                except Exception:
+                    confirmed = False
+            self.report["cleanup"] = "confirmed" if confirmed else "unconfirmed; preserve state and reconcile branch execution leases"
+        try:
+            self.stop()
+        finally:
+            try:
+                self.client.close()
+            finally:
+                self.log.close()
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--config", required=True)
+    parser.add_argument("--report", required=True)
+    args = parser.parse_args()
+    require(os.environ.get("HYPERCALL_RUNTIME_2B_TEST") == "1", "HYPERCALL_RUNTIME_2B_TEST=1_required")
+    require(os.environ.get("HYPERCALL_DATABASE_URL"), "HYPERCALL_DATABASE_URL_required")
+    key = os.environ.get("HYPERCALL_API_KEY", "")
+    require(len(key) >= 32, "scoped_API_key_required")
+    config = base["configuration"](args.config, profile="cooperative_python_v1_firecracker", execution_mode="cooperative_python_v1")
+    destination = Path(args.report)
+    require(destination.is_absolute() and not destination.exists(), "new_absolute_report_required")
+    descriptor = os.open(destination, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600)
+    report = {"schema_version": 1, "profile": config["profile"], "status": "failed", "checks": {},
+              "server_sha256": config["server_sha256"], "cli_sha256": config["cli_sha256"],
+              "manifest_sha256": hashlib.sha256(Path(config["manifest_file"]).read_bytes()).hexdigest(),
+              "scope_of_claim": "Instrumented continuation experiment; deterministic fixtures, sequential restores; no whole-task reliability or fan-out capacity claim"}
+    workflow = None
+    try:
+        workflow = AgentWorkflow(config, key, report)
+        workflow.run()
+    except Exception as error:
+        report["failure"] = error.code if isinstance(error, HypercallError) else (str(error) if isinstance(error, QualificationFailure) else type(error).__name__)
+    finally:
+        try:
+            if workflow:
+                workflow.close()
+        except Exception as error:
+            report.update(status="failed", cleanup="unconfirmed; preserve host state and reconcile execution leases",
+                          cleanup_failure=type(error).__name__)
+        finally:
+            with os.fdopen(descriptor, "w") as output:
+                json.dump(report, output, indent=2)
+                output.write("\n")
+    print("Phase 2B runtime workflow: " + report["status"])
+    return 0 if report["status"] == "passed" else 1
+
+
+if __name__ == "__main__":
+    try:
+        raise SystemExit(main())
+    except Exception as error:
+        code = str(error) if isinstance(error, QualificationFailure) else type(error).__name__
+        print("Phase 2B qualification refused: " + code, file=sys.stderr)
+        raise SystemExit(2)

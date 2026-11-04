@@ -19,6 +19,7 @@ import (
 	"time"
 
 	guestv1 "github.com/gduchidze/hypercall/gen/go/hypercall/guest/v1"
+	harnessv1 "github.com/gduchidze/hypercall/gen/go/hypercall/harness/v1"
 	"github.com/gduchidze/hypercall/internal/snapshot"
 	"google.golang.org/grpc"
 )
@@ -53,13 +54,14 @@ type instance struct {
 	done       chan struct{}
 }
 type record struct {
-	SchemaVersion           int         `json:"schema_version"`
-	CheckpointID            string      `json:"checkpoint_id,omitempty"`
-	SnapshotReference       string      `json:"snapshot_reference,omitempty"`
-	PendingReferenceRelease bool        `json:"pending_reference_release,omitempty"`
-	Token                   string      `json:"token"`
-	Observation             Observation `json:"observation"`
-	Limits                  Limits      `json:"limits"`
+	HarnessSession          *harnessv1.HarnessSession `json:"harness_session,omitempty"`
+	SchemaVersion           int                       `json:"schema_version"`
+	CheckpointID            string                    `json:"checkpoint_id,omitempty"`
+	SnapshotReference       string                    `json:"snapshot_reference,omitempty"`
+	PendingReferenceRelease bool                      `json:"pending_reference_release,omitempty"`
+	Token                   string                    `json:"token"`
+	Observation             Observation               `json:"observation"`
+	Limits                  Limits                    `json:"limits"`
 }
 
 func New(ctx context.Context, c Config) (backend *Backend, result error) {
@@ -234,6 +236,9 @@ func (b *Backend) get(a Allocation) (*instance, error) {
 }
 
 func (b *Backend) Create(ctx context.Context, r CreateRequest) (Observation, error) {
+	if r.HarnessSession != nil && r.HarnessSession.InheritedBarrier != nil {
+		return Observation{}, ErrInvalid
+	}
 	return b.create(ctx, r, nil, false)
 }
 func (b *Backend) create(ctx context.Context, r CreateRequest, restored *restoreSpec, retry bool) (o Observation, result error) {
@@ -256,10 +261,14 @@ func (b *Backend) create(ctx context.Context, r CreateRequest, restored *restore
 		return o, err
 	}
 	now := time.Now().UTC()
-	o = Observation{Allocation: r.Allocation, State: StateStarting, CreatedAt: now, ExpiresAt: now.Add(r.Limits.TTL), CgroupPath: filepath.Join(b.cfg.CgroupDir, token), RootDir: filepath.Join(b.cfg.StateDir, "jails", "firecracker", token, "root")}
+	expiresAt, expiryErr := r.Deadline(now)
+	if expiryErr != nil {
+		return o, expiryErr
+	}
+	o = Observation{Allocation: r.Allocation, State: StateStarting, CreatedAt: now, ExpiresAt: expiresAt, CgroupPath: filepath.Join(b.cfg.CgroupDir, token), RootDir: filepath.Join(b.cfg.StateDir, "jails", "firecracker", token, "root")}
 	o.VSockPath = filepath.Join(o.RootDir, "vsock.sock")
 	lifetime, cancel := context.WithDeadline(context.Background(), o.ExpiresAt)
-	h := &instance{restore: restored, record: record{SchemaVersion: 1, Token: token, Observation: o, Limits: r.Limits}, credential: hex.EncodeToString(secret), lifetime: lifetime, cancel: cancel, done: make(chan struct{})}
+	h := &instance{restore: restored, record: record{HarnessSession: r.HarnessSession, SchemaVersion: 1, Token: token, Observation: o, Limits: r.Limits}, credential: hex.EncodeToString(secret), lifetime: lifetime, cancel: cancel, done: make(chan struct{})}
 	if restored != nil {
 		h.record.CheckpointID = restored.checkpoint
 		h.record.SnapshotReference = restored.reference
